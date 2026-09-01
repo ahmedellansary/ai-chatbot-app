@@ -76,6 +76,8 @@
   const state = {
     currentMode: 'MID',
     currentModel: null,
+    devModelKey: null,
+    modelCatalog: [],
     conversations: [],
     activeConvId: null,
     systemPrompt: '',
@@ -91,9 +93,11 @@
   async function init() {
     loadConversations();
     await loadSystemPrompt();
+    await loadModelCatalog();
     setupEventListeners();
     registerServiceWorker();
     setupInstallPrompt();
+    runStartupHealthCheck();
 
     if (state.conversations.length === 0) {
       showWelcomeScreen();
@@ -143,6 +147,72 @@
         localStorage.setItem('system_prompt', state.systemPrompt);
       }
     } catch {}
+  }
+
+  function normalizeModelCatalog(data) {
+    if (!data) return [];
+
+    const source = Array.isArray(data) ? data : Object.values(data).flat();
+    const seen = new Set();
+
+    return source.filter(item => {
+      if (!item || !item.id || !item.name) return false;
+      const key = `${item.provider || 'unknown'}:${item.id}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }
+
+  function getModelCatalog() {
+    if (!state.modelCatalog || state.modelCatalog.length === 0) {
+      state.modelCatalog = normalizeModelCatalog(MODELS);
+    }
+    return state.modelCatalog;
+  }
+
+  async function loadModelCatalog() {
+    try {
+      const cached = localStorage.getItem('model_catalog');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length) {
+          state.modelCatalog = normalizeModelCatalog(parsed);
+          return;
+        }
+      }
+
+      const localRes = await fetch('./models.json?t=' + Date.now());
+      if (localRes.ok) {
+        const localData = await localRes.json();
+        const catalog = normalizeModelCatalog(localData);
+        if (catalog.length) {
+          state.modelCatalog = catalog;
+          localStorage.setItem('model_catalog', JSON.stringify(catalog));
+          return;
+        }
+      }
+
+      const remoteRes = await fetch(
+        `${GITHUB_API}/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/models.json?ref=${GITHUB_BRANCH}&t=${Date.now()}`,
+        { headers: getGHHeaders() }
+      );
+
+      if (remoteRes.ok) {
+        const remoteData = await remoteRes.json();
+        const decoded = JSON.parse(atob(remoteData.content.replace(/\n/g, '')));
+        const catalog = normalizeModelCatalog(decoded);
+        if (catalog.length) {
+          state.modelCatalog = catalog;
+          localStorage.setItem('model_catalog', JSON.stringify(catalog));
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn('[Model Catalog Load Failed]', e.message || e);
+    }
+
+    state.modelCatalog = normalizeModelCatalog(MODELS);
   }
 
   // ─── GitHub Functions ───
@@ -247,7 +317,7 @@
         messages,
         stream: true,
         temperature: 0.7,
-        max_tokens: 4096
+        max_tokens: 2048
       }),
       signal
     });
@@ -271,7 +341,7 @@
         messages,
         stream: true,
         temperature: 0.7,
-        max_tokens: 4096
+        max_tokens: 2048
       }),
       signal
     });
@@ -316,6 +386,46 @@
       }
     } finally {
       reader.releaseLock();
+    }
+  }
+
+  function getAvailableModels() {
+    const flat = getModelCatalog();
+    const seen = new Set();
+    return flat.filter(model => {
+      const key = `${model.provider}:${model.id}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }
+
+  function getSelectedDevModel() {
+    const models = getAvailableModels();
+    if (!models.length) return null;
+
+    const key = state.devModelKey || `${models[0].provider}:${models[0].id}`;
+    const selected = models.find(model => `${model.provider}:${model.id}` === key) || models[0];
+    state.devModelKey = `${selected.provider}:${selected.id}`;
+    return selected;
+  }
+
+  async function* runSingleModel(model, messages, signal, onModelChange) {
+    onModelChange?.(model, false);
+
+    try {
+      const response = model.provider === 'groq'
+        ? await callGroq(model, messages, signal)
+        : await callOpenRouter(model, messages, signal);
+
+      for await (const chunk of readStream(response)) {
+        yield { chunk, model, usedFallback: false };
+      }
+      return;
+    } catch (err) {
+      if (err.name === 'AbortError') throw err;
+      console.warn(`[Single Model] ${model.name} failed:`, err.message);
+      throw new Error(`تعذر الاتصال بالموديل المحدد (${model.name}). حاول موديلًا آخر أو تأكد من توفر الخدمة.`);
     }
   }
 
@@ -400,6 +510,7 @@
 
     if (!existing) {
       const id = generateId();
+      const devModel = getSelectedDevModel();
       const conv = {
         id,
         title: '🛠️ شات المطور',
@@ -408,12 +519,13 @@
             id: generateId(),
             role: 'ai',
             content: `مرحباً بك في **شات المطور الذكي** 🛠️\n\nأنا مهندس برمجيات التطبيق (AI Lead Developer). أستطيع تعديل التطبيق وتحديث ملفاته ورفعها على GitHub فوراً.\n\nتستطيع أن تطلب مني:\n- *"غيّر لغة الواجهة إلى الإنجليزية وخلي النصوص LTR"*\n- *"عدّل ألوان أو أحجام العناصر"*\n- *"أضف ميزة أو زر جديد"*\n\n🔒 **الأمان التام:** سأعرض عليك بطاقة تفاعلية لتأكيد النشر، ومعك زر **استرجاع فوري (Rollback)** وزر **مراجعة آخر تعديل فقط** لتجنب أي هلوسة. ما التعديل المطلوب؟`,
-            model: 'Nemotron Lead Developer',
+            model: devModel ? `Developer (${devModel.name})` : 'Nemotron Lead Developer',
             usedFallback: false,
             timestamp: new Date().toISOString()
           }
         ],
         mode: 'FAST',
+        devModelKey: state.devModelKey || `${devModel.provider}:${devModel.id}`,
         isDev: true,
         createdAt: new Date().toISOString()
       };
@@ -438,6 +550,9 @@
 
     state.activeConvId = id;
     state.currentMode = conv.mode || state.currentMode;
+    if (conv.isDev && conv.devModelKey) {
+      state.devModelKey = conv.devModelKey;
+    }
 
     renderAllMessages(conv.messages);
     updateHeaderUI();
@@ -492,6 +607,23 @@
     });
   }
 
+  function buildDevModelOptions() {
+    const models = getAvailableModels();
+    const selected = getSelectedDevModel();
+    const options = models.map(model => {
+      const key = `${model.provider}:${model.id}`;
+      const isSelected = selected && selected.provider === model.provider && selected.id === model.id;
+      return `<option value="${key}" ${isSelected ? 'selected' : ''}>${model.name}</option>`;
+    }).join('');
+
+    return `
+      <span class="mode-tag dev-mode-tag" style="color:#fbbf24; background:rgba(217,119,6,0.15);">وضع المطور</span>
+      <select id="dev-model-select" class="dev-model-select" aria-label="اختيار موديل المطور">
+        ${options}
+      </select>
+    `;
+  }
+
   function updateHeaderUI() {
     const conv = getActiveConv();
     const titleText = $('header-title-text');
@@ -501,7 +633,19 @@
     if (conv?.isDev) {
       if (titleText) titleText.textContent = '🛠️ شات المطور';
       if (dot) dot.style.background = '#fbbf24';
-      if (indicator) indicator.innerHTML = '<span class="mode-tag" style="color:#fbbf24; background:rgba(217,119,6,0.15);">وضع المطور (تعديل حي)</span>';
+      if (indicator) {
+        indicator.innerHTML = buildDevModelOptions();
+        const select = $('dev-model-select');
+        select?.addEventListener('change', (e) => {
+          state.devModelKey = e.target.value;
+          const active = getActiveConv();
+          if (active && active.isDev) {
+            active.devModelKey = state.devModelKey;
+            saveConversations();
+          }
+          showToast('تم اختيار موديل المطور', 'info');
+        });
+      }
     } else {
       if (titleText) titleText.textContent = `نيترون · ${state.currentMode}`;
       if (dot) dot.style.background = '#10b981';
@@ -598,7 +742,7 @@
     if (isDev) {
       systemPromptForCall = `أنت مهندس البرمجيات ومطور التطبيق الذكي (AI Lead Developer).
 أنت تتحدث مع المستخدم لتطوير وتعديل هذا التطبيق نفسه (ChatBot PWA).
-
+ 
 قواعد صارمة ومهمة جداً لمنع الهلوسة:
 1. ركز بدقة على الطلب المطلوب فقط.
 2. لا تحذف أي ميزات أخرى أو تعيد كتابة ملفات غير مطلوبة.
@@ -617,12 +761,13 @@
 \`\`\``;
     }
 
+    const recentMessages = conv.messages
+      .filter(m => m.id !== userMsg.id)
+      .slice(-8);
+
     const apiMessages = [
       { role: 'system', content: systemPromptForCall },
-      ...conv.messages
-        .filter(m => m.id !== userMsg.id)
-        .slice(-15)
-        .map(m => ({ role: m.role === 'ai' ? 'assistant' : m.role, content: m.content })),
+      ...recentMessages.map(m => ({ role: m.role === 'ai' ? 'assistant' : m.role, content: m.content })),
       { role: 'user', content: userText.trim() }
     ];
 
@@ -642,24 +787,37 @@
       };
       conv2.messages.push(aiMsgObj);
 
-      hideTyping();
-      appendMessage(aiMsgObj);
+      showTyping();
 
-      const msgRow = document.querySelector(`[data-id="${aiMsgId}"] .msg-content`);
+     const selectedModel = isDev ? getSelectedDevModel() : null;
+     const stream = isDev
+       ? runSingleModel(selectedModel, apiMessages, state.abortController.signal, (model, isFallback) => {
+           aiMsgObj.model = `Developer (${model.name})`;
+           aiMsgObj.usedFallback = isFallback;
+         })
+       : chatWithFallback(
+           state.currentMode,
+           apiMessages,
+           state.abortController.signal,
+           (model, isFallback) => {
+             aiMsgObj.model = model.name;
+             aiMsgObj.usedFallback = isFallback;
+           }
+         );
 
-      const stream = chatWithFallback(
-        isDev ? 'FAST' : state.currentMode,
-        apiMessages,
-        state.abortController.signal,
-        (model, isFallback) => {
-          aiMsgObj.model = isDev ? `Developer (${model.name})` : model.name;
-          aiMsgObj.usedFallback = isFallback;
-        }
-      );
-
+      let msgRow = null;
       for await (const { chunk, model, usedFallback } of stream) {
         fullContent += chunk;
         finalModelInfo = { model, usedFallback };
+        aiMsgObj.model = isDev ? `Developer (${model.name})` : model.name;
+        aiMsgObj.usedFallback = usedFallback;
+
+        if (!msgRow) {
+          hideTyping();
+          appendMessage(aiMsgObj);
+          msgRow = document.querySelector(`[data-id="${aiMsgId}"] .msg-content`);
+        }
+
         if (msgRow) {
           msgRow.innerHTML = parseMarkdown(fullContent);
           scrollToBottom();
@@ -669,7 +827,7 @@
       aiMsgObj.content = fullContent;
 
       if (isDev) {
-        await handleDevProposal(fullContent, msgRow);
+        await handleDevProposal(fullContent, msgRow || document.querySelector(`[data-id="${aiMsgId}"]`));
       }
 
       saveConversations();
@@ -682,11 +840,62 @@
         appendMessage(errMsg);
       }
     } finally {
+      if (thinkingTimer) {
+        clearInterval(thinkingTimer);
+        thinkingTimer = null;
+      }
+
+      const typingIndicator = document.getElementById('typing-indicator');
+      if (typingIndicator && typingIndicator.dataset.aiId) {
+        const finalText = typingIndicator.querySelector('.msg-content')?.textContent || '';
+        if (!finalText.trim()) {
+          typingIndicator.remove();
+        }
+      }
+
       state.isStreaming = false;
       state.abortController = null;
       $('send-btn').disabled = false;
       scrollToBottom();
     }
+  }
+
+  function applyRuntimePatch(file, content) {
+    if (!file) return false;
+
+    try {
+      if (file.endsWith('.css')) {
+        let styleTag = document.getElementById('live-patch-style');
+        if (!styleTag) {
+          styleTag = document.createElement('style');
+          styleTag.id = 'live-patch-style';
+          document.head.appendChild(styleTag);
+        }
+        styleTag.textContent = content;
+        return true;
+      }
+
+      if (file.endsWith('.html') || file === 'index.html') {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(content, 'text/html');
+        const newApp = doc.getElementById('app');
+        const currentApp = document.getElementById('app');
+        if (newApp && currentApp) {
+          currentApp.innerHTML = newApp.innerHTML;
+          return true;
+        }
+      }
+
+      if (file === 'system_prompt.txt') {
+        state.systemPrompt = content;
+        localStorage.setItem('system_prompt', content);
+        return true;
+      }
+    } catch (e) {
+      console.warn('[Live Patch Failed]', e.message);
+    }
+
+    return false;
   }
 
   // ─── Dev Proposal & Review Logic ───
@@ -739,17 +948,26 @@
     }
 
     try {
+      const localApplied = applyRuntimePatch(data.file, data.content);
+      if (localApplied) {
+        showToast(`✅ تم تطبيق التعديل محلياً فوراً في هذه الجلسة`, 'success');
+      }
+
       showToast(`🔄 جاري رفع ${data.file} على GitHub...`, 'info');
       await uploadFileToGitHub(data.file, data.content, `🛠️ Dev Mode: ${data.message || 'Update'}`);
       showToast(`✅ تم النشر على GitHub بنجاح!`, 'success');
 
       if (card) {
+        const statusText = localApplied
+          ? '✅ تم تطبيق التعديل محلياً فوراً + حفظه في GitHub'
+          : `✅ تم النشر وتحديث ملف <code>${escapeHtml(data.file)}</code> بنجاح!`;
+
         card.innerHTML = `
-          <div class="dev-proposal-title" style="color:var(--success);">✅ تم النشر وتحديث ملف <code>${escapeHtml(data.file)}</code> بنجاح!</div>
-          <p class="dev-proposal-desc">تم حفظ التعديل في المستودع. اضغط على الزر أدناه لتطبيقه على شاشتك فوراً:</p>
+          <div class="dev-proposal-title" style="color:var(--success);">${statusText}</div>
+          <p class="dev-proposal-desc">تم حفظ التعديل في المستودع، وقد تم تطبيقه محلياً فوراً إذا كان من النوع HTML/CSS/Text. يمكنك أيضاً إعادة تحميل الصفحة إذا أردت تحديث كامل التطبيق.</p>
           <div class="dev-proposal-btns">
             <button class="dev-btn-action reload" onclick="location.reload()">
-              🔄 تطبيق التعديل الآن (Reload)
+              🔄 تحديث كامل الصفحة
             </button>
             <button class="dev-btn-action cancel" onclick="window._emergencyRollback()">
               ⏪ تراجع عن النسخة
@@ -810,19 +1028,46 @@
   }
 
   // ─── Typing Indicator ───
+  const THINKING_STAGES = ['Analyzing', 'Reasoning', 'Drafting', 'Refining'];
+  let thinkingTimer = null;
+
   function showTyping() {
     const container = $('chat-container');
     if (!container) return;
 
+    const existing = $('typing-indicator');
+    if (existing) existing.remove();
+
     const typing = document.createElement('div');
     typing.id = 'typing-indicator';
-    typing.className = 'message-row ai';
-    typing.innerHTML = `<div class="msg-content" style="color:var(--text-muted); font-size:14px;">✦ جاري التفكير...</div>`;
+    typing.className = 'message-row ai typing-indicator';
+    typing.innerHTML = `
+      <div class="typing-bubble">
+        <span class="typing-icon">✦</span>
+        <span id="thinking-word" class="thinking-word">Analyzing</span>
+      </div>
+    `;
     container.appendChild(typing);
+
+    const wordEl = document.getElementById('thinking-word');
+    if (!wordEl) return;
+
+    let stageIndex = 0;
+    const updateStage = () => {
+      wordEl.textContent = THINKING_STAGES[stageIndex % THINKING_STAGES.length];
+      stageIndex++;
+    };
+
+    updateStage();
+    thinkingTimer = setInterval(updateStage, 1200);
     scrollToBottom();
   }
 
   function hideTyping() {
+    if (thinkingTimer) {
+      clearInterval(thinkingTimer);
+      thinkingTimer = null;
+    }
     $('typing-indicator')?.remove();
   }
 
@@ -833,10 +1078,13 @@
 
     html = html.replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) => {
       const label = lang || 'code';
-      return `<div class="code-header-bar">
-        <span>${label}</span>
-        <button class="copy-btn" onclick="window._copyCode(this)">نسخ</button>
-      </div><pre><code>${code.trim()}</code></pre>`;
+      return `<div class="code-window">
+        <div class="code-header-bar">
+          <span>${label}</span>
+          <button class="copy-btn" onclick="window._copyCode(this)">نسخ</button>
+        </div>
+        <pre><code>${code.trim()}</code></pre>
+      </div>`;
     });
 
     html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
@@ -878,7 +1126,50 @@
   }
 
   // ─── Event Handlers ───
+  function runStartupHealthCheck() {
+    const panel = $('startup-check');
+    const status = $('startup-check-status');
+    if (!panel || !status) return;
+
+    const checks = {
+      app: !!document.getElementById('app'),
+      chat: !!document.getElementById('chat-area'),
+      input: !!document.getElementById('user-input'),
+      emergency: !!document.getElementById('btn-emergency-rollback') && !!document.getElementById('btn-emergency-fix'),
+      header: !!document.getElementById('header')
+    };
+
+    const failed = Object.entries(checks).filter(([, ok]) => !ok);
+
+    if (!failed.length) {
+      status.textContent = 'تم فحص الواجهة بنجاح — كل الأزرار الرئيسية متاحة والواجهة جاهزة.';
+      panel.classList.remove('hidden');
+      panel.classList.add('good');
+      panel.querySelector('.startup-check-btn.success').textContent = 'تم';
+      panel.querySelector('.startup-check-btn.danger').style.display = 'none';
+      setTimeout(() => panel.classList.add('hidden'), 1500);
+      return;
+    }
+
+    panel.classList.remove('hidden');
+    panel.classList.remove('good');
+    status.textContent = 'هناك مشكلة في تحميل الواجهة: بعض العناصر الأساسية غير متاحة. راجع الملفات أو أعد التحميل.';
+    panel.querySelector('.startup-check-btn.success').textContent = 'إغلاق';
+    panel.querySelector('.startup-check-btn.danger').style.display = 'block';
+    panel.querySelector('.startup-check-btn.danger').textContent = 'مراجعة وإصلاح';
+  }
+
   function setupEventListeners() {
+    const startupPanel = $('startup-check');
+    $('startup-check-ok')?.addEventListener('click', () => {
+      startupPanel?.classList.add('hidden');
+    });
+
+    $('startup-check-fix')?.addEventListener('click', () => {
+      startupPanel?.classList.add('hidden');
+      startDevChat('راجع آخر تعديل قام به التطبيق فقط وافحص سبب مشكلة الواجهة، ثم أصلحها دون المساس بملفات أخرى.');
+    });
+
     $('sidebar-toggle')?.addEventListener('click', () => {
       $('sidebar').classList.add('open');
       $('overlay').classList.add('active');
