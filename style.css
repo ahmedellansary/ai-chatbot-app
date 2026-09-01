@@ -1200,7 +1200,43 @@ body {
   color: var(--text-primary);
 }
 
-.dev-card-btn.secondary:hover {
-  background: var(--border-strong);
+.dev-proposal-card {
+  margin-top: 14px;
+  padding: 16px;
+  background: var(--bg-surface);
+  border: 1.5px solid var(--accent);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 4px 20px rgba(124,92,252,0.15);
+}
+
+.dev-card-desc {
+  font-size: 13px;
+  color: var(--text-primary);
+  line-height: 1.6;
+}
+
+.dev-card-btn.deploy {
+  background: linear-gradient(135deg, var(--accent), #5c3ff5);
+  color: white;
+  border-color: var(--accent);
+  font-weight: 600;
+}
+
+.dev-card-btn.deploy:hover {
+  background: var(--accent-hover);
+  transform: translateY(-1px);
+}
+
+.dev-card-btn.cancel {
+  background: var(--bg-elevated);
+  color: var(--text-muted);
+}
+
+.dev-card-btn.cancel:hover {
+  color: var(--error);
+  border-color: rgba(248,113,113,0.3);
 }
 
