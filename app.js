@@ -210,6 +210,18 @@
         const saved = localStorage.getItem('conversations');
         if (saved) {
           state.conversations = JSON.parse(saved);
+          if (Array.isArray(state.conversations)) {
+            state.conversations.forEach(conv => {
+              if (Array.isArray(conv.messages)) {
+                conv.messages = conv.messages.filter(m => {
+                  if (!m || !m.content) return false;
+                  if (m.content.includes('preResponseSanity') || m.content.includes('Output blocked by pre-response')) return false;
+                  return true;
+                });
+              }
+            });
+            this.save();
+          }
         }
       } catch (e) {
         console.warn('[State] Failed to load conversations', e);
@@ -240,6 +252,8 @@
         createdAt: new Date().toISOString()
       };
       state.conversations.unshift(conv);
+      state.activeConvId = id;
+      try { localStorage.setItem('activeConvId', id); } catch {}
       this.save();
       this.loadConversation(id);
       UIEngine.renderConversationsList();
@@ -251,6 +265,7 @@
       if (!conv) return;
 
       state.activeConvId = id;
+      try { localStorage.setItem('activeConvId', id); } catch {}
       state.currentMode = conv.mode || state.currentMode;
       this.save();
       MessageRenderer.renderAllMessages(conv.messages);
@@ -2006,7 +2021,9 @@
     if (state.conversations.length === 0) {
       UIEngine.showWelcomeScreen();
     } else {
-      StateController.loadConversation(state.conversations[0].id);
+      const lastActiveId = localStorage.getItem('activeConvId');
+      const targetConv = state.conversations.find(c => c.id === lastActiveId) || state.conversations[0];
+      StateController.loadConversation(targetConv.id);
     }
 
     UIEngine.updateHeaderUI();
