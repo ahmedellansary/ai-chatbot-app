@@ -670,7 +670,7 @@ html, body {
   resize: none;
   max-height: 150px;
   min-height: 26px;
-  direction: auto;
+  unicode-bidi: plaintext;
 }
 
 .chat-textarea::placeholder {
