@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0c0c0e">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="X.v1 Dev">
+
+  <title>X.v1 — Developer Portal & Codebase Studio</title>
+  <link rel="stylesheet" href="./dev_style.css?v=46">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛠️</text></svg>">
+</head>
+<body>
+<div id="app">
+
+  <!-- ═══ Developer Sidebar ═══ -->
+  <aside id="sidebar">
+    <div class="sidebar-header">
+      <div class="dev-brand">
+        <span style="font-size:18px;">🛠️</span>
+        <span>X.v1 Dev Studio</span>
+        <span class="dev-badge">Portal</span>
+      </div>
+      <button class="icon-btn" id="close-sidebar-btn" style="display:none;" aria-label="Close">✕</button>
+    </div>
+
+    <div class="sidebar-nav">
+      <button class="dev-btn-primary" id="btn-new-dev-chat">
+        <span>＋</span>
+        <span>جلسة تطوير جديدة (New Task)</span>
+      </button>
+    </div>
+
+    <!-- Quick Developer Action Chips -->
+    <div style="padding: 0 14px; display:flex; flex-direction:column; gap:6px; margin-bottom:8px;">
+      <div class="sidebar-section-title" style="padding:0 4px 4px;">أوامر تطوير سريعة (AI Shortcuts)</div>
+      <button class="sidebar-link-btn" onclick="window._sendQuickDevPrompt('🎨 قم بفحص واجهة وتصميم الشات style.css واقترح تحسينات بصرية عصرية وفخمة دون حذف أي ميزات قائمة.')">
+        <span>🎨</span>
+        <span>تحسين التصميم والواجهة</span>
+      </button>
+      <button class="sidebar-link-btn" onclick="window._sendQuickDevPrompt('⚡ افحص أداء التطبيق app.js وتدفق التوكنز والذاكرة واقترح تحسينات سرعة واستقرار.')">
+        <span>⚡</span>
+        <span>تحسين الأداء والكاش</span>
+      </button>
+      <button class="sidebar-link-btn" onclick="window._sendQuickDevPrompt('🛡️ قم بعمل مراجعة أمنية شاملة لملفات التطبيق index.html و app.js والتأكد من حماية الـ DOM والمفاتيح.')">
+        <span>🛡️</span>
+        <span>فحص الأمان والـ XSS</span>
+      </button>
+      <button class="sidebar-link-btn" onclick="window._runCodeDiagnostics()">
+        <span>🩺</span>
+        <span>فحص صحة الـ APIs والمستودع</span>
+      </button>
+    </div>
+
+    <div class="sidebar-section-title">سجل مهام التطوير (Dev Tasks)</div>
+    <div id="conversations-list"></div>
+
+    <div class="sidebar-footer">
+      <a href="./index.html" target="_blank" class="sidebar-link-btn" style="color:#6ee7b7; border-color:rgba(16,185,129,0.3);" title="افتح تطبيق الشات الرئيسي">
+        <span>🌐</span>
+        <span>معاينة تطبيق الشات المباشر</span>
+        <span style="margin-right:auto;">↗</span>
+      </a>
+      <button class="sidebar-link-btn" onclick="window._lockDevWorkspace()">
+        <span>🔒</span>
+        <span>قفل بيئة المطور (Lock)</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- ═══ Main Development Studio ═══ -->
+  <main id="main">
+
+    <!-- Top Header -->
+    <header id="header">
+      <div class="header-left">
+        <button class="icon-btn" id="sidebar-toggle" aria-label="Menu">
+          <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none">
+            <line x1="4" y1="7" x2="20" y2="7"></line>
+            <line x1="4" y1="17" x2="20" y2="17"></line>
+          </svg>
+        </button>
+        <div class="repo-status-badge">
+          <span class="status-dot"></span>
+          <span>ahmedellansary/ai-chatbot-app : main</span>
+        </div>
+      </div>
+
+      <div class="header-right">
+        <button class="icon-btn" onclick="window._openFilesModal()" title="استعراض وتعديل ملفات التطبيق مباشرة">
+          <span>📁</span>
+          <span>محرر الملفات المباشر</span>
+        </button>
+        <button class="icon-btn" onclick="window._openRollbackModal()" title="سجل النسخ والاسترجاع الطارئ">
+          <span>⏪</span>
+          <span>Rollback</span>
+        </button>
+        <button class="icon-btn" onclick="window._openDevSettingsModal()" title="إعدادات المطور وتعليمات النظام">
+          <span>⚙️</span>
+          <span>تعليمات المطور</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Chat Messages Feed -->
+    <div id="chat-area">
+      <div class="chat-container" id="chat-container"></div>
+    </div>
+
+    <!-- Floating Input Bar -->
+    <div id="input-section">
+      <div class="input-container">
+        <textarea
+          id="user-input"
+          class="dev-textarea"
+          placeholder="اكتب طلب التطوير أو التعديل لملفات التطبيق (مثال: عدل تصميم الشات، أضف ميزة جديدة، صلح خطأ معين...)"
+          rows="1"
+          autocomplete="off"
+        ></textarea>
+
+        <div class="input-bottom-bar">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:11.5px; color:var(--text-dim);">موديل المطور:</span>
+            <select id="dev-model-select" class="icon-btn" style="padding: 4px 10px; font-size:12px; background:#141419; color:#fbbf24; border-color:rgba(255,255,255,0.1);">
+              <option value="groq:openai/gpt-oss-120b">GPT OSS 120B (Groq - فائق السرعة 8K)</option>
+              <option value="openrouter:nvidia/nemotron-3-ultra-550b-a55b:free">Nemotron 550B (OpenRouter)</option>
+              <option value="groq:qwen/qwen3.8-27b">Qwen 27B (Groq)</option>
+            </select>
+          </div>
+
+          <button id="send-btn" class="dev-send-btn" disabled>
+            <span>إرسال وتجهيز التعديل</span>
+            <span>⚡</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ═══ File Explorer & Live Code Editor Modal ═══ -->
+  <div id="files-modal" class="custom-modal hidden">
+    <div class="custom-modal-card" style="max-width: 900px; height: 88vh;">
+      <div class="custom-modal-header">
+        <div class="modal-header-title">
+          <span>📁</span>
+          <span>مستعرض ومحرر ملفات المشروع المباشر (Direct Code Editor)</span>
+        </div>
+        <button class="icon-btn" onclick="window._closeFilesModal()">✕</button>
+      </div>
+      <div class="modal-body" style="flex:1; display:flex; flex-direction:column; gap:10px;">
+        <div style="display:flex; gap:6px; flex-wrap:wrap;">
+          <button class="icon-btn active" id="btn-file-index" onclick="window._selectFileForEditing('index.html')">📄 index.html</button>
+          <button class="icon-btn" id="btn-file-style" onclick="window._selectFileForEditing('style.css')">🎨 style.css</button>
+          <button class="icon-btn" id="btn-file-app" onclick="window._selectFileForEditing('app.js')">⚙️ app.js</button>
+          <button class="icon-btn" id="btn-file-prompt" onclick="window._selectFileForEditing('system_prompt.txt')">🧠 system_prompt.txt</button>
+          <button class="icon-btn" id="btn-file-sw" onclick="window._selectFileForEditing('sw.js')">⚡ sw.js</button>
+        </div>
+        
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
+          <span id="current-editing-filename" style="font-weight:700; color:#fbbf24; font-size:13px; font-family:var(--font-mono);">الملف الحالي: index.html</span>
+          <button class="dev-btn-action deploy" onclick="window._commitCurrentEditorFile()">
+            <span>💾</span>
+            <span>حفظ ونشر التعديل على GitHub فوراً</span>
+          </button>
+        </div>
+
+        <textarea
+          id="direct-code-editor"
+          class="dev-textarea"
+          style="flex:1; width:100%; min-height:360px; background:#08080b; border:1px solid var(--border-subtle); border-radius:10px; padding:12px; font-family:var(--font-mono); font-size:12.5px; line-height:1.5; color:#f3f4f6; resize:none;"
+          placeholder="اختر ملفاً لعرضه وتعديله هنا..."
+        ></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ Rollback History Modal ═══ -->
+  <div id="rollback-modal" class="custom-modal hidden">
+    <div class="custom-modal-card">
+      <div class="custom-modal-header">
+        <div class="modal-header-title">
+          <span>⏪</span>
+          <span>سجل النسخ والاسترجاع الطارئ (Git Rollback History)</span>
+        </div>
+        <button class="icon-btn" onclick="window._closeRollbackModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:13px; color:var(--text-muted);">اختر أي نسخة سابقة للتراجع الفوري واسترجاع ملفات التطبيق كما كانت:</p>
+        <div id="commits-list-container" style="display:flex; flex-direction:column; gap:8px; margin-top:8px;">
+          <div style="padding:16px; text-align:center; color:var(--text-dim);">جاري جلب سجل الـ Commits من GitHub...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ Dev Settings Modal ═══ -->
+  <div id="dev-settings-modal" class="custom-modal hidden">
+    <div class="custom-modal-card">
+      <div class="custom-modal-header">
+        <div class="modal-header-title">
+          <span>⚙️</span>
+          <span>تعليمات وإعدادات مهندس البرمجيات (Dev System Prompt)</span>
+        </div>
+        <button class="icon-btn" onclick="window._closeDevSettingsModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span style="font-weight:600; font-size:13.5px; color:#fff;">تعليمات المطور (Developer System Prompt):</span>
+          <button class="icon-btn" onclick="window._resetDefaultDevPrompt()" style="font-size:11.5px;">استعادة الافتراضي</button>
+        </div>
+        <p style="font-size:12.5px; color:var(--text-muted);">هذه التعليمات توجه ذكاء المهندس المطور لكيفية فحص وتعديل ملفات مشروع الشات.</p>
+        <textarea id="dev-prompt-textarea" class="dev-textarea" style="background:#0d0d10; border:1px solid var(--border-subtle); border-radius:10px; padding:12px; min-height:220px;" rows="9"></textarea>
+        <button class="dev-btn-primary" onclick="window._saveDevPrompt()" style="align-self:flex-start; margin-top:6px;">
+          <span>💾</span>
+          <span>حفظ تعليمات المطور</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ Full Screen App Lock Gate ═══ -->
+  <div id="app-lock-gate" class="app-lock-gate" aria-live="polite">
+    <div class="lock-gate-card">
+      <div class="lock-gate-star">🛠️</div>
+      <h2 class="lock-gate-title">X.v1 Developer Portal</h2>
+      <p class="lock-gate-sub">أدخل كلمة سر المطور لفتح بيئة التحكم وتعديل الملفات.</p>
+
+      <form id="lock-gate-form" onsubmit="event.preventDefault()" style="width:100%; display:flex; flex-direction:column; gap:10px;">
+        <input
+          type="password"
+          id="gate-pin-input"
+          class="lock-gate-input"
+          placeholder="أدخل كلمة السر..."
+          maxlength="32"
+          autocomplete="current-password"
+        >
+        <button type="submit" id="gate-unlock-btn" class="lock-gate-btn">
+          <span>فتح بيئة المطور</span>
+          <span>🔓</span>
+        </button>
+      </form>
+
+      <div style="font-size:11px; color:var(--text-dim); margin-top:6px;">🔐 محمية بتشفير Salted SHA-256</div>
+    </div>
+  </div>
+
+  <div id="toast-container"></div>
+</div>
+
+<script src="./config.js?v=46"></script>
+<script src="./dev.js?v=46"></script>
+</body>
+</html>
