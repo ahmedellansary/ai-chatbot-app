@@ -66,6 +66,24 @@ html, body {
   position: relative;
 }
 
+/* ─── Backdrop Overlay ─── */
+#overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 110;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+#overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
 /* ─── Sidebar ─── */
 #sidebar {
   width: 300px;
@@ -75,7 +93,7 @@ html, body {
   flex-direction: column;
   flex-shrink: 0;
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  z-index: 50;
+  z-index: 120;
 }
 
 .sidebar-header {
