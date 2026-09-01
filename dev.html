@@ -91,7 +91,7 @@
         </button>
         <div class="repo-status-badge">
           <span class="status-dot"></span>
-          <span class="repo-badge-text">X.v1 Dev</span>
+          <span class="repo-badge-text">Dev</span>
         </div>
       </div>
 
@@ -128,45 +128,57 @@
       <div class="chat-container" id="chat-container"></div>
     </div>
 
-    <!-- Floating Input Bar (مطابق لتصميم الشات الرئيسي الفخم) -->
+    <!-- Floating Input Bar (مطابق 100% للشات بوت) -->
     <div id="input-section">
       <div class="input-container">
-        <!-- Attachment Previews -->
-        <div id="attachment-preview-container" class="attachment-preview-bar hidden"></div>
+        <!-- Attachment Previews (مطابق للشات بوت) -->
+        <div id="attachment-preview-container" class="attachment-previews hidden"></div>
 
+        <!-- Textarea (مطابق للشات بوت) -->
         <textarea
           id="user-input"
           class="chat-textarea"
-          placeholder="اكتب طلب التطوير أو التعديل لملفات التطبيق..."
+          placeholder="Reply to X.v1 Dev..."
           rows="1"
           autocomplete="off"
         ></textarea>
 
+        <!-- Bottom Controls Row inside Container -->
         <div class="input-bottom-bar">
+          <!-- Left Controls (Plus & Model Pill) -->
           <div class="input-bottom-left">
-            <input type="file" id="attach-input" multiple style="display:none;" accept="image/*,.js,.css,.html,.txt,.json,.py,.md">
-            <button type="button" class="claude-plus-btn" id="attach-btn" title="إرفاق ملفات أو لقطات شاشة (Attach Files/Screenshots)">
+            <!-- Plus / Attach Button -->
+            <button class="claude-plus-btn" id="attach-btn" title="Attach files or photos" aria-label="Attach">
               <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round">
                 <line x1="12" y1="5" x2="12" y2="19"></line>
                 <line x1="5" y1="12" x2="19" y2="12"></line>
               </svg>
             </button>
 
-            <!-- Modern Simple Agent Selector Pill Button -->
-            <button type="button" class="claude-model-pill" id="agent-selector-pill-btn" onclick="window._openAgentModal()" title="تغيير مهندس البرمجيات / الموديل">
-              <span id="selected-agent-icon" style="font-size:14px;">👨‍💻</span>
-              <span id="selected-agent-label">Qwen 2.5 Coder 32B</span>
-              <svg viewBox="0 0 12 12" width="10" height="10" fill="currentColor"><path d="M2 4l4 4 4-4z"/></svg>
-            </button>
+            <!-- Model Selector Pill & Popup Dropdown (مطابق للشات بوت) -->
+            <div style="position: relative;">
+              <button class="claude-model-pill" id="model-pill-trigger" title="Select Model">
+                <span id="selected-agent-icon" style="font-size: 13px;">👨‍💻</span>
+                <span id="selected-agent-label">Qwen 2.5 Coder 32B</span>
+                <svg viewBox="0 0 12 12" width="10" height="10" fill="currentColor"><path d="M2 4l4 4 4-4z"/></svg>
+              </button>
+
+              <div class="model-dropdown" id="model-dropdown-menu">
+                <!-- Rendered dynamically by DevUIEngine -->
+              </div>
+            </div>
           </div>
 
+          <!-- Right Controls (Send Button with ⚡) -->
           <div class="input-bottom-right">
-            <!-- Electric Send Button (علامة الكهرباء ⚡) -->
-            <button id="send-btn" class="claude-send-btn dev-electric-send-btn" aria-label="Send" title="إرسال طلب التطوير" disabled>
-              <span class="send-btn-icon" style="font-size:17px; line-height:1;">⚡</span>
+            <button id="send-btn" class="claude-send-btn dev-send-electric" aria-label="Send" title="Send request" disabled>
+              <span style="font-size: 17px; line-height: 1; display: flex; align-items: center; justify-content: center;">⚡</span>
             </button>
           </div>
         </div>
+
+        <!-- Hidden Native File Input -->
+        <input type="file" id="attach-input" multiple accept="image/*,text/*,.pdf,.txt,.js,.py,.html,.css,.json,.md,.csv" style="display: none;">
       </div>
     </div>
 
