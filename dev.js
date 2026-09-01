@@ -769,6 +769,7 @@
   const DevUIEngine = {
     init() {
       this.setupEventListeners();
+      this.setupModelDropdown();
       this.setupPullToRefresh();
       DevState.load();
       this.loadDevPrompt();
@@ -780,6 +781,21 @@
       } else {
         DevState.newConversation();
       }
+    },
+
+    updateAgentPillDisplay() {
+      const agent = DevState.getSelectedAgent();
+      if (!agent) return;
+
+      const headerName = $('header-agent-name');
+      const headerIcon = $('header-agent-icon');
+      if (headerName) headerName.textContent = agent.name;
+      if (headerIcon) headerIcon.textContent = agent.icon || '👨‍💻';
+
+      const pillLabel = $('selected-agent-label');
+      const pillIcon = $('selected-agent-icon');
+      if (pillLabel) pillLabel.textContent = agent.name;
+      if (pillIcon) pillIcon.textContent = agent.icon || '👨‍💻';
     },
 
     setupPullToRefresh() {
@@ -1071,22 +1087,29 @@
       if (!pill || !menu) return;
 
       const renderMenu = () => {
-        menu.innerHTML = DEV_AGENTS.map(agent => {
-          const isActive = agent.id === state.selectedAgentId;
+        const activeAgent = DevState.getSelectedAgent();
+        menu.innerHTML = `
+          <div style="padding:6px 10px; font-size:11px; font-weight:700; color:var(--text-dim); display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.06); margin-bottom:4px;">
+            <span>🤖 اختر مهندس / نموذج الذكاء الاصطناعي</span>
+            <button type="button" onclick="event.stopPropagation(); window._openAgentModal();" style="background:transparent; border:none; color:#fbbf24; cursor:pointer; font-size:11px; font-weight:600;">🔍 عرض الكل</button>
+          </div>
+        ` + DEV_AGENTS.map(agent => {
+          const isActive = agent.id === activeAgent.id;
           const providerText = agent.provider === 'groq' ? '⚡ Groq Fast' : '🌐 OpenRouter';
           return `
             <button type="button" class="dropdown-opt ${isActive ? 'active' : ''}" onclick="window._selectAgentFromDropdown('${agent.id}')">
-              <div class="opt-title">
+              <div class="opt-title" style="display:flex; align-items:center; justify-content:space-between; width:100%;">
                 <span>${agent.icon || '🧠'} ${this.escapeHtml(agent.name)}</span>
-                ${isActive ? '<span style="color:#fbbf24; font-size:12px;">✓</span>' : ''}
+                ${isActive ? '<span style="color:#fbbf24; font-size:12px; font-weight:bold;">✓</span>' : ''}
               </div>
-              <div class="opt-desc">${this.escapeHtml(agent.desc)} · ${agent.params} (${providerText})</div>
+              <div class="opt-desc">${this.escapeHtml(agent.desc || '')} · <span style="color:#fbbf24;">${agent.params || ''}</span> (${providerText})</div>
             </button>
           `;
         }).join('');
       };
 
       pill.onclick = (e) => {
+        e.preventDefault();
         e.stopPropagation();
         renderMenu();
         menu.classList.toggle('show');
@@ -1712,15 +1735,13 @@
     state.activeAgentId = agent.id;
     localStorage.setItem('active_dev_agent_id', agent.id);
 
-    // Update Header UI
-    const nameEl = $('header-agent-name');
-    const iconEl = $('header-agent-icon');
-    if (nameEl) nameEl.textContent = agent.name;
-    if (iconEl) iconEl.textContent = agent.icon || '👨‍💻';
-
+    DevUIEngine.updateAgentPillDisplay();
+    $('model-dropdown-menu')?.classList.remove('show');
     window._closeAgentModal();
     DevUIEngine.showToast(`🎯 تم اختيار المهندس: ${agent.name}`, 'success');
   };
+
+  window._selectAgentFromDropdown = (id) => window._selectAgent(id);
 
   window._openRollbackModal = async function() {
     const modal = $('rollback-modal');
