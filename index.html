@@ -2,30 +2,150 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <title>ChatBot PWA</title>
-  <link rel="stylesheet" href="style.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#131314">
+  <meta name="description" content="نيترون — المساعد الذكي المتقدم">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="نيترون">
+
+  <title>نيترون</title>
+  <link rel="manifest" href="./manifest.json?v=20260901">
+  <link rel="stylesheet" href="./style.css?v=20260901">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✦</text></svg>">
 </head>
 <body>
-  <div id="app">
-    <!-- نافذة الدردشة -->
-    <div id="chat-window"></div>
+<div id="app">
 
-    <!-- شريط الإدخال (يظهر في وضع الشات أو وضع المطور) -->
-    <div id="input-bar">
-      <!-- زر رفع ملفات -->
-      <input type="file" id="file-input" multiple accept="image/*,video/*,audio/*">
-      <label for="file-input" id="file-input-label" title="رفع ملفات">
-        📎
-      </label>
+  <!-- ═══ Drawer Sidebar (القائمة الجانبية) ═══ -->
+  <aside id="sidebar">
+    <div class="sidebar-header">
+      <div class="brand-logo">
+        <div class="brand-icon">✦</div>
+        <span>نيترون</span>
+      </div>
+      <button class="icon-btn" id="close-sidebar-btn" aria-label="إغلاق">✕</button>
+    </div>
 
-      <!-- حقل النص -->
-      <input type="text" id="message-input" placeholder="اكتب رسالتك...">
+    <!-- Main Navigation Actions -->
+    <div class="sidebar-nav">
+      <button class="nav-btn primary" id="btn-new-chat">
+        <span>＋</span>
+        <span>محادثة جديدة</span>
+      </button>
+      <button class="nav-btn dev" id="btn-dev-chat">
+        <span>🛠️</span>
+        <span>شات المطور (تعديل التطبيق)</span>
+      </button>
+    </div>
 
-      <!-- زر الإرسال -->
-      <button id="send-button">إرسال</button>
+    <div class="sidebar-section-title">المحادثات السابقة</div>
+    <div id="conversations-list"></div>
+
+    <div class="sidebar-footer">
+      <button class="footer-btn" id="install-btn" style="display:none;">
+        <span>📲</span>
+        <span>تثبيت التطبيق على الموبايل</span>
+      </button>
+      <button class="footer-btn" onclick="localStorage.clear(); location.reload()">
+        <span>🗑️</span>
+        <span>مسح السجل والكاش</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- ═══ Main View (الواجهة الرئيسية) ═══ -->
+  <div id="emergency-floating" class="emergency-floating" aria-live="polite">
+    <div class="emergency-floating-header">🚨 تحكم الطوارئ</div>
+    <div class="emergency-floating-actions">
+      <button class="emergency-btn rollback" id="btn-emergency-rollback">
+        <span>⏪</span>
+        <span>استرجاع فوري</span>
+      </button>
+      <button class="emergency-btn fix" id="btn-emergency-fix">
+        <span>🔍</span>
+        <span>مراجعة وإصلاح</span>
+      </button>
     </div>
   </div>
 
-  <script src="app.js"></script>
+  <main id="main">
+
+    <!-- Top Header -->
+    <header id="header">
+      <button class="icon-btn" id="sidebar-toggle" aria-label="القائمة">☰</button>
+
+      <!-- Center Model Pill Dropdown -->
+      <div style="position: relative;">
+        <button class="model-pill" id="model-pill-trigger">
+          <span class="status-dot"></span>
+          <span id="header-title-text">نيترون · MID</span>
+          <span style="font-size: 9px; opacity: 0.6;">▼</span>
+        </button>
+
+        <div class="model-dropdown" id="model-dropdown-menu">
+          <button class="dropdown-opt" data-mode="HIGH">
+            <div class="opt-title">⚡ وضع HIGH (أقوى الموديلز)</div>
+            <div class="opt-desc">Nemotron Ultra 550B + MiniMax M3</div>
+          </button>
+          <button class="dropdown-opt active" data-mode="MID">
+            <div class="opt-title">⚖️ وضع MID (متوازن وذكي)</div>
+            <div class="opt-desc">Nemotron 120B + GPT OSS 120B</div>
+          </button>
+          <button class="dropdown-opt" data-mode="FAST">
+            <div class="opt-title">🚀 وضع FAST (الأسرع استجابة)</div>
+            <div class="opt-desc">Groq Compound + Qwen 3.6 27B</div>
+          </button>
+        </div>
+      </div>
+
+      <button class="icon-btn" id="header-new-chat-btn" title="محادثة جديدة">＋</button>
+    </header>
+
+    <!-- Chat Messages Feed -->
+    <div id="chat-area">
+      <div class="chat-container" id="chat-container"></div>
+    </div>
+
+    <!-- Floating Input Bar (Claude & ChatGPT Style) -->
+    <div id="input-section">
+      <div class="input-container">
+        <textarea
+          id="user-input"
+          class="chat-textarea"
+          placeholder="اكتب رسالتك أو اطلب تعديلاً..."
+          rows="1"
+          autocomplete="off"
+        ></textarea>
+        <div class="input-actions-bar">
+          <div class="input-left-info" id="input-mode-indicator">
+            <span class="mode-tag">الشات الطبيعي</span>
+          </div>
+          <button id="send-btn" class="send-btn" disabled aria-label="إرسال">↑</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <div id="startup-check" class="startup-check hidden" aria-live="polite">
+    <div class="startup-check-header">🔎 تحقق الواجهة</div>
+    <div class="startup-check-status" id="startup-check-status">جاري فحص الواجهة...</div>
+    <div class="startup-check-actions">
+      <button class="startup-check-btn success" id="startup-check-ok">موافق</button>
+      <button class="startup-check-btn danger" id="startup-check-fix">مراجعة وإصلاح</button>
+    </div>
+  </div>
+
+  <!-- Overlay -->
+  <div id="overlay"></div>
+
+  <!-- Toast Container -->
+  <div id="toast-container"></div>
+
+</div>
+
+<!-- Single Unified Application Bundle (No external imports that could fail) -->
+<script src="./app.js?v=20260901"></script>
 </body>
 </html>
