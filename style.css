@@ -655,26 +655,39 @@ html, body {
   gap: 6px;
 }
 
-/* ─── Attachment Previews & Button ─── */
+/* ─── Attachment Previews & Button (Modern Sleek Style) ─── */
 .attach-btn {
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
-  background: var(--bg-card);
-  border: 1px solid var(--border-subtle);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   color: var(--text-muted);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
-  transition: all 0.15s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
 }
 
 .attach-btn:hover {
-  background: var(--bg-card-hover);
-  color: var(--text-main);
-  border-color: var(--border-focus);
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: scale(1.06);
+}
+
+.attach-btn:active {
+  transform: scale(0.95);
+}
+
+.attach-svg {
+  transition: transform 0.2s ease;
+}
+
+.attach-btn:hover .attach-svg {
+  stroke: #fff;
 }
 
 .attachment-previews {
