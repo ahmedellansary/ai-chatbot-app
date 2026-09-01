@@ -1548,18 +1548,22 @@ if (typeof $$ === 'undefined') {
     const voiceBtn = $('voice-mode-btn');
 
     function updateSendBtnState() {
-      const hasText = !!input.value.trim();
+      const hasText = input ? input.value.trim().length > 0 : false;
       const hasAtt = state.attachments && state.attachments.length > 0;
       const canSend = (hasText || hasAtt) && !state.isStreaming;
 
       if (sendBtn) {
         if (canSend) {
           sendBtn.classList.remove('disabled');
+          sendBtn.removeAttribute('disabled');
         } else {
           sendBtn.classList.add('disabled');
+          sendBtn.setAttribute('disabled', 'true');
         }
       }
     }
+
+    updateSendBtnState();
 
     function updateInputDirection() {
       const val = input.value || '';
