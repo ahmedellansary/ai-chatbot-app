@@ -1449,11 +1449,26 @@ if (typeof $$ === 'undefined') {
         return;
       }
 
+      // Skills Menu Trigger (✨)
+      if (e.target.closest('#skills-menu-trigger')) {
+        e.preventDefault();
+        e.stopPropagation();
+        $('skills-vertical-menu')?.classList.toggle('show');
+        $('model-dropdown-menu')?.classList.remove('show');
+        return;
+      }
+
+      // Close skills menu when clicked outside
+      if (!e.target.closest('#skills-vertical-menu')) {
+        $('skills-vertical-menu')?.classList.remove('show');
+      }
+
       // Model Pill Trigger
       if (e.target.closest('#model-pill-trigger')) {
         e.preventDefault();
         e.stopPropagation();
         $('model-dropdown-menu')?.classList.toggle('show');
+        $('skills-vertical-menu')?.classList.remove('show');
         return;
       }
 
@@ -1469,7 +1484,7 @@ if (typeof $$ === 'undefined') {
           conv.mode = state.currentMode;
           saveConversations();
         }
-        showToast(`تم التبديل لوضع ${state.currentMode}`, 'info');
+        showToast(`Switched to ${state.currentMode} mode`, 'info');
         return;
       }
 
@@ -1719,13 +1734,12 @@ if (typeof $$ === 'undefined') {
     const indicator = $('pull-refresh-indicator');
     if (!indicator) return;
 
-    const icon = indicator.querySelector('.pull-icon');
-    const text = indicator.querySelector('.pull-text');
+    const spinner = indicator.querySelector('.pull-refresh-spinner');
 
     let startY = 0;
     let currentPull = 0;
     let isTracking = false;
-    const THRESHOLD = 55;
+    const THRESHOLD = 50;
 
     document.addEventListener('touchstart', (e) => {
       const chatArea = $('chat-area');
@@ -1751,19 +1765,14 @@ if (typeof $$ === 'undefined') {
 
         if (e.cancelable) e.preventDefault();
 
-        currentPull = Math.min(diff * 0.5, 90);
+        currentPull = Math.min(diff * 0.5, 75);
         indicator.classList.add('visible');
         indicator.style.opacity = '1';
-        indicator.style.transform = `translate(-50%, ${currentPull - 40}px)`;
+        indicator.style.transform = `translate(-50%, ${currentPull - 35}px) scale(1)`;
 
-        if (diff >= THRESHOLD) {
-          if (icon) icon.textContent = '🔄';
-          if (text) text.textContent = 'Release to refresh';
-          indicator.style.color = 'var(--accent-color)';
-        } else {
-          if (icon) icon.textContent = '↓';
-          if (text) text.textContent = 'Pull to refresh';
-          indicator.style.color = '#fff';
+        if (spinner) {
+          const deg = (diff / THRESHOLD) * 280;
+          spinner.style.transform = `rotate(${deg}deg)`;
         }
       } else {
         indicator.classList.remove('visible');
@@ -1777,17 +1786,16 @@ if (typeof $$ === 'undefined') {
 
       if (currentPull >= THRESHOLD * 0.35) {
         indicator.classList.add('refreshing');
-        indicator.style.transform = 'translate(-50%, 20px)';
-        if (icon) icon.textContent = '🔄';
-        if (text) text.textContent = 'Refreshing...';
+        indicator.style.transform = 'translate(-50%, 18px) scale(1)';
 
         setTimeout(() => {
           window.location.reload();
-        }, 250);
+        }, 220);
       } else {
         indicator.classList.remove('visible');
         indicator.style.opacity = '0';
-        indicator.style.transform = 'translate(-50%, -100px)';
+        indicator.style.transform = 'translate(-50%, -80px) scale(0.85)';
+        if (spinner) spinner.style.transform = '';
       }
       currentPull = 0;
     }, { passive: true });
@@ -1801,23 +1809,23 @@ if (typeof $$ === 'undefined') {
   window._triggerSkill = (skill) => {
     $('sidebar')?.classList.remove('open');
     $('overlay')?.classList.remove('active');
+    $('skills-vertical-menu')?.classList.remove('show');
     const input = $('user-input');
-    const sendBtn = $('send-btn');
     if (!input) return;
 
     if (skill === 'roundtable') {
-      input.value = '👥 طاولة النقاش: [اكتب موضوعك هنا ليناقشه 3 وكلاء أذكياء بعمق]';
+      input.value = '👥 Roundtable Discussion: [Write your topic here for 3 AI agents to analyze in-depth]';
     } else if (skill === 'mindmap') {
-      input.value = '🗺️ أنشئ خريطة ذهنية تفاعلية شاملة لموضوع: [اكتب موضوعك]';
+      input.value = '🗺️ Create a detailed Mind Map visual outline for: [Write topic]';
     } else if (skill === 'slides') {
-      input.value = '📊 أنشئ عرض تقديمي كامل وشرائح تفاعلية حول: [اكتب موضوعك]';
+      input.value = '📊 Build an interactive Slide Deck presentation about: [Write topic]';
     } else if (skill === 'sandbox') {
-      input.value = '🧪 أنشئ كود تفاعلي حي (HTML/CSS/JS) أو محاكاة قابلة للتشغيل باللمس لـ: [اكتب فكرتك]';
+      input.value = '🧪 Generate an interactive runnable HTML/CSS/JS simulation for: [Write idea]';
     }
 
     input.focus();
     input.dispatchEvent(new Event('input'));
-    showToast(`تم تفعيل وضع ${skill}`, 'info');
+    showToast(`Activated ${skill} mode`, 'info');
   };
 
   // ─── Live Sandbox Runner ───
