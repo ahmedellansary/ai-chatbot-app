@@ -1033,7 +1033,7 @@
 
         if (MessageRenderer._thinkingTimer) clearTimeout(MessageRenderer._thinkingTimer);
         MessageRenderer._thinkingTimer = setTimeout(() => {
-          MessageRenderer.setThinkingStage(`Reasoning & thinking...`);
+          MessageRenderer.setThinkingStage('Reasoning...');
         }, 550);
       };
 
