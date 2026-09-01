@@ -447,6 +447,30 @@ body {
   width: 100%;
 }
 
+/* AI Message Model Attribution Tag (اسم الموديل المطور) */
+.msg-model-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #fbbf24;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.22);
+  padding: 3px 9px;
+  border-radius: 7px;
+  width: fit-content;
+  margin-bottom: 2px;
+  font-family: var(--font-sans);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  animation: fadeIn 0.2s ease;
+}
+
+.msg-model-tag .model-tag-name {
+  color: #fff;
+  font-weight: 600;
+}
+
 .message-row.user {
   align-self: flex-end;
   align-items: flex-end;
