@@ -399,7 +399,7 @@
           messages,
           stream: true,
           temperature: 0.7,
-          max_tokens: 2048
+          max_tokens: 8192
         }),
         signal
       });
@@ -423,7 +423,7 @@
           messages,
           stream: true,
           temperature: 0.7,
-          max_tokens: 2048
+          max_tokens: 8192
         }),
         signal
       });
@@ -1993,11 +1993,17 @@
     }
   };
 
-  window._openSettingsModal = function() {
+  window._openSettingsModal = async function() {
     const modal = $('settings-modal');
     const textarea = $('settings-system-prompt');
     if (!modal) return;
     if (textarea) {
+      if (!state.systemPrompt) {
+        try {
+          const res = await fetch('./system_prompt.txt?t=' + Date.now());
+          if (res.ok) state.systemPrompt = await res.text();
+        } catch {}
+      }
       textarea.value = state.systemPrompt || localStorage.getItem('system_prompt') || '';
     }
     modal.classList.remove('hidden');
@@ -2018,6 +2024,7 @@
       return;
     }
     state.systemPrompt = val;
+    localStorage.setItem('custom_system_prompt', val);
     localStorage.setItem('system_prompt', val);
     MessageRenderer.showToast('✅ تم حفظ تعليمات النظام بنجاح!', 'success');
     window._closeSettingsModal();
@@ -2029,6 +2036,7 @@
       if (res.ok) {
         const text = await res.text();
         state.systemPrompt = text;
+        localStorage.removeItem('custom_system_prompt');
         localStorage.setItem('system_prompt', text);
         const textarea = $('settings-system-prompt');
         if (textarea) textarea.value = text;
@@ -2060,9 +2068,9 @@
   }
 
   async function loadSystemPrompt() {
-    const local = localStorage.getItem('system_prompt');
-    if (local) {
-      state.systemPrompt = local;
+    const customPrompt = localStorage.getItem('custom_system_prompt');
+    if (customPrompt) {
+      state.systemPrompt = customPrompt;
       return;
     }
     try {
@@ -2071,7 +2079,9 @@
         state.systemPrompt = await res.text();
         localStorage.setItem('system_prompt', state.systemPrompt);
       }
-    } catch {}
+    } catch {
+      state.systemPrompt = localStorage.getItem('system_prompt') || '';
+    }
   }
 
   async function loadModelCatalog() {
