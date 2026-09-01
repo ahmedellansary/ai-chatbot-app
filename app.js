@@ -1548,36 +1548,44 @@ if (typeof $$ === 'undefined') {
     const voiceBtn = $('voice-mode-btn');
 
     function updateSendBtnState() {
-      const hasText = input ? input.value.trim().length > 0 : false;
-      const hasAtt = state.attachments && state.attachments.length > 0;
+      const inputEl = $('user-input');
+      const btn = $('send-btn');
+      if (!btn) return;
+      const textVal = inputEl ? inputEl.value : '';
+      const hasText = textVal.trim().length > 0;
+      const hasAtt = Array.isArray(state.attachments) && state.attachments.length > 0;
       const canSend = (hasText || hasAtt) && !state.isStreaming;
 
-      if (sendBtn) {
-        if (canSend) {
-          sendBtn.classList.remove('disabled');
-          sendBtn.removeAttribute('disabled');
+      if (canSend) {
+        btn.classList.add('active');
+        btn.classList.remove('disabled');
+        btn.removeAttribute('disabled');
+      } else {
+        btn.classList.remove('active');
+        btn.classList.add('disabled');
+        btn.setAttribute('disabled', 'true');
+      }
+    }
+
+    window._updateSendBtn = updateSendBtnState;
+    updateSendBtnState();
+
+    function updateInputDirection() {
+      const val = input ? input.value : '';
+      const hasArabic = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(val);
+      if (input) {
+        if (hasArabic) {
+          input.dir = 'rtl';
+          input.style.textAlign = 'right';
         } else {
-          sendBtn.classList.add('disabled');
-          sendBtn.setAttribute('disabled', 'true');
+          input.dir = 'ltr';
+          input.style.textAlign = 'left';
         }
       }
     }
 
-    updateSendBtnState();
-
-    function updateInputDirection() {
-      const val = input.value || '';
-      const hasArabic = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(val);
-      if (hasArabic) {
-        input.dir = 'rtl';
-        input.style.textAlign = 'right';
-      } else {
-        input.dir = 'ltr';
-        input.style.textAlign = 'left';
-      }
-    }
-
     function adjustTextareaHeight() {
+      if (!input) return;
       input.style.height = 'auto';
       const scrollH = input.scrollHeight;
       const targetH = Math.min(Math.max(scrollH, 26), 190);
@@ -1585,10 +1593,14 @@ if (typeof $$ === 'undefined') {
       input.style.overflowY = scrollH > 190 ? 'auto' : 'hidden';
     }
 
-    input.addEventListener('input', () => {
-      adjustTextareaHeight();
-      updateInputDirection();
-      updateSendBtnState();
+    ['input', 'keyup', 'change', 'paste', 'cut'].forEach(evtName => {
+      input?.addEventListener(evtName, () => {
+        setTimeout(() => {
+          adjustTextareaHeight();
+          updateInputDirection();
+          updateSendBtnState();
+        }, 0);
+      });
     });
 
     input.addEventListener('keydown', e => {
