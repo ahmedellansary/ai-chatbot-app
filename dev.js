@@ -248,7 +248,7 @@
       return { sha: data.sha, content };
     },
 
-    async commitFile(path, content, message) {
+    async commitFile(path, content, message, skipCacheBump = false) {
       let sha = null;
       try {
         const existing = await this.getFile(path);
@@ -276,7 +276,34 @@
         const err = await res.json().catch(() => ({}));
         throw new Error(err.message || `HTTP ${res.status}: Commit failed`);
       }
-      return await res.json();
+
+      const result = await res.json();
+
+      // Automatically bump Service Worker cache version if modifying production assets
+      if (!skipCacheBump && path !== 'sw.js') {
+        this.bumpServiceWorkerVersion().catch(() => {});
+      }
+
+      return result;
+    },
+
+    async bumpServiceWorkerVersion() {
+      try {
+        const swData = await this.getFile('sw.js');
+        let swContent = swData.content;
+        const match = swContent.match(/const\s+CACHE_NAME\s*=\s*['"]xv1-chat-v(\d+)['"]/);
+        if (match) {
+          const nextVer = parseInt(match[1], 10) + 1;
+          const newSwContent = swContent.replace(
+            /const\s+CACHE_NAME\s*=\s*['"]xv1-chat-v\d+['"]/,
+            `const CACHE_NAME = 'xv1-chat-v${nextVer}'`
+          );
+          await this.commitFile('sw.js', newSwContent, `⚡ Auto-bump cache to v${nextVer} for instant deployment`, true);
+          console.log(`[Cache Sync] Auto-bumped sw.js cache to v${nextVer}`);
+        }
+      } catch (err) {
+        console.warn('[Cache Sync] Could not auto-bump sw.js:', err);
+      }
     },
 
     async listCommits(perPage = 10) {
