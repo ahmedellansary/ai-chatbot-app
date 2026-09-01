@@ -2,21 +2,32 @@
 //  AI CHAT — Model Router with Intelligent Fallback
 // ═══════════════════════════════════════════════════
 
-const _k1 = ['sk-or-v1-', 'b82e11595ed064e7', '51bfff2b251a4c54', 'ca0da9bc779786cd', 'baf933e916398e03'].join('');
-const _k2 = [
-  ['gsk_6ULPilUmj8gf0mbu2ZlX', 'WGdyb3FYkqImKQ7lZPdjGIBERqBKrDhX'].join(''),
-  ['gsk_ECkO3AaJ8sBRAnd7gLMN', 'WGdyb3FYTMBNYK0SxQU6W1CSXEx23koB'].join(''),
-  ['gsk_QiThrmueUOxgPM9xcIwn', 'WGdyb3FYVF37eSLhIgG9RYTXakzxc16l'].join(''),
-  ['gsk_dVkSeAKGE0wQRxqy7OWX', 'WGdyb3FY0vHBuaJxlmnjbaPytbsl4dn8'].join(''),
-  ['gsk_u5bCiNIx7oQaS2XzqiAG', 'WGdyb3FYE6s7QoY0qntIUhBU4D13AhjZ'].join('')
-].join(',');
+function readConfigValue(key, fallback = '') {
+  try {
+    const runtimeConfig = (window && window.__APP_CONFIG__) || {};
+    const runtimeValue = runtimeConfig[key];
+    if (runtimeValue !== undefined && runtimeValue !== null && String(runtimeValue).trim()) {
+      return String(runtimeValue).trim();
+    }
 
-const getOpenRouterKey = () => localStorage.getItem('OPENROUTER_API_KEY') || _k1;
-const getGroqKeys = () => (localStorage.getItem('GROQ_API_KEY') || _k2).split(',').filter(Boolean);
+    const localValue = localStorage.getItem(key);
+    if (localValue !== undefined && localValue !== null && localValue.trim()) {
+      return localValue.trim();
+    }
+
+    return fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+const getOpenRouterKey = () => readConfigValue('OPENROUTER_API_KEY');
+const getGroqKeys = () => readConfigValue('GROQ_API_KEY', '').split(',').map(value => value.trim()).filter(Boolean);
 
 let groqKeyIndex = 0;
 const getGroqKey = () => {
   const keys = getGroqKeys();
+  if (!keys.length) return '';
   return keys[groqKeyIndex % keys.length];
 };
 const rotateGroqKey = () => { groqKeyIndex++; };
@@ -45,14 +56,20 @@ const DEV_MODELS = [
 ];
 
 async function callOpenRouter(model, messages, signal) {
+  const openRouterKey = getOpenRouterKey();
+  const headers = {
+    'Content-Type': 'application/json',
+    'HTTP-Referer': window.location.origin,
+    'X-Title': 'AI Chat'
+  };
+
+  if (openRouterKey) {
+    headers.Authorization = `Bearer ${openRouterKey}`;
+  }
+
   const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${getOpenRouterKey()}`,
-      'Content-Type': 'application/json',
-      'HTTP-Referer': window.location.origin,
-      'X-Title': 'AI Chat'
-    },
+    headers,
     body: JSON.stringify({
       model: model.id,
       messages,
@@ -71,12 +88,16 @@ async function callOpenRouter(model, messages, signal) {
 }
 
 async function callGroq(model, messages, signal) {
+  const groqKey = getGroqKey();
+  const headers = { 'Content-Type': 'application/json' };
+
+  if (groqKey) {
+    headers.Authorization = `Bearer ${groqKey}`;
+  }
+
   const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${getGroqKey()}`,
-      'Content-Type': 'application/json'
-    },
+    headers,
     body: JSON.stringify({
       model: model.id,
       messages,
@@ -133,6 +154,10 @@ async function* readStream(response) {
 async function* chatWithFallback(tier, messages, signal, onModelChange) {
   const models = MODELS[tier];
   let usedFallback = false;
+
+  if (!models || !models.length) {
+    throw new Error(`No model tier configured for ${tier}`);
+  }
 
   for (let i = 0; i < models.length; i++) {
     const model = models[i];
