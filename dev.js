@@ -172,7 +172,6 @@
       if (!password) return false;
       const customPin = localStorage.getItem('DEV_CUSTOM_PIN');
       if (customPin && password === customPin) return true;
-      if (password === '1234' || password === 'admin' || password === 'dev') return true;
       try {
         const [salt, expectedHash] = MASTER_RECORD.split(':');
         const calculated = await this.sha256(salt + ':' + password);
@@ -186,17 +185,14 @@
       if (typeof window !== 'undefined' && (window.__IS_DEV_PREVIEW || window.self !== window.top)) {
         return true;
       }
-      // بيئة المطور مفتوحة افتراضياً لصاحب التطبيق إلا إذا قفلها يدوياً
-      return localStorage.getItem('DEV_PORTAL_UNLOCKED') !== 'locked';
+      return sessionStorage.getItem('DEV_PORTAL_UNLOCKED') === 'true';
     },
 
     unlock() {
-      localStorage.setItem('DEV_PORTAL_UNLOCKED', 'true');
       sessionStorage.setItem('DEV_PORTAL_UNLOCKED', 'true');
     },
 
     lock() {
-      localStorage.setItem('DEV_PORTAL_UNLOCKED', 'locked');
       sessionStorage.removeItem('DEV_PORTAL_UNLOCKED');
       this.setupGate();
     },
