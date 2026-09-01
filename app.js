@@ -1220,6 +1220,7 @@
     });
 
     setupEmergencyControls();
+    setupPullToRefresh();
 
     const input = $('user-input');
     const sendBtn = $('send-btn');
@@ -1250,6 +1251,71 @@
       input.style.height = 'auto';
       sendBtn.disabled = true;
       sendMessage(text);
+    });
+  }
+
+  // ─── Pull to Refresh Touch Gesture (السحب للتحديث) ───
+  function setupPullToRefresh() {
+    const chatArea = $('chat-area');
+    const indicator = $('pull-refresh-indicator');
+    if (!chatArea || !indicator) return;
+
+    const icon = indicator.querySelector('.pull-icon');
+    const text = indicator.querySelector('.pull-text');
+
+    let startY = 0;
+    let distance = 0;
+    let isPulling = false;
+    const THRESHOLD = 70;
+
+    chatArea.addEventListener('touchstart', (e) => {
+      if (chatArea.scrollTop <= 5) {
+        startY = e.touches[0].clientY;
+        isPulling = true;
+      }
+    }, { passive: true });
+
+    chatArea.addEventListener('touchmove', (e) => {
+      if (!isPulling) return;
+      const currentY = e.touches[0].clientY;
+      distance = currentY - startY;
+
+      if (distance > 15 && chatArea.scrollTop <= 5) {
+        indicator.classList.add('visible');
+        if (distance >= THRESHOLD) {
+          if (icon) icon.textContent = '🔄';
+          if (text) text.textContent = 'أفلت للتحديث الآن';
+          indicator.style.color = '#fbbf24';
+        } else {
+          if (icon) icon.textContent = '↓';
+          if (text) text.textContent = 'اسحب للتحديث...';
+          indicator.style.color = 'var(--text-muted)';
+        }
+      } else {
+        indicator.classList.remove('visible');
+      }
+    }, { passive: true });
+
+    chatArea.addEventListener('touchend', () => {
+      if (!isPulling) return;
+      isPulling = false;
+
+      if (distance >= THRESHOLD) {
+        indicator.classList.add('refreshing');
+        if (icon) icon.textContent = '⚙️';
+        if (text) text.textContent = 'جاري تحديث التطبيق...';
+        if (navigator.vibrate) {
+          try { navigator.vibrate(20); } catch {}
+        }
+        showToast('🔄 جاري تحديث التطبيق...', 'info');
+
+        setTimeout(() => {
+          location.reload();
+        }, 350);
+      } else {
+        indicator.classList.remove('visible');
+      }
+      distance = 0;
     });
   }
 
