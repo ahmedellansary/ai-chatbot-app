@@ -5,13 +5,13 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400&family=JetBrains+Mono:wght@400;500&display=swap');
 
 :root {
-  --bg-main: #18181b;
-  --bg-sidebar: #1f1f23;
-  --bg-card: #26262b;
-  --bg-card-hover: #2e2e34;
-  --bg-user-bubble: #26262b;
-  --bg-input: #1e1e22;
-  --bg-pill: #2b2b30;
+  --bg-main: #131315;
+  --bg-sidebar: #18181c;
+  --bg-card: #1f1f24;
+  --bg-card-hover: #26262c;
+  --bg-user-bubble: #232328;
+  --bg-input: #1a1a1e;
+  --bg-pill: #25252b;
 
   --accent-color: #da7756;
   --accent-color-dark: #b85d3e;
@@ -302,7 +302,7 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: transparent;
+  background: var(--bg-main);
   z-index: 20;
   flex-shrink: 0;
 }
