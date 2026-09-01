@@ -888,39 +888,40 @@
     },
 
     _thinkingTimer: null,
-    showTyping() {
+    showTyping(initialText = 'Analyzing...') {
       const container = $('chat-container');
-      if (!container || $('typing-indicator')) return;
+      if (!container) return;
 
-      const typing = document.createElement('div');
-      typing.id = 'typing-indicator';
-      typing.className = 'message-row ai typing-indicator';
-      typing.innerHTML = `
-        <div class="typing-bubble">
-          <span class="typing-icon">✦</span>
-          <span id="thinking-word" class="thinking-word">Analyzing</span>
-        </div>
-      `;
-      container.appendChild(typing);
-
-      const wordEl = document.getElementById('thinking-word');
-      if (!wordEl) return;
-
-      const stages = ['Analyzing', 'Reasoning', 'Drafting', 'Refining'];
-      let stageIndex = 0;
-      const updateStage = () => {
-        wordEl.textContent = stages[stageIndex % stages.length];
-        stageIndex++;
-      };
-
-      updateStage();
-      this._thinkingTimer = setInterval(updateStage, 1200);
+      let typing = $('typing-indicator');
+      if (!typing) {
+        typing = document.createElement('div');
+        typing.id = 'typing-indicator';
+        typing.className = 'message-row ai typing-indicator';
+        typing.innerHTML = `
+          <div class="typing-bubble">
+            <span class="typing-icon">✦</span>
+            <span id="thinking-word" class="thinking-word">${this.escapeHtml(initialText)}</span>
+          </div>
+        `;
+        container.appendChild(typing);
+      } else {
+        const wordEl = document.getElementById('thinking-word');
+        if (wordEl) wordEl.textContent = initialText;
+      }
       this.scrollToBottom();
+    },
+
+    setThinkingStage(text) {
+      const wordEl = document.getElementById('thinking-word');
+      if (wordEl) {
+        wordEl.textContent = text;
+        this.scrollToBottom();
+      }
     },
 
     hideTyping() {
       if (this._thinkingTimer) {
-        clearInterval(this._thinkingTimer);
+        clearTimeout(this._thinkingTimer);
         this._thinkingTimer = null;
       }
       $('typing-indicator')?.remove();
@@ -1021,19 +1022,32 @@
       };
       conv.messages.push(aiMsgObj);
 
-      MessageRenderer.showTyping();
+      const isArabic = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(textForPayload);
+      const initialStageText = isArabic ? 'جاري تحليل المدخلات...' : 'Analyzing prompt & context...';
+      MessageRenderer.showTyping(initialStageText);
+
+      const onModelEvent = (model, isFallback) => {
+        aiMsgObj.model = isDev ? `Developer (${model.name})` : model.name;
+        aiMsgObj.usedFallback = isFallback;
+
+        const connectText = isArabic
+          ? (isFallback ? `تبديل تلقائي إلى ${model.name}...` : `الاتصال بـ ${model.name}...`)
+          : (isFallback ? `Switching to ${model.name}...` : `Connecting to ${model.name}...`);
+        
+        MessageRenderer.setThinkingStage(connectText);
+
+        if (MessageRenderer._thinkingTimer) clearTimeout(MessageRenderer._thinkingTimer);
+        MessageRenderer._thinkingTimer = setTimeout(() => {
+          const reasoningText = isArabic ? `استحضار الأفكار وصياغة الرد...` : `Reasoning & formulating response...`;
+          MessageRenderer.setThinkingStage(reasoningText);
+        }, 600);
+      };
 
       try {
         const selectedModel = isDev ? ModelEngine.getSelectedDevModel() : null;
         const stream = isDev
-          ? ModelEngine.runSingleModel(selectedModel, apiMessages, state.abortController.signal, (model, isFallback) => {
-              aiMsgObj.model = `Developer (${model.name})`;
-              aiMsgObj.usedFallback = isFallback;
-            })
-          : ModelEngine.chatWithFallback(state.currentMode, apiMessages, state.abortController.signal, (model, isFallback) => {
-              aiMsgObj.model = model.name;
-              aiMsgObj.usedFallback = isFallback;
-            });
+          ? ModelEngine.runSingleModel(selectedModel, apiMessages, state.abortController.signal, onModelEvent)
+          : ModelEngine.chatWithFallback(state.currentMode, apiMessages, state.abortController.signal, onModelEvent);
 
         let msgRow = null;
         for await (const { chunk, model, usedFallback } of stream) {
