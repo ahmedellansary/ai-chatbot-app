@@ -1008,6 +1008,10 @@ html, body {
   box-shadow: 0 3px 12px rgba(218, 119, 86, 0.45) !important;
 }
 
+.claude-send-btn.active svg {
+  stroke: #ffffff !important;
+}
+
 .claude-send-btn.active:hover {
   background: var(--accent-color-dark) !important;
   transform: scale(1.08);
