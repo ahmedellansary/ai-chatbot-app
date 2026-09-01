@@ -728,6 +728,9 @@
           const propId = generateId();
           state.pendingModifications[propId] = data;
 
+          const existingCard = msgRow.querySelector('.dev-proposal-box');
+          if (existingCard) existingCard.remove();
+
           const card = document.createElement('div');
           card.id = `proposal-${propId}`;
           card.className = 'dev-proposal-box';
@@ -740,19 +743,28 @@
             <div class="dev-proposal-btns">
               <button class="dev-btn-action preview" onclick="window._previewProposal('${propId}')">
                 <span>👁️</span>
-                <span>معاينة حية افتراضية للتعديل</span>
+                <span>معاينة حية للتطبيق</span>
               </button>
               <button class="dev-btn-action deploy" onclick="window._deployProposal('${propId}')">
                 <span>🚀</span>
                 <span>نشر التعديل على GitHub</span>
               </button>
-              <button class="dev-btn-action review-fix" onclick="window._reviewProposal('${propId}')">
+              <button class="dev-btn-action review-fix" onclick="window._togglePatchDrawer('${propId}')">
                 <span>🔍</span>
-                <span>فحص الكود</span>
+                <span>فحص الكود المعدل ▾</span>
               </button>
               <button class="dev-btn-action cancel" onclick="window._cancelProposal('${propId}')">
                 <span>✕</span>
               </button>
+            </div>
+
+            <!-- Collapsible Mini Code Drawer inside Proposal Card -->
+            <div class="dev-patch-drawer hidden" id="drawer-${propId}">
+              <div class="patch-drawer-header">
+                <span>📄 كود الملف المعدل (${DevUIEngine.escapeHtml(data.file)})</span>
+                <button class="btn-copy-patch" onclick="window._copyPatchContent('${propId}')">📋 نسخ الكود</button>
+              </div>
+              <pre class="patch-drawer-code"><code>${DevUIEngine.escapeHtml(data.content)}</code></pre>
             </div>
           `;
           msgRow.appendChild(card);
@@ -1318,6 +1330,11 @@
     parseMarkdown(text) {
       if (!text) return '';
       let out = text;
+
+      // Automatically strip proposal JSON blocks so raw code never floods chat stream
+      out = out.replace(/```json\s*\{[\s\S]*?"file"[\s\S]*?"content"[\s\S]*?\}\s*```/g, '');
+      out = out.replace(/\{[\s\S]*?"file"\s*:\s*["'][^"']+["'][\s\S]*?"content"\s*:[\s\S]*?\}/g, '');
+
       // Code blocks
       out = out.replace(/```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g, (m, lang, code) => {
         return `<pre><code>${this.escapeHtml(code.trim())}</code></pre>`;
@@ -1620,6 +1637,20 @@
     if (!data) return;
     window._openFilesModal();
     window._selectFileForEditing(data.file, data.content);
+  };
+
+  window._togglePatchDrawer = function(propId) {
+    const drawer = $(`drawer-${propId}`);
+    if (drawer) drawer.classList.toggle('hidden');
+  };
+
+  window._copyPatchContent = function(propId) {
+    const data = state.pendingModifications[propId];
+    if (data && data.content) {
+      navigator.clipboard.writeText(data.content).then(() => {
+        DevUIEngine.showToast('📋 تم نسخ كود التعديل إلى الحافظة!', 'success');
+      });
+    }
   };
 
   window._cancelProposal = function(propId) {
