@@ -1279,14 +1279,14 @@ html, body {
 .app-lock-gate {
   position: fixed;
   inset: 0;
-  background: #131315;
+  background: rgba(15, 15, 18, 0.96);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 500;
   padding: 20px;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   transition: opacity 0.25s ease, transform 0.25s ease;
 }
 
@@ -1298,94 +1298,100 @@ html, body {
 
 .lock-gate-card {
   width: 100%;
-  max-width: 360px;
-  background: #1c1c20;
-  border: 1px solid rgba(218, 119, 86, 0.35);
-  border-radius: 24px;
-  padding: 32px 24px;
+  max-width: 380px;
+  background: #1c1c22;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 28px;
+  padding: 36px 26px 28px;
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
   gap: 12px;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.85);
+  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.85);
   animation: fadeIn 0.3s ease;
 }
 
 .lock-gate-star {
-  font-size: 38px;
+  font-size: 40px;
   color: var(--accent-color);
   margin-bottom: 2px;
+  filter: drop-shadow(0 4px 12px rgba(218, 119, 86, 0.4));
 }
 
 .lock-gate-title {
   font-family: var(--font-serif);
-  font-size: 26px;
-  font-weight: 500;
+  font-size: 28px;
+  font-weight: 600;
   color: #fff;
+  letter-spacing: 0.02em;
 }
 
 .lock-gate-sub {
   font-size: 13.5px;
   color: var(--text-muted);
   line-height: 1.5;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
 }
 
 .lock-gate-form {
   width: 100%;
-}
-
-.lock-input-group {
   display: flex;
-  gap: 8px;
-  width: 100%;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .lock-gate-input {
-  flex: 1;
-  background: #111113;
-  border: 1.5px solid var(--border-subtle);
+  width: 100%;
+  height: 48px;
+  background: #121215;
+  border: 1.5px solid rgba(255, 255, 255, 0.1);
   border-radius: 14px;
-  padding: 13px 14px;
+  padding: 0 16px;
   color: #fff;
   font-size: 16px;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.1em;
   text-align: center;
   outline: none;
   font-family: var(--font-mono);
-  transition: border-color 0.2s ease;
+  transition: all 0.2s ease;
 }
 
 .lock-gate-input:focus {
   border-color: var(--accent-color);
+  background: #16161a;
+  box-shadow: 0 0 0 3px rgba(218, 119, 86, 0.2);
 }
 
 .lock-gate-btn {
-  padding: 0 18px;
+  width: 100%;
+  height: 48px;
   background: var(--accent-color);
   color: #fff;
   border: none;
   border-radius: 14px;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
+  gap: 8px;
   transition: all 0.15s ease;
   font-family: var(--font-sans);
+  box-shadow: 0 4px 16px rgba(218, 119, 86, 0.35);
 }
 
 .lock-gate-btn:hover {
   background: var(--accent-color-dark);
+  transform: translateY(-1px);
 }
 
 .lock-gate-footer {
   font-size: 11.5px;
   color: var(--text-dim);
-  margin-top: 4px;
+  margin-top: 8px;
 }
 
 /* ─── Toast Notifications ─── */
