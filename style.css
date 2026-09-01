@@ -1088,114 +1088,117 @@ html, body {
   color: #fecaca;
 }
 
-/* ─── Owner PIN Authentication Modal ─── */
-.owner-modal {
+/* ─── Full Screen App Lock Gate ─── */
+.app-lock-gate {
   position: fixed;
   inset: 0;
+  background: #131315;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.75);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  z-index: 300;
-  padding: 16px;
-  transition: opacity 0.2s ease;
+  z-index: 500;
+  padding: 20px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: opacity 0.25s ease, transform 0.25s ease;
 }
 
-.owner-modal.hidden {
+.app-lock-gate.hidden {
   opacity: 0;
   pointer-events: none;
+  transform: scale(0.98);
 }
 
-.owner-modal-card {
+.lock-gate-card {
   width: 100%;
-  max-width: 380px;
-  background: #1e1e24;
-  border: 1px solid rgba(218, 119, 86, 0.4);
-  border-radius: 20px;
-  padding: 24px 20px;
-  text-align: center;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+  max-width: 360px;
+  background: #1c1c20;
+  border: 1px solid rgba(218, 119, 86, 0.35);
+  border-radius: 24px;
+  padding: 32px 24px;
   display: flex;
   flex-direction: column;
   align-items: center;
+  text-align: center;
   gap: 12px;
-  animation: fadeIn 0.2s ease;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.85);
+  animation: fadeIn 0.3s ease;
 }
 
-.owner-modal-icon {
-  font-size: 36px;
+.lock-gate-star {
+  font-size: 38px;
+  color: var(--claude-terracotta);
   margin-bottom: 2px;
 }
 
-.owner-modal-title {
-  font-size: 18px;
-  font-weight: 700;
+.lock-gate-title {
+  font-family: var(--font-serif);
+  font-size: 26px;
+  font-weight: 500;
   color: #fff;
 }
 
-.owner-modal-desc {
-  font-size: 13px;
+.lock-gate-sub {
+  font-size: 13.5px;
   color: var(--text-muted);
   line-height: 1.5;
+  margin-bottom: 8px;
 }
 
-.pin-input-wrap {
+.lock-gate-form {
   width: 100%;
-  margin: 6px 0 10px;
 }
 
-.owner-pin-input {
+.lock-input-group {
+  display: flex;
+  gap: 8px;
   width: 100%;
-  background: #121215;
+}
+
+.lock-gate-input {
+  flex: 1;
+  background: #111113;
   border: 1.5px solid var(--border-subtle);
-  border-radius: 12px;
-  padding: 12px;
-  text-align: center;
-  font-size: 18px;
-  font-weight: 700;
-  letter-spacing: 0.25em;
+  border-radius: 14px;
+  padding: 13px 14px;
   color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-align: center;
   outline: none;
   font-family: var(--font-mono);
   transition: border-color 0.2s ease;
 }
 
-.owner-pin-input:focus {
+.lock-gate-input:focus {
   border-color: var(--claude-terracotta);
 }
 
-.owner-modal-actions {
-  display: flex;
-  gap: 10px;
-  width: 100%;
-}
-
-.owner-modal-btn {
-  flex: 1;
-  padding: 12px;
-  border-radius: 12px;
+.lock-gate-btn {
+  padding: 0 18px;
+  background: var(--claude-terracotta);
+  color: #fff;
+  border: none;
+  border-radius: 14px;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  border: none;
-  font-family: var(--font-sans);
+  display: flex;
+  align-items: center;
+  gap: 6px;
   transition: all 0.15s ease;
+  font-family: var(--font-sans);
 }
 
-.owner-modal-btn.primary {
-  background: var(--claude-terracotta);
-  color: #fff;
-}
-
-.owner-modal-btn.primary:hover {
+.lock-gate-btn:hover {
   background: var(--claude-terracotta-dark);
 }
 
-.owner-modal-btn.cancel {
-  background: var(--bg-card);
-  color: var(--text-muted);
+.lock-gate-footer {
+  font-size: 11.5px;
+  color: var(--text-dim);
+  margin-top: 4px;
 }
 
 /* ─── Toast Notifications ─── */
