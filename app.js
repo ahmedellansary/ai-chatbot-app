@@ -1303,24 +1303,40 @@
 
       // Click Event Delegation
       document.addEventListener('click', (e) => {
+        const sidebar = $('sidebar');
+        const overlay = $('overlay');
+
         if (e.target.closest('#sidebar-toggle') || e.target.closest('#header-dots-btn')) {
           e.preventDefault();
-          $('sidebar')?.classList.add('open');
-          $('overlay')?.classList.add('active');
+          e.stopPropagation();
+          const isOpen = sidebar?.classList.contains('open');
+          if (isOpen) {
+            sidebar?.classList.remove('open');
+            overlay?.classList.remove('active');
+          } else {
+            sidebar?.classList.add('open');
+            overlay?.classList.add('active');
+          }
           return;
         }
 
         if (e.target.closest('#close-sidebar-btn')) {
           e.preventDefault();
-          $('sidebar')?.classList.remove('open');
-          $('overlay')?.classList.remove('active');
+          sidebar?.classList.remove('open');
+          overlay?.classList.remove('active');
           return;
         }
 
+        // Close sidebar if click occurs outside of the sidebar
+        if (sidebar?.classList.contains('open') && !e.target.closest('#sidebar')) {
+          sidebar.classList.remove('open');
+          overlay?.classList.remove('active');
+        }
+
         if (e.target.closest('#overlay')) {
-          $('sidebar')?.classList.remove('open');
+          sidebar?.classList.remove('open');
           $('model-dropdown-menu')?.classList.remove('show');
-          $('overlay')?.classList.remove('active');
+          overlay?.classList.remove('active');
           return;
         }
 
