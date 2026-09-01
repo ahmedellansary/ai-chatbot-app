@@ -1435,6 +1435,12 @@
       $('model-dropdown-menu').classList.toggle('show');
     });
 
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('#model-dropdown-menu') && !e.target.closest('#model-pill-trigger')) {
+        $('model-dropdown-menu')?.classList.remove('show');
+      }
+    });
+
     $$('.dropdown-opt').forEach(btn => {
       btn.addEventListener('click', () => {
         state.currentMode = btn.dataset.mode;
