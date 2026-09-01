@@ -1552,14 +1552,12 @@ if (typeof $$ === 'undefined') {
       const hasAtt = state.attachments && state.attachments.length > 0;
       const canSend = (hasText || hasAtt) && !state.isStreaming;
 
-      if (canSend) {
-        sendBtn.classList.remove('hidden');
-        if (micBtn) micBtn.style.display = 'none';
-        if (voiceBtn) voiceBtn.style.display = 'none';
-      } else {
-        sendBtn.classList.add('hidden');
-        if (micBtn) micBtn.style.display = 'flex';
-        if (voiceBtn) voiceBtn.style.display = 'flex';
+      if (sendBtn) {
+        if (canSend) {
+          sendBtn.classList.remove('disabled');
+        } else {
+          sendBtn.classList.add('disabled');
+        }
       }
     }
 
@@ -1575,9 +1573,16 @@ if (typeof $$ === 'undefined') {
       }
     }
 
-    input.addEventListener('input', () => {
+    function adjustTextareaHeight() {
       input.style.height = 'auto';
-      input.style.height = Math.min(input.scrollHeight, 150) + 'px';
+      const scrollH = input.scrollHeight;
+      const targetH = Math.min(Math.max(scrollH, 26), 190);
+      input.style.height = targetH + 'px';
+      input.style.overflowY = scrollH > 190 ? 'auto' : 'hidden';
+    }
+
+    input.addEventListener('input', () => {
+      adjustTextareaHeight();
       updateInputDirection();
       updateSendBtnState();
     });
@@ -1589,19 +1594,20 @@ if (typeof $$ === 'undefined') {
         if (!state.isStreaming && (input.value.trim() || hasAtt)) {
           const text = input.value.trim();
           input.value = '';
-          input.style.height = 'auto';
+          adjustTextareaHeight();
           updateSendBtnState();
           sendMessage(text);
         }
       }
     });
 
-    sendBtn.addEventListener('click', () => {
+    sendBtn?.addEventListener('click', (e) => {
+      e.preventDefault();
       const text = input.value.trim();
       const hasAtt = state.attachments && state.attachments.length > 0;
       if ((!text && !hasAtt) || state.isStreaming) return;
       input.value = '';
-      input.style.height = 'auto';
+      adjustTextareaHeight();
       updateSendBtnState();
       sendMessage(text);
     });
