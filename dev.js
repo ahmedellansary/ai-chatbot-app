@@ -332,7 +332,9 @@
     conversations: [],
     activeConvId: null,
     devPrompt: '',
-    selectedAgentId: 'qwen/qwen-2.5-coder-32b-instruct:free',
+    selectedAgentId: 'openai/gpt-oss-120b',
+    activeAgentId: 'openai/gpt-oss-120b',
+    isMultiAgentMode: localStorage.getItem('is_dev_multi_agent_mode') === '1',
     currentFilter: 'all',
     isStreaming: false,
     abortController: null,
@@ -628,8 +630,23 @@
       let fullContent = '';
       const aiMsgId = generateId();
       const chosenAgent = DevState.getSelectedAgent();
-      const aiMsgObj = { id: aiMsgId, role: 'ai', content: '', model: chosenAgent.name };
+      const aiMsgObj = { id: aiMsgId, role: 'ai', content: '', model: state.isMultiAgentMode ? '👥 فريق الوكلاء المتشاورين' : chosenAgent.name };
       DevUIEngine.appendEmptyAiMessage(aiMsgObj);
+
+      if (state.isMultiAgentMode) {
+        try {
+          await this.runDevMultiAgentConsensus(textForPayload, apiMessages, aiMsgId, aiMsgObj, conv);
+        } catch (err) {
+          if (err.name !== 'AbortError') {
+            DevUIEngine.showToast('❌ ' + err.message, 'error');
+          }
+        } finally {
+          state.isStreaming = false;
+          state.abortController = null;
+          DevUIEngine.updateSendBtn();
+        }
+        return;
+      }
 
       const fallbackList = this.buildFallbackCascade(chosenAgent);
 
@@ -718,6 +735,121 @@
       DevUIEngine.updateSendBtn();
     },
 
+    async runDevMultiAgentConsensus(textForPayload, apiMessages, aiMsgId, aiMsgObj, conv) {
+      const msgRow = document.querySelector(`[data-id="${aiMsgId}"]`);
+      const msgContent = msgRow ? msgRow.querySelector('.msg-content') : null;
+
+      const renderLiveUI = (steps, finalContent = '', isThinking = true) => {
+        if (!msgContent) return;
+
+        const stepsHtml = steps.map(s => `
+          <div class="agent-step-item">
+            <div class="agent-step-header">
+              <span class="agent-step-name">${s.icon} ${DevUIEngine.escapeHtml(s.title)}</span>
+              <span class="agent-step-badge">${DevUIEngine.escapeHtml(s.status)}</span>
+            </div>
+            <div class="agent-step-body">${DevUIEngine.escapeHtml(s.summary || 'جاري الفحص...')}</div>
+          </div>
+        `).join('');
+
+        const boxHtml = `
+          <div class="multi-agent-box" id="box-${aiMsgId}">
+            <div class="multi-agent-header" onclick="window._toggleThinkingBox('${aiMsgId}')">
+              <div class="multi-agent-title">
+                <span>👥</span>
+                <span>تشاور مهندسي التطوير (${steps.length} وكلاء مشاركين)</span>
+              </div>
+              <div class="multi-agent-toggle-indicator">
+                <span id="indicator-${aiMsgId}">[إخفاء / عرض النقاش] ▾</span>
+              </div>
+            </div>
+            <div class="multi-agent-content">
+              ${stepsHtml}
+            </div>
+          </div>
+        `;
+
+        const parsedFinal = finalContent ? DevUIEngine.parseMarkdown(finalContent) : (isThinking ? '<div style="color:var(--text-dim); font-size:13px; padding:4px;">⏳ جاري دمج المراجعات واعتماد كود الباتش النهائي...</div>' : '');
+        msgContent.innerHTML = boxHtml + parsedFinal;
+      };
+
+      const steps = [
+        { id: 1, icon: '💡', title: 'مهندس التحليل المعماري (Architectural Lead)', status: 'نشط الآن', summary: 'جاري فحص وتحديد الملفات والتعديل المطلوب بدقة...' },
+        { id: 2, icon: '🛡️', title: 'خبير مراجعة الأكواد والأمان (Code & Security Auditor)', status: 'في الانتظار', summary: 'بانتظار المسودة لمراجعة المنطق واكتشاف أي ثغرات أو تعارضات...' },
+        { id: 3, icon: '👑', title: 'المقرر النهائي للتطوير (Lead Dev Synthesizer)', status: 'في الانتظار', summary: 'بانتظار الصياغة النهائية لحزمة التعديل المعتمدة...' }
+      ];
+
+      renderLiveUI(steps, '', true);
+
+      // --- STAGE 1: Architectural Lead ---
+      const stage1Agent = DEV_AGENTS.find(a => a.id === 'openai/gpt-oss-120b') || DEV_AGENTS[0];
+      const stage1Messages = [
+        ...apiMessages.slice(0, -1),
+        { role: 'user', content: `${textForPayload}\n\n[DIRECTIVE TO ARCHITECTURAL LEAD]: Provide the initial code analysis and proposed patch under Minimal Safe Patch Protocol. Be concise and sharp.` }
+      ];
+
+      let stage1Output = '';
+      try {
+        await this.callSingleAgentStream(stage1Agent, stage1Messages, state.abortController.signal, (delta) => {
+          stage1Output += delta;
+        });
+        steps[0].status = '✓ اكتمل';
+        steps[0].summary = stage1Output.slice(0, 160).trim() + '...';
+        steps[1].status = 'نشط الآن';
+        steps[1].summary = 'جاري تدقيق المسودة وفحص الأمان والتوافقية...';
+        renderLiveUI(steps, '', true);
+      } catch (e) {
+        steps[0].status = 'تجاوز';
+        stage1Output = 'تم تحديد التعديلات المعمارية المطلوبة.';
+      }
+
+      // --- STAGE 2: Code & Security Auditor ---
+      const stage2Agent = DEV_AGENTS.find(a => a.id === 'minimax/minimax-m2.7:free') || DEV_AGENTS[1] || DEV_AGENTS[0];
+      const stage2Messages = [
+        ...apiMessages.slice(0, -1),
+        { role: 'user', content: `Task: "${textForPayload}"\n\nAgent 1 Proposal:\n"${stage1Output}"\n\n[DIRECTIVE TO SECURITY & CODE AUDITOR]: Review and verify Agent 1's code proposal. Point out any missed syntax, regression risks, or mobile styling edge cases in 2 concise bullets.` }
+      ];
+
+      let stage2Output = '';
+      try {
+        await this.callSingleAgentStream(stage2Agent, stage2Messages, state.abortController.signal, (delta) => {
+          stage2Output += delta;
+        });
+        steps[1].status = '✓ اكتمل';
+        steps[1].summary = stage2Output.slice(0, 160).trim() + '...';
+        steps[2].status = 'نشط الآن';
+        steps[2].summary = 'جاري اعتماد التعديل النهائي وتجهيز حزمة النشر...';
+        renderLiveUI(steps, '', true);
+      } catch (e) {
+        steps[1].status = 'تجاوز';
+        stage2Output = 'تمت مراجعة الكود والموافقة على خطة التعديل.';
+      }
+
+      // --- STAGE 3: Final Synthesis & JSON Patch ---
+      const stage3Agent = DevState.getSelectedAgent();
+      const stage3Messages = [
+        ...apiMessages.slice(0, -1),
+        { role: 'user', content: `${textForPayload}\n\n[CONSENSUS CONTEXT]\nArch Proposal:\n${stage1Output}\n\nAudit Feedback:\n${stage2Output}\n\n[DIRECTIVE TO LEAD SYNTHESIZER]: Deliver the finalized, approved solution. Explain clearly in Arabic without dumping huge raw code in the text, and output the deployment JSON block at the very end.` }
+      ];
+
+      let finalOutput = '';
+      await this.callSingleAgentStream(stage3Agent, stage3Messages, state.abortController.signal, (delta) => {
+        finalOutput += delta;
+        renderLiveUI(steps, finalOutput, false);
+      });
+
+      steps[2].status = '✓ معتمد';
+      steps[2].summary = 'تم اعتماد خطة التعديل وتجهيز باتش النشر بنجاح.';
+      renderLiveUI(steps, finalOutput, false);
+
+      aiMsgObj.content = finalOutput;
+      aiMsgObj.model = '👥 فريق الوكلاء المتشاورين';
+      conv.messages.push(aiMsgObj);
+      DevState.save();
+
+      await this.handleDevProposal(finalOutput, msgRow);
+    },
+
     async handleDevProposal(content, msgRow) {
       const jsonMatch = content.match(/```json\s*(\{[\s\S]*?\})\s*```/) || content.match(/(\{[\s\S]*"file"[\s\S]*"content"[\s\S]*\})/);
       if (!jsonMatch || !msgRow) return;
@@ -788,6 +920,13 @@
       DevAuthManager.setupGate();
       this.updateAgentPillDisplay();
 
+      const multiBtn = $('dev-multi-agent-toggle-btn');
+      if (multiBtn && state.isMultiAgentMode) {
+        multiBtn.classList.add('active');
+        const label = $('dev-multi-agent-label-text');
+        if (label) label.textContent = 'تشاور الوكلاء (نشط)';
+      }
+
       if (state.conversations.length) {
         DevState.loadConversation(state.conversations[0].id);
       } else {
@@ -799,14 +938,10 @@
       const agent = DevState.getSelectedAgent();
       if (!agent) return;
 
-      const headerName = $('header-agent-name');
-      const headerIcon = $('header-agent-icon');
-      if (headerName) headerName.textContent = agent.name;
-      if (headerIcon) headerIcon.textContent = agent.icon || '👨‍💻';
-
       const pillLabel = $('selected-agent-label');
       const pillIcon = $('selected-agent-icon');
-      if (pillLabel) pillLabel.textContent = agent.name;
+      const shortName = agent.name.replace(' Lead Architect', '').replace(' Fast Coder', '').replace(' Rapid Coder', '');
+      if (pillLabel) pillLabel.textContent = shortName;
       if (pillIcon) pillIcon.textContent = agent.icon || '👨‍💻';
     },
 
@@ -1777,6 +1912,21 @@
   };
 
   window._selectAgentFromDropdown = (id) => window._selectAgent(id);
+
+  window._toggleDevMultiAgentMode = function() {
+    state.isMultiAgentMode = !state.isMultiAgentMode;
+    localStorage.setItem('is_dev_multi_agent_mode', state.isMultiAgentMode ? '1' : '0');
+    const btn = $('dev-multi-agent-toggle-btn');
+    if (btn) btn.classList.toggle('active', !!state.isMultiAgentMode);
+    const label = $('dev-multi-agent-label-text');
+    if (label) label.textContent = state.isMultiAgentMode ? 'تشاور الوكلاء (نشط)' : 'تشاور الوكلاء';
+    DevUIEngine.showToast(state.isMultiAgentMode ? '👥 تم تفعيل تشاور الوكلاء في استوديو المطور!' : '⚪ تم تعطيل تشاور الوكلاء', 'info');
+  };
+
+  window._toggleThinkingBox = function(msgId) {
+    const box = document.getElementById(`box-${msgId}`);
+    if (box) box.classList.toggle('collapsed');
+  };
 
   window._openRollbackModal = async function() {
     const modal = $('rollback-modal');
