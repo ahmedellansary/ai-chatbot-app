@@ -822,6 +822,8 @@ if (typeof $$ === 'undefined') {
     row.dataset.id = msg.id;
 
     const parsed = msg.role === 'ai' ? parseMarkdown(msg.content) : escapeHtml(msg.content);
+    const hasArabic = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(msg.content || '');
+    const dirAttr = hasArabic ? 'dir="rtl" style="text-align: right;"' : 'dir="ltr" style="text-align: left;"';
 
     let attachmentsHtml = '';
     if (msg.attachments && msg.attachments.length > 0) {
@@ -836,7 +838,7 @@ if (typeof $$ === 'undefined') {
 
     if (msg.role === 'user') {
       row.innerHTML = `
-        <div class="msg-content">
+        <div class="msg-content" ${dirAttr}>
           ${parsed}
           ${attachmentsHtml}
         </div>
@@ -844,7 +846,7 @@ if (typeof $$ === 'undefined') {
     } else {
       // AI Message with Claude Action Toolbar & Disclaimer Note
       row.innerHTML = `
-        <div class="msg-content">
+        <div class="msg-content" ${dirAttr}>
           ${parsed}
           ${attachmentsHtml}
         </div>
@@ -1555,9 +1557,22 @@ if (typeof $$ === 'undefined') {
       }
     }
 
+    function updateInputDirection() {
+      const val = input.value || '';
+      const hasArabic = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(val);
+      if (hasArabic) {
+        input.dir = 'rtl';
+        input.style.textAlign = 'right';
+      } else {
+        input.dir = 'ltr';
+        input.style.textAlign = 'left';
+      }
+    }
+
     input.addEventListener('input', () => {
       input.style.height = 'auto';
       input.style.height = Math.min(input.scrollHeight, 150) + 'px';
+      updateInputDirection();
       updateSendBtnState();
     });
 
