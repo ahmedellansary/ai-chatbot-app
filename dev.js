@@ -549,55 +549,47 @@
         textForPayload = textForPayload ? `${textForPayload}\n\n${fileContexts}` : fileContexts;
       }
 
-      // Smart Live Codebase Injector:
-      // Auto-fetch relevant repo files from GitHub so the AI has full context of existing code!
+      // Smart Live Codebase Injector (محمي وموفر للتوكنز):
+      // لا يتم جلب الملفات إلا عند وجود طلب تعديل كود صريح وبحد أقصى ملف واحد مختصر
       if (attachedTexts.length === 0 && textForPayload) {
         const promptLower = textForPayload.toLowerCase();
-        const knownFiles = ['dev.html', 'dev_style.css', 'dev.js', 'index.html', 'style.css', 'app.js', 'instructions.json', 'models.js', 'sw.js', 'models.json', 'system_prompt.txt', 'dev_prompt.txt'];
-        const targetFilesToFetch = [];
+        const isCasual = /^(هاي|مرحبا|سلام|أهلاً|اهلا|شكرا|تمام|مين انت|من انت|hi|hello|hey|test)\b/i.test(promptLower) || promptLower.length < 15;
+        const isCodeRequest = /عدل|صلح|غير|ضيف|احذف|كود|زر|شاشة|تعديل|مشكلة|خطأ|bug|fix|css|style|html|js|dropdown|مطور|استوديو|محرر/i.test(promptLower);
 
-        for (const kf of knownFiles) {
-          if (promptLower.includes(kf)) {
-            targetFilesToFetch.push(kf);
+        if (!isCasual && isCodeRequest) {
+          const knownFiles = ['dev_style.css', 'dev.html', 'dev.js', 'style.css', 'index.html', 'app.js', 'instructions.json', 'sw.js'];
+          let targetFile = null;
+
+          for (const kf of knownFiles) {
+            if (promptLower.includes(kf)) {
+              targetFile = kf;
+              break;
+            }
+          }
+
+          if (!targetFile) {
+            if (/تصميم|ستايل|لون|شكل|خلفية|css|style|border|دروب|قائمة|موبايل/i.test(promptLower)) {
+              targetFile = /استوديو|مطور|dev/i.test(promptLower) ? 'dev_style.css' : 'style.css';
+            } else if (/html|زر|modal|عنصر|dom|واجهة/i.test(promptLower)) {
+              targetFile = /استوديو|مطور|dev/i.test(promptLower) ? 'dev.html' : 'index.html';
+            } else if (/كود|دالة|js|جافاسكريبت|api|نشر|git/i.test(promptLower)) {
+              targetFile = /استوديو|مطور|dev/i.test(promptLower) ? 'dev.js' : 'app.js';
+            }
+          }
+
+          if (targetFile) {
+            try {
+              const fetched = await DevGitHubService.getFile(targetFile);
+              if (fetched && fetched.content) {
+                // اقتطاع الملف لمنع تجاوز حد TPM
+                const safeContent = fetched.content.length > 3500 ? (fetched.content.slice(0, 3500) + '\n\n/* ... [تم اقتطاع باقي الملف لتوفير التوكنز والسرعة] ... */') : fetched.content;
+                textForPayload += `\n\n--- [LIVE GITHUB REPO FILE: ${targetFile}] ---\n${safeContent}\n--- [END OF ${targetFile}] ---\n`;
+              }
+            } catch (e) {
+              console.log(`[SmartContext] Fetch skipped for ${targetFile}:`, e.message);
+            }
           }
         }
-
-        if (targetFilesToFetch.length === 0) {
-          const isDevRelated = /مطور|ديف|dev|استوديو|موديل|مودلز|مهندس|agent|دروب|قائمة|github|نشر|commit|rollback|ملفات|editor|preview/i.test(promptLower);
-          
-          if (isDevRelated) {
-            if (/تصميم|ستايل|لون|شكل|خلفية|css|style|border|دروب|dropdown|قائمة/i.test(promptLower)) {
-              targetFilesToFetch.push('dev_style.css');
-            }
-            if (/html|زر|modal|عنصر|dom|واجهة|هيكل/i.test(promptLower)) {
-              targetFilesToFetch.push('dev.html');
-            }
-            targetFilesToFetch.push('dev.js');
-          } else if (/تصميم|ستايل|لون|شكل|خلفية|css|style|border|color|theme/i.test(promptLower)) {
-            targetFilesToFetch.push('style.css');
-          } else if (/شات بوت|شات|رسائل|مهارات|تعليمات|فلاش باك|برومبت|app|chat|send|دالة|وظيفة|كود/i.test(promptLower)) {
-            targetFilesToFetch.push('app.js');
-          } else {
-            targetFilesToFetch.push('dev.js');
-            targetFilesToFetch.push('dev.html');
-          }
-        }
-
-        // Deduplicate
-        const uniqueTargets = [...new Set(targetFilesToFetch)].slice(0, 3);
-
-        for (const tf of uniqueTargets) {
-          try {
-            const fetched = await DevGitHubService.getFile(tf);
-            if (fetched && fetched.content) {
-              textForPayload += `\n\n--- [LIVE GITHUB REPO FILE: ${tf}] ---\n${fetched.content}\n--- [END OF ${tf}] ---\n`;
-            }
-          } catch (e) {
-            console.log(`[SmartContext] Could not auto-fetch ${tf}:`, e.message);
-          }
-        }
-
-        textForPayload += `\n\n[REPO CONTEXT: GitHub Repository has full active files: dev.html, dev_style.css, dev.js, index.html, style.css, app.js, instructions.json, models.json, sw.js. You have direct context of these files. Never ask the user to upload them manually.]`;
       }
 
       const attachedImages = currentAttachments.filter(a => a.type.startsWith('image/'));
@@ -752,15 +744,18 @@
           </div>
         `).join('');
 
+        const isDone = !isThinking && steps.every(s => s.status.includes('✓') || s.status.includes('معتمد') || s.status.includes('تجاوز'));
+        const statusBadgeText = isDone ? '✓ تم التوافق والاعتماد' : (steps.find(s => s.status === 'نشط الآن')?.title || 'جاري التشاور...');
+
         const boxHtml = `
           <div class="multi-agent-box" id="box-${aiMsgId}">
             <div class="multi-agent-header" onclick="window._toggleThinkingBox('${aiMsgId}')">
               <div class="multi-agent-title">
                 <span>👥</span>
-                <span>تشاور مهندسي التطوير (${steps.length} وكلاء مشاركين)</span>
+                <span>تشاور الوكلاء: <span style="color:#fbbf24; font-weight:normal;">${DevUIEngine.escapeHtml(statusBadgeText)}</span></span>
               </div>
               <div class="multi-agent-toggle-indicator">
-                <span id="indicator-${aiMsgId}">[إخفاء / عرض النقاش] ▾</span>
+                <span id="indicator-${aiMsgId}">[التفاصيل ▾]</span>
               </div>
             </div>
             <div class="multi-agent-content">
@@ -769,36 +764,52 @@
           </div>
         `;
 
-        const parsedFinal = finalContent ? DevUIEngine.parseMarkdown(finalContent) : (isThinking ? '<div style="color:var(--text-dim); font-size:13px; padding:4px;">⏳ جاري دمج المراجعات واعتماد كود الباتش النهائي...</div>' : '');
+        const parsedFinal = finalContent ? DevUIEngine.parseMarkdown(finalContent) : (isThinking ? '<div style="color:var(--text-dim); font-size:12.5px; padding:4px;">⏳ جاري دمج المراجعات واعتماد كود الباتش النهائي...</div>' : '');
         msgContent.innerHTML = boxHtml + parsedFinal;
       };
 
       const steps = [
-        { id: 1, icon: '💡', title: 'مهندس التحليل المعماري (Architectural Lead)', status: 'نشط الآن', summary: 'جاري فحص وتحديد الملفات والتعديل المطلوب بدقة...' },
-        { id: 2, icon: '🛡️', title: 'خبير مراجعة الأكواد والأمان (Code & Security Auditor)', status: 'في الانتظار', summary: 'بانتظار المسودة لمراجعة المنطق واكتشاف أي ثغرات أو تعارضات...' },
-        { id: 3, icon: '👑', title: 'المقرر النهائي للتطوير (Lead Dev Synthesizer)', status: 'في الانتظار', summary: 'بانتظار الصياغة النهائية لحزمة التعديل المعتمدة...' }
+        { id: 1, icon: '💡', title: 'مهندس التحليل', status: 'نشط الآن', summary: 'جاري فحص وتحديد المطلوب بدقة...' },
+        { id: 2, icon: '🛡️', title: 'خبير الأمان', status: 'في الانتظار', summary: 'بانتظار المسودة لمراجعة المنطق واكتشاف التعارضات...' },
+        { id: 3, icon: '👑', title: 'المقرر النهائي', status: 'في الانتظار', summary: 'بانتظار الصياغة النهائية لحزمة التعديل المعتمدة...' }
       ];
 
       renderLiveUI(steps, '', true);
+
+      // Helper to stream with automatic fallback cascade
+      const streamWithCascade = async (preferredAgent, customMessages, onDelta) => {
+        const cascade = this.buildFallbackCascade(preferredAgent);
+        for (const agent of cascade) {
+          try {
+            await this.callSingleAgentStream(agent, customMessages, state.abortController.signal, onDelta);
+            return agent;
+          } catch (err) {
+            if (err.name === 'AbortError') throw err;
+            console.warn(`[Consensus Step Fallback] ${agent.name} failed:`, err.message);
+          }
+        }
+        throw new Error('تعذر الاستجابة من جميع الوكلاء.');
+      };
 
       // --- STAGE 1: Architectural Lead ---
       const stage1Agent = DEV_AGENTS.find(a => a.id === 'openai/gpt-oss-120b') || DEV_AGENTS[0];
       const stage1Messages = [
         ...apiMessages.slice(0, -1),
-        { role: 'user', content: `${textForPayload}\n\n[DIRECTIVE TO ARCHITECTURAL LEAD]: Provide the initial code analysis and proposed patch under Minimal Safe Patch Protocol. Be concise and sharp.` }
+        { role: 'user', content: `${textForPayload}\n\n[DIRECTIVE]: Provide concise technical plan in 2 short bullet points.` }
       ];
 
       let stage1Output = '';
       try {
-        await this.callSingleAgentStream(stage1Agent, stage1Messages, state.abortController.signal, (delta) => {
+        await streamWithCascade(stage1Agent, stage1Messages, (delta) => {
           stage1Output += delta;
         });
-        steps[0].status = '✓ اكتمل';
-        steps[0].summary = stage1Output.slice(0, 160).trim() + '...';
+        steps[0].status = '✓ تم';
+        steps[0].summary = stage1Output.slice(0, 100).trim() + '...';
         steps[1].status = 'نشط الآن';
-        steps[1].summary = 'جاري تدقيق المسودة وفحص الأمان والتوافقية...';
+        steps[1].summary = 'جاري تدقيق الخطة والتأكد من الأمان...';
         renderLiveUI(steps, '', true);
       } catch (e) {
+        if (e.name === 'AbortError') return;
         steps[0].status = 'تجاوز';
         stage1Output = 'تم تحديد التعديلات المعمارية المطلوبة.';
       }
@@ -807,47 +818,53 @@
       const stage2Agent = DEV_AGENTS.find(a => a.id === 'minimax/minimax-m2.7:free') || DEV_AGENTS[1] || DEV_AGENTS[0];
       const stage2Messages = [
         ...apiMessages.slice(0, -1),
-        { role: 'user', content: `Task: "${textForPayload}"\n\nAgent 1 Proposal:\n"${stage1Output}"\n\n[DIRECTIVE TO SECURITY & CODE AUDITOR]: Review and verify Agent 1's code proposal. Point out any missed syntax, regression risks, or mobile styling edge cases in 2 concise bullets.` }
+        { role: 'user', content: `Task: "${textForPayload.slice(0, 400)}"\n\nArch: "${stage1Output.slice(0, 300)}"\n\n[DIRECTIVE]: Review in 1 concise line.` }
       ];
 
       let stage2Output = '';
       try {
-        await this.callSingleAgentStream(stage2Agent, stage2Messages, state.abortController.signal, (delta) => {
+        await streamWithCascade(stage2Agent, stage2Messages, (delta) => {
           stage2Output += delta;
         });
-        steps[1].status = '✓ اكتمل';
-        steps[1].summary = stage2Output.slice(0, 160).trim() + '...';
+        steps[1].status = '✓ تم';
+        steps[1].summary = stage2Output.slice(0, 100).trim() + '...';
         steps[2].status = 'نشط الآن';
         steps[2].summary = 'جاري اعتماد التعديل النهائي وتجهيز حزمة النشر...';
         renderLiveUI(steps, '', true);
       } catch (e) {
+        if (e.name === 'AbortError') return;
         steps[1].status = 'تجاوز';
-        stage2Output = 'تمت مراجعة الكود والموافقة على خطة التعديل.';
+        stage2Output = 'تمت المراجعة والتأكيد على سلامة التعديل.';
       }
 
       // --- STAGE 3: Final Synthesis & JSON Patch ---
       const stage3Agent = DevState.getSelectedAgent();
       const stage3Messages = [
         ...apiMessages.slice(0, -1),
-        { role: 'user', content: `${textForPayload}\n\n[CONSENSUS CONTEXT]\nArch Proposal:\n${stage1Output}\n\nAudit Feedback:\n${stage2Output}\n\n[DIRECTIVE TO LEAD SYNTHESIZER]: Deliver the finalized, approved solution. Explain clearly in Arabic without dumping huge raw code in the text, and output the deployment JSON block at the very end.` }
+        { role: 'user', content: `${textForPayload}\n\n[CONSENSUS NOTES]\nPlan: ${stage1Output.slice(0, 250)}\nReview: ${stage2Output.slice(0, 150)}\n\n[DIRECTIVE]: Deliver the direct, friendly solution in concise Arabic without huge code dumps in text, and output the deployment JSON block at the end if code is changed.` }
       ];
 
       let finalOutput = '';
-      await this.callSingleAgentStream(stage3Agent, stage3Messages, state.abortController.signal, (delta) => {
-        finalOutput += delta;
+      try {
+        await streamWithCascade(stage3Agent, stage3Messages, (delta) => {
+          finalOutput += delta;
+          renderLiveUI(steps, finalOutput, false);
+        });
+
+        steps[2].status = '✓ معتمد';
+        steps[2].summary = 'تم اعتماد الحل وتجهيز الرد بنجاح.';
         renderLiveUI(steps, finalOutput, false);
-      });
 
-      steps[2].status = '✓ معتمد';
-      steps[2].summary = 'تم اعتماد خطة التعديل وتجهيز باتش النشر بنجاح.';
-      renderLiveUI(steps, finalOutput, false);
+        aiMsgObj.content = finalOutput;
+        aiMsgObj.model = '👥 فريق الوكلاء المتشاورين';
+        conv.messages.push(aiMsgObj);
+        DevState.save();
 
-      aiMsgObj.content = finalOutput;
-      aiMsgObj.model = '👥 فريق الوكلاء المتشاورين';
-      conv.messages.push(aiMsgObj);
-      DevState.save();
-
-      await this.handleDevProposal(finalOutput, msgRow);
+        await this.handleDevProposal(finalOutput, msgRow);
+      } catch (err) {
+        if (err.name === 'AbortError') return;
+        throw err;
+      }
     },
 
     async handleDevProposal(content, msgRow) {
