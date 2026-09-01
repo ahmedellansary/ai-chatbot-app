@@ -49,7 +49,7 @@
     },
 
     isUnlocked() {
-      if (typeof window !== 'undefined' && (window.__IS_DEV_PREVIEW || window.self !== window.top)) {
+      if (typeof window !== 'undefined' && window.__IS_DEV_PREVIEW === true) {
         return true;
       }
       return sessionStorage.getItem('OPS_PORTAL_UNLOCKED') === 'true';
@@ -194,7 +194,9 @@
       const res = await fetch(url, { headers: this.getHeaders() });
       if (!res.ok) throw new Error(`HTTP ${res.status}: Failed to fetch ${path}`);
       const data = await res.json();
-      const content = decodeURIComponent(escape(atob(data.content.replace(/\s/g, ''))));
+      const binaryStr = atob(data.content.replace(/\s/g, ''));
+      const bytes = Uint8Array.from(binaryStr, c => c.charCodeAt(0));
+      const content = new TextDecoder('utf-8').decode(bytes);
       return { sha: data.sha, content };
     },
 
@@ -205,7 +207,13 @@
         sha = existing.sha;
       } catch (e) {}
 
-      const encodedContent = btoa(unescape(encodeURIComponent(content)));
+      const bytes = new TextEncoder().encode(content);
+      let binaryStr = '';
+      for (let i = 0; i < bytes.length; i++) {
+        binaryStr += String.fromCharCode(bytes[i]);
+      }
+      const encodedContent = btoa(binaryStr);
+
       const url = `https://api.github.com/repos/${OpsConfig.githubUser}/${OpsConfig.githubRepo}/contents/${path}`;
       const body = {
         message: message || `Rollback ${path} via X.v1 Ops Portal`,
