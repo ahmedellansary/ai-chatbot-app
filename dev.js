@@ -980,17 +980,16 @@
 
     async loadDevPrompt() {
       try {
-        const saved = localStorage.getItem('dev_system_prompt');
-        if (saved && saved.trim()) {
-          state.devPrompt = saved.trim();
+        const res = await fetch('./dev_prompt.txt?t=' + Date.now());
+        if (res.ok) {
+          state.devPrompt = await res.text();
         } else {
-          const res = await fetch('./dev_prompt.txt?t=' + Date.now());
-          if (res.ok) {
-            state.devPrompt = await res.text();
-          }
+          const saved = localStorage.getItem('custom_dev_prompt');
+          if (saved) state.devPrompt = saved;
         }
       } catch (e) {
-        console.warn('[DevPrompt] Load fallback:', e.message);
+        const saved = localStorage.getItem('custom_dev_prompt');
+        if (saved) state.devPrompt = saved;
       }
       this.syncLiveRepoMap();
     },
