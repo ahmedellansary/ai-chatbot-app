@@ -620,6 +620,12 @@
     });
   }
 
+  const ATTACH_ICON_SVG = `
+    <svg class="attach-svg" viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
+    </svg>
+  `;
+
   function buildDevModelOptions() {
     const models = getAvailableModels();
     const selected = getSelectedDevModel();
@@ -630,8 +636,8 @@
     }).join('');
 
     return `
-      <button class="attach-btn" id="attach-btn" title="إرفاق ملفات أو صور">
-        <span>📎</span>
+      <button class="attach-btn" id="attach-btn" title="إرفاق ملفات أو صور" aria-label="إرفاق">
+        ${ATTACH_ICON_SVG}
       </button>
       <span class="mode-tag dev-mode-tag" style="color:#fbbf24; background:rgba(217,119,6,0.15);">وضع المطور</span>
       <select id="dev-model-select" class="dev-model-select" aria-label="اختيار موديل المطور">
@@ -668,8 +674,8 @@
       if (dot) dot.style.background = '#10b981';
       if (indicator) {
         indicator.innerHTML = `
-          <button class="attach-btn" id="attach-btn" title="إرفاق ملفات أو صور">
-            <span>📎</span>
+          <button class="attach-btn" id="attach-btn" title="إرفاق ملفات أو صور" aria-label="إرفاق">
+            ${ATTACH_ICON_SVG}
           </button>
           <span class="mode-tag">الشات الطبيعي</span>
         `;
