@@ -930,10 +930,37 @@
       }
 
       if (sidebarToggle) {
-        sidebarToggle.onclick = () => {
-          $('sidebar')?.classList.toggle('open');
+        sidebarToggle.onclick = (e) => {
+          e.stopPropagation();
+          const sidebar = $('sidebar');
+          const overlay = $('overlay');
+          const isOpen = sidebar?.classList.contains('open');
+          if (isOpen) {
+            sidebar?.classList.remove('open');
+            overlay?.classList.remove('active');
+          } else {
+            sidebar?.classList.add('open');
+            overlay?.classList.add('active');
+          }
         };
       }
+
+      document.addEventListener('click', (e) => {
+        const sidebar = $('sidebar');
+        const overlay = $('overlay');
+
+        if (e.target.closest('#close-sidebar-btn') || e.target.closest('#overlay')) {
+          e.preventDefault();
+          sidebar?.classList.remove('open');
+          overlay?.classList.remove('active');
+          return;
+        }
+
+        if (sidebar?.classList.contains('open') && !e.target.closest('#sidebar') && !e.target.closest('#sidebar-toggle')) {
+          sidebar.classList.remove('open');
+          overlay?.classList.remove('active');
+        }
+      });
 
       this.setupAttachmentHandler();
     },
