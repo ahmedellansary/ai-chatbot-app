@@ -35,21 +35,27 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-body {
+html, body {
   background: var(--bg-app);
   color: var(--text-main);
   font-family: var(--font-sans);
-  height: 100vh;
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
   overflow: hidden;
+  position: fixed;
+  inset: 0;
   user-select: text;
 }
 
 #app {
   display: flex;
-  height: 100vh;
-  width: 100vw;
+  height: 100%;
+  width: 100%;
   overflow: hidden;
-  position: relative;
+  position: absolute;
+  inset: 0;
 }
 
 /* ─── Sidebar ─── */
@@ -221,7 +227,8 @@ body {
   flex: 1;
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100%;
+  min-height: 0;
   position: relative;
   overflow: hidden;
   background: var(--bg-app);
@@ -422,21 +429,22 @@ body {
 
 /* ─── Chat Area ─── */
 #chat-area {
-  flex: 1;
+  flex: 1 1 0%;
+  min-height: 0;
   overflow-y: auto;
-  padding: 24px 20px;
+  -webkit-overflow-scrolling: touch;
+  padding: 16px 16px 8px;
   display: flex;
   flex-direction: column;
-  align-items: center;
 }
 
 .chat-container {
   width: 100%;
-  max-width: 900px;
+  max-width: 768px;
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 22px;
-  min-height: 100%;
+  gap: 20px;
 }
 
 /* ─── Message Rows ─── */
@@ -447,28 +455,34 @@ body {
   width: 100%;
 }
 
-/* AI Message Model Attribution Tag (اسم الموديل المطور) */
+/* AI Message Model Attribution Tag (تحت الرد بلون خفيف وأنيق) */
 .msg-model-tag {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-size: 11.5px;
-  font-weight: 700;
-  color: #fbbf24;
-  background: rgba(245, 158, 11, 0.08);
-  border: 1px solid rgba(245, 158, 11, 0.22);
-  padding: 3px 9px;
-  border-radius: 7px;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #71717a;
+  background: transparent;
+  border: none;
+  padding: 1px 4px;
   width: fit-content;
-  margin-bottom: 2px;
+  margin-top: 2px;
+  margin-bottom: 0;
   font-family: var(--font-sans);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-  animation: fadeIn 0.2s ease;
+  opacity: 0.8;
+  transition: opacity 0.15s ease, color 0.15s ease;
+  user-select: none;
+}
+
+.msg-model-tag:hover {
+  opacity: 1;
+  color: #9ca3af;
 }
 
 .msg-model-tag .model-tag-name {
-  color: #fff;
-  font-weight: 600;
+  color: #71717a;
+  font-weight: 500;
 }
 
 .message-row.user {
@@ -671,7 +685,8 @@ pre code {
 
 /* ─── Floating Input Bar (Identical to User Chatbox) ─── */
 #input-section {
-  padding: 6px 14px 16px;
+  padding: 6px 14px 18px;
+  padding-bottom: max(18px, env(safe-area-inset-bottom, 18px));
   background: transparent;
   flex-shrink: 0;
   z-index: 25;
@@ -681,8 +696,8 @@ pre code {
 }
 
 .input-container {
-  width: 100%;
   max-width: 768px;
+  width: 100%;
   margin: 0 auto;
   background: #17171d;
   border: 1px solid var(--border-subtle);
@@ -690,7 +705,7 @@ pre code {
   padding: 14px 16px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
@@ -712,15 +727,14 @@ pre code {
   resize: none;
   min-height: 26px;
   max-height: 200px;
-  padding: 2px 0 4px;
+  padding: 2px 0 6px;
   overflow-y: hidden;
   unicode-bidi: plaintext;
   box-sizing: border-box;
 }
 
 .chat-textarea::placeholder {
-  color: #6b7280;
-  font-size: 14.5px;
+  color: #52525b;
 }
 
 /* Bottom Controls Row inside Container */
@@ -728,7 +742,6 @@ pre code {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
 }
 
 .input-bottom-left {
@@ -749,30 +762,28 @@ pre code {
   height: 32px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: none;
   color: var(--text-muted);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.15s ease;
-  flex-shrink: 0;
 }
 
 .claude-plus-btn:hover {
   background: rgba(255, 255, 255, 0.1);
   color: #fff;
-  border-color: rgba(255, 255, 255, 0.2);
 }
 
-/* Model/Agent Selector Pill */
+/* Model Selector Pill */
 .claude-model-pill {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 14px;
+  padding: 7px 14px;
   background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: none;
   border-radius: 999px;
   color: #fbbf24;
   font-size: 13px;
@@ -780,21 +791,93 @@ pre code {
   cursor: pointer;
   font-family: var(--font-sans);
   transition: all 0.15s ease;
-  max-width: 250px;
 }
 
 .claude-model-pill:hover {
   background: rgba(245, 158, 11, 0.12);
-  border-color: rgba(245, 158, 11, 0.35);
   color: #fff;
 }
 
+/* Model Dropdown Menu Popup right above the pill (Identical to User Chat) */
+.model-dropdown {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 0;
+  right: auto;
+  background: #1c1c22;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.85);
+  padding: 8px;
+  display: none;
+  flex-direction: column;
+  gap: 6px;
+  width: max-content;
+  min-width: 280px;
+  max-width: min(340px, calc(100vw - 32px));
+  max-height: 55vh;
+  overflow-y: auto;
+  z-index: 100;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.model-dropdown.show {
+  display: flex;
+  animation: dropdownPop 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dropdown-opt {
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-main);
+  font-family: var(--font-sans);
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  transition: all 0.15s ease;
+}
+
+.dropdown-opt:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.dropdown-opt.active {
+  background: rgba(245, 158, 11, 0.15);
+  border-color: rgba(245, 158, 11, 0.4);
+}
+
+.dropdown-opt .opt-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dropdown-opt.active .opt-title {
+  color: #fbbf24;
+}
+
+.dropdown-opt .opt-desc {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--text-dim);
+  line-height: 1.4;
+}
+
 /* Electric Send Button (⚡) */
-.claude-send-btn.dev-electric-send-btn {
+.claude-send-btn {
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.08);
   color: #71717a;
   border: none;
   cursor: not-allowed;
@@ -805,26 +888,87 @@ pre code {
   pointer-events: none;
   opacity: 0.45;
   box-shadow: none;
-  flex-shrink: 0;
 }
 
-.claude-send-btn.dev-electric-send-btn.active {
+.claude-send-btn.active {
   background: linear-gradient(135deg, #f59e0b, #d97706) !important;
   color: #000 !important;
   cursor: pointer !important;
   pointer-events: auto !important;
   opacity: 1 !important;
-  box-shadow: 0 3px 14px rgba(245, 158, 11, 0.45) !important;
-  transform: scale(1.02);
+  box-shadow: 0 3px 12px rgba(245, 158, 11, 0.45) !important;
 }
 
-.claude-send-btn.dev-electric-send-btn.active:hover {
+.claude-send-btn.active:hover {
   filter: brightness(1.1);
   transform: scale(1.08);
 }
 
-.claude-send-btn.dev-electric-send-btn.active:active {
+.claude-send-btn.active:active {
   transform: scale(0.96);
+}
+
+/* ─── Attachment Previews (Identical to User Chat) ─── */
+.attachment-previews {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.attachment-previews.hidden {
+  display: none;
+}
+
+.preview-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #1e1e26;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 4px 8px;
+  font-size: 12px;
+  color: var(--text-main);
+  max-width: 180px;
+  flex-shrink: 0;
+}
+
+.preview-thumb {
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  object-fit: cover;
+}
+
+.preview-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100px;
+}
+
+.preview-remove {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: var(--text-muted);
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  transition: all 0.15s ease;
+}
+
+.preview-remove:hover {
+  background: var(--accent-rose);
+  color: #fff;
 }
 
 @media (max-width: 600px) {
@@ -853,7 +997,7 @@ pre code {
     height: 30px;
   }
 
-  .claude-send-btn.dev-electric-send-btn {
+  .claude-send-btn {
     width: 32px;
     height: 32px;
   }
