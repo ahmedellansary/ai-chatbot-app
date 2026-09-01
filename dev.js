@@ -182,7 +182,7 @@
     },
 
     isUnlocked() {
-      if (typeof window !== 'undefined' && (window.__IS_DEV_PREVIEW || window.self !== window.top)) {
+      if (typeof window !== 'undefined' && window.__IS_DEV_PREVIEW === true) {
         return true;
       }
       return sessionStorage.getItem('DEV_PORTAL_UNLOCKED') === 'true';
@@ -288,7 +288,9 @@
       const res = await fetch(url, { headers: this.getHeaders() });
       if (!res.ok) throw new Error(`HTTP ${res.status}: Failed to fetch ${path}`);
       const data = await res.json();
-      const content = decodeURIComponent(escape(atob(data.content.replace(/\s/g, ''))));
+      const binaryStr = atob(data.content.replace(/\s/g, ''));
+      const bytes = Uint8Array.from(binaryStr, c => c.charCodeAt(0));
+      const content = new TextDecoder('utf-8').decode(bytes);
       return { sha: data.sha, content };
     },
 
@@ -313,7 +315,13 @@
         console.log(`[GitHub] Creating new file ${path}`);
       }
 
-      const encodedContent = btoa(unescape(encodeURIComponent(content)));
+      const bytes = new TextEncoder().encode(content);
+      let binaryStr = '';
+      for (let i = 0; i < bytes.length; i++) {
+        binaryStr += String.fromCharCode(bytes[i]);
+      }
+      const encodedContent = btoa(binaryStr);
+
       const url = `https://api.github.com/repos/${DevConfigVault.githubUser}/${DevConfigVault.githubRepo}/contents/${path}`;
       const body = {
         message: message || `Auto-update ${path} via X.v1 Developer Portal`,
@@ -1169,33 +1177,6 @@
       document.addEventListener('touchmove', onTouchMove, { passive: false });
       document.addEventListener('touchend', onTouchEnd, { passive: true });
       document.addEventListener('touchcancel', onTouchEnd, { passive: true });
-    },
-
-    updateAgentPillDisplay() {
-      const agent = DevState.getSelectedAgent();
-      const pillIcon = $('selected-agent-icon');
-      const pillLabel = $('selected-agent-label');
-      const headerIcon = $('header-agent-icon');
-      const headerName = $('header-agent-name');
-
-      if (pillIcon) pillIcon.innerText = agent.icon || '🧠';
-      if (pillLabel) pillLabel.innerText = agent.name;
-      if (headerIcon) headerIcon.innerText = agent.icon || '🧠';
-      if (headerName) headerName.innerText = agent.name;
-    },
-
-    async loadDevPrompt() {
-      try {
-        const custom = localStorage.getItem('custom_dev_prompt');
-        if (custom) {
-          state.devPrompt = custom;
-          return;
-        }
-        const res = await fetch('./dev_prompt.txt?t=' + Date.now());
-        if (res.ok) {
-          state.devPrompt = await res.text();
-        }
-      } catch {}
     },
 
     setupEventListeners() {
