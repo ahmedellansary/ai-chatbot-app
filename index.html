@@ -39,6 +39,19 @@
       </button>
     </div>
 
+    <!-- Emergency Controls (أزرار الطوارئ داخل القائمة الجانبية فقط) -->
+    <div class="emergency-box">
+      <div class="emergency-title">🚨 تحكم الطوارئ (Safety Controls)</div>
+      <button class="emergency-btn rollback" id="btn-emergency-rollback">
+        <span>⏪</span>
+        <span>استرجاع فوري لآخر نسخة</span>
+      </button>
+      <button class="emergency-btn fix" id="btn-emergency-fix">
+        <span>🔍</span>
+        <span>مراجعة وإصلاح آخر تعديل</span>
+      </button>
+    </div>
+
     <div class="sidebar-section-title">المحادثات السابقة</div>
     <div id="conversations-list"></div>
 
@@ -54,21 +67,7 @@
     </div>
   </aside>
 
-  <!-- ═══ Main View (الواجهة الرئيسية) ═══ -->
-  <div id="emergency-floating" class="emergency-floating" aria-live="polite">
-    <div class="emergency-floating-header">🚨 تحكم الطوارئ</div>
-    <div class="emergency-floating-actions">
-      <button class="emergency-btn rollback" id="btn-emergency-rollback">
-        <span>⏪</span>
-        <span>استرجاع فوري</span>
-      </button>
-      <button class="emergency-btn fix" id="btn-emergency-fix">
-        <span>🔍</span>
-        <span>مراجعة وإصلاح</span>
-      </button>
-    </div>
-  </div>
-
+  <!-- ═══ Main View (الواجهة الرئيسية النظيفة) ═══ -->
   <main id="main">
 
     <!-- Top Header -->
