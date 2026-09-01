@@ -586,10 +586,10 @@
 
       let fullContent = '';
       const aiMsgId = generateId();
-      const aiMsgObj = { id: aiMsgId, role: 'ai', content: '' };
+      const chosenAgent = DevState.getSelectedAgent();
+      const aiMsgObj = { id: aiMsgId, role: 'ai', content: '', model: chosenAgent.name };
       DevUIEngine.appendEmptyAiMessage(aiMsgObj);
 
-      const chosenAgent = DevState.getSelectedAgent();
       const fallbackList = this.buildFallbackCascade(chosenAgent);
 
       let succeeded = false;
@@ -598,6 +598,12 @@
       for (let i = 0; i < fallbackList.length; i++) {
         const currentAgent = fallbackList[i];
         try {
+          // Update model badge live in UI
+          const tagElem = document.querySelector(`[data-id="${aiMsgId}"] .msg-model-tag`);
+          if (tagElem) {
+            tagElem.innerHTML = `<span>${currentAgent.icon || '🧠'}</span> <span class="model-tag-name">${DevUIEngine.escapeHtml(currentAgent.name)}</span>`;
+          }
+
           if (i > 0) {
             DevUIEngine.showToast(`🛡️ تم التحويل التلقائي إلى: ${currentAgent.name} (Smart Fallback)`, 'warning');
             const msgElem = document.querySelector(`[data-id="${aiMsgId}"] .msg-content`);
@@ -1013,8 +1019,19 @@
       row.className = `message-row ${msg.role} ${isAr ? 'is-rtl' : 'is-ltr'}`;
       row.dataset.id = msg.id;
 
+      let modelBadgeHtml = '';
+      if (msg.role === 'ai') {
+        const modelName = msg.model || 'AI Developer';
+        const matchedAgent = DEV_AGENTS.find(a => a.name === modelName);
+        const icon = matchedAgent?.icon || '🧠';
+        modelBadgeHtml = `<div class="msg-model-tag"><span>${icon}</span> <span class="model-tag-name">${this.escapeHtml(modelName)}</span></div>`;
+      }
+
       const contentHtml = msg.role === 'ai' ? this.parseMarkdown(msg.content) : this.escapeHtml(msg.content);
-      row.innerHTML = `<div class="msg-content">${contentHtml}</div>`;
+      row.innerHTML = `
+        ${modelBadgeHtml}
+        <div class="msg-content">${contentHtml}</div>
+      `;
       container.appendChild(row);
 
       if (msg.role === 'ai') {
@@ -1029,7 +1046,15 @@
       const row = document.createElement('div');
       row.className = 'message-row ai is-rtl';
       row.dataset.id = msgObj.id;
-      row.innerHTML = `<div class="msg-content"><span style="color:var(--text-dim);">جاري التحليل وتجهيز التعديل...</span></div>`;
+
+      const modelName = msgObj.model || 'جاري التحليل...';
+      const matchedAgent = DEV_AGENTS.find(a => a.name === modelName);
+      const icon = matchedAgent?.icon || '🧠';
+
+      row.innerHTML = `
+        <div class="msg-model-tag"><span>${icon}</span> <span class="model-tag-name">${this.escapeHtml(modelName)}</span></div>
+        <div class="msg-content"><span style="color:var(--text-dim);">جاري التحليل وتجهيز التعديل...</span></div>
+      `;
       container.appendChild(row);
       this.scrollToBottom();
     },
