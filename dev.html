@@ -330,7 +330,7 @@
       <h2 class="lock-gate-title">X.v1 Developer Portal</h2>
       <p class="lock-gate-sub">أدخل كلمة سر المطور لفتح بيئة التحكم وتعديل الملفات.</p>
 
-      <form id="lock-gate-form" onsubmit="event.preventDefault()" style="width:100%; display:flex; flex-direction:column; gap:10px;">
+      <form id="lock-gate-form" style="width:100%; display:flex; flex-direction:column; gap:10px;">
         <input
           type="password"
           id="gate-pin-input"
@@ -339,7 +339,7 @@
           maxlength="32"
           autocomplete="current-password"
         >
-        <button type="submit" id="gate-unlock-btn" class="lock-gate-btn">
+        <button type="button" id="gate-unlock-btn" class="lock-gate-btn">
           <span>فتح بيئة المطور</span>
           <span>🔓</span>
         </button>
