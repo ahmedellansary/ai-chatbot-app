@@ -215,7 +215,8 @@
     isStreaming: false,
     abortController: null,
     pendingModifications: {},
-    currentEditingFile: 'index.html'
+    currentEditingFile: 'index.html',
+    attachments: []
   };
 
   const DevState = {
@@ -306,12 +307,32 @@
   // ─────────────────────────────────────────────────────────────────
   const DevChatEngine = {
     async sendMessage(userText) {
-      if (state.isStreaming || !userText.trim()) return;
+      const hasAttachments = state.attachments && state.attachments.length > 0;
+      if (state.isStreaming || (!userText.trim() && !hasAttachments)) return;
 
       if (!state.activeConvId) DevState.newConversation();
       const conv = DevState.getActiveConv();
 
-      const userMsg = DevState.addMessage('user', userText.trim());
+      let textForPayload = userText.trim();
+      const currentAttachments = [...state.attachments];
+
+      // Prepare attached text/code contexts
+      const attachedTexts = currentAttachments.filter(a => !a.type.startsWith('image/'));
+      if (attachedTexts.length > 0) {
+        const fileContexts = attachedTexts.map(f => `--- محتوى الملف المرفق: ${f.name} ---\n${f.textContent || ''}\n--- نهاية الملف ---`).join('\n\n');
+        textForPayload = textForPayload ? `${textForPayload}\n\n${fileContexts}` : fileContexts;
+      }
+
+      const attachedImages = currentAttachments.filter(a => a.type.startsWith('image/'));
+      if (attachedImages.length > 0 && !textForPayload) {
+        textForPayload = 'يرجى فحص هذه الصورة/الملف المرفق وتطبيق التعديل المطلوب.';
+      }
+
+      // Clear attachments
+      state.attachments = [];
+      DevUIEngine.renderAttachmentPreviews();
+
+      const userMsg = DevState.addMessage('user', userText.trim() || 'ملف مرفق');
       DevUIEngine.appendMessage(userMsg);
 
       state.isStreaming = true;
@@ -329,7 +350,7 @@
       const apiMessages = [
         { role: 'system', content: systemPrompt },
         ...recentMessages,
-        { role: 'user', content: userText.trim() }
+        { role: 'user', content: textForPayload }
       ];
 
       let fullContent = '';
@@ -538,6 +559,72 @@
           $('sidebar')?.classList.toggle('open');
         };
       }
+
+      this.setupAttachmentHandler();
+    },
+
+    setupAttachmentHandler() {
+      const attachBtn = $('attach-btn');
+      const attachInput = $('attach-input');
+      if (!attachBtn || !attachInput) return;
+
+      attachBtn.onclick = () => attachInput.click();
+
+      attachInput.onchange = async (e) => {
+        const files = Array.from(e.target.files || []);
+        if (!files.length) return;
+
+        for (const f of files) {
+          const isImg = f.type.startsWith('image/');
+          const att = {
+            id: generateId(),
+            name: f.name,
+            size: f.size,
+            type: f.type || 'text/plain',
+            textContent: '',
+            dataUrl: ''
+          };
+
+          if (isImg) {
+            att.dataUrl = await new Promise(resolve => {
+              const r = new FileReader();
+              r.onload = () => resolve(r.result);
+              r.readAsDataURL(f);
+            });
+          } else {
+            att.textContent = await new Promise(resolve => {
+              const r = new FileReader();
+              r.onload = () => resolve(r.result);
+              r.readAsText(f);
+            });
+          }
+          state.attachments.push(att);
+        }
+
+        attachInput.value = '';
+        this.renderAttachmentPreviews();
+        this.updateSendBtn();
+      };
+    },
+
+    renderAttachmentPreviews() {
+      const container = $('attachment-preview-container');
+      if (!container) return;
+
+      if (!state.attachments || !state.attachments.length) {
+        container.classList.add('hidden');
+        container.innerHTML = '';
+        return;
+      }
+
+      container.classList.remove('hidden');
+      container.innerHTML = state.attachments.map(a => `
+        <div class="attachment-chip">
+          <span>${a.type.startsWith('image/') ? '🖼️' : '📄'}</span>
+          <span>${this.escapeHtml(a.name)}</span>
+          <button type="button" class="attachment-chip-del" onclick="window._removeDevAttachment('${a.id}')">✕</button>
+        </div>
+      `).join('');
     },
 
     handleSend() {
@@ -554,7 +641,9 @@
       const input = $('user-input');
       const sendBtn = $('send-btn');
       if (!input || !sendBtn) return;
-      sendBtn.disabled = !input.value.trim() || state.isStreaming;
+      const hasAtt = state.attachments && state.attachments.length > 0;
+      const hasText = input.value.trim().length > 0;
+      sendBtn.disabled = (!hasText && !hasAtt) || state.isStreaming;
     },
 
     renderConversationsList() {
@@ -657,6 +746,12 @@
   // ─────────────────────────────────────────────────────────────────
   window._loadDevConv = (id) => DevState.loadConversation(id);
   window._deleteDevConv = (id) => DevState.deleteConversation(id);
+
+  window._removeDevAttachment = (attId) => {
+    state.attachments = state.attachments.filter(a => a.id !== attId);
+    DevUIEngine.renderAttachmentPreviews();
+    DevUIEngine.updateSendBtn();
+  };
 
   window._lockDevWorkspace = () => {
     DevAuthManager.lock();
