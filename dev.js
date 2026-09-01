@@ -61,117 +61,87 @@
   const DEV_AGENTS = [
     // ═══ 1. المتخصصين في البرمجة والأكواد (Coding Specialists - Top Priority) ═══
     {
-      id: 'qwen/qwen-2.5-coder-32b-instruct:free',
-      provider: 'openrouter',
-      name: 'Qwen 2.5 Coder 32B',
-      icon: '👨‍💻',
-      category: 'code',
-      params: '32B Coder',
-      desc: 'المتخصص الأول في كتابة وهندسة الأكواد وتصحيح أخطاء JavaScript & CSS بدقة متناهية.',
-      priority: 1
-    },
-    {
-      id: 'deepseek/deepseek-r1:free',
-      provider: 'openrouter',
-      name: 'DeepSeek R1 Reasoning',
-      icon: '🧠',
-      category: 'code',
-      params: 'DeepSeek R1',
-      desc: 'استدلال منطقي عميق وتخطيط معماري متقدم لهيكل المشروع والميزات المعقدة.',
-      priority: 1
-    },
-    {
       id: 'openai/gpt-oss-120b',
       provider: 'groq',
       name: 'GPT OSS 120B Lead Architect',
-      icon: '⚡',
-      category: 'code',
-      params: '120B Groq',
-      desc: 'مهندس برمجيات متقدم فائق السرعة لتوليد الحلول وهندسة الملفات.',
-      priority: 1
-    },
-    {
-      id: 'meta-llama/llama-3.3-70b-versatile',
-      provider: 'groq',
-      name: 'Llama 3.3 70B Versatile',
       icon: '👨‍💻',
       category: 'code',
-      params: '70B Groq',
-      desc: 'مطور برمجيات ذكي وسريع متعدد الاستخدامات وإصلاح المشاكل البرمجية.',
+      params: '120B Coder',
+      desc: 'المهندس المعماري الأول لكتابة وهندسة الأكواد وتعديل ملفات التطبيق بدقة فائقة.',
       priority: 1
     },
     {
       id: 'qwen/qwen3.8-27b',
       provider: 'groq',
-      name: 'Qwen 27B Fast Coder',
+      name: 'Qwen 3.8 27B Fast Coder',
       icon: '⚡',
       category: 'code',
-      params: '27B Groq',
-      desc: 'سريع ودقيق في تحليل الدوال وتطوير الواجهات.',
+      params: '27B Coder',
+      desc: 'خبير برمجي فائق السرعة لتصحيح الأخطاء وتوليد دوال جافاسكريبت والـ CSS.',
+      priority: 1
+    },
+    {
+      id: 'groq/compound',
+      provider: 'groq',
+      name: 'AGENT_ROUTER (Compound Coder)',
+      icon: '🧠',
+      category: 'code',
+      params: 'Agent Router',
+      desc: 'وكيل البرمجة المركب الذكي يوجه طلبات التطوير تلقائياً لأفضل خطة معمارية.',
+      priority: 1
+    },
+    {
+      id: 'qwen/qwen3.6-27b',
+      provider: 'groq',
+      name: 'Qwen 3.6 27B Logic Coder',
+      icon: '👨‍💻',
+      category: 'code',
+      params: '27B Logic',
+      desc: 'استدلال منطقي وبرمجي سريع للمهام الخفيفة والمراجعات.',
+      priority: 1
+    },
+    {
+      id: 'openai/gpt-oss-20b',
+      provider: 'groq',
+      name: 'GPT OSS 20B Rapid Coder',
+      icon: '⚡',
+      category: 'code',
+      params: '20B Rapid',
+      desc: 'مطور خفيف وسريع جداً للإجابات والتعديلات الفورية.',
       priority: 1
     },
 
     // ═══ 2. الأعلى معالم والقدرات المعمارية (High-Parameter Architecture) ═══
     {
-      id: 'nvidia/nemotron-3-ultra-550b-a55b:free',
-      provider: 'openrouter',
-      name: 'Nemotron 550B Ultra Flagship',
-      icon: '👑',
-      category: 'reasoning',
-      params: '550B Ultra',
-      desc: 'الأعلى معالم على الإطلاق (550 مليار معامل) للمهام الكبيرة والتحليلات الشاملة.',
-      priority: 2
-    },
-    {
       id: 'minimax/minimax-m3:free',
       provider: 'openrouter',
       name: 'MiniMax M3 Architect',
-      icon: '🧠',
+      icon: '👑',
       category: 'reasoning',
       params: '456B Context',
-      desc: 'نموذج عملاق ذو سياق استيعاب ضخم للمشاريع متعددة الملفات.',
+      desc: 'نموذج عملاق ذو سياق استيعاب ضخم للمشاريع متعددة الملفات والمراجعات الكبرى.',
       priority: 2
     },
     {
-      id: 'nvidia/nemotron-3-super-120b-a12b:free',
+      id: 'minimax/minimax-m2.7:free',
       provider: 'openrouter',
-      name: 'Nemotron 120B Super',
+      name: 'MiniMax M2.7 Reasoning',
       icon: '🧠',
       category: 'reasoning',
-      params: '120B Super',
-      desc: 'استدلال متقدم وهندسة ذكية للملفات والمكونات.',
+      params: 'M2.7 Reason',
+      desc: 'تخطيط وتحليل المنطق المعماري البرمجي والتعديلات الهيكلية.',
       priority: 2
     },
 
     // ═══ 3. السرعة الفائقة والمهام الخفيفة (Ultra-Fast Execution) ═══
     {
-      id: 'groq/compound',
+      id: 'groq/compound-mini',
       provider: 'groq',
-      name: 'Groq Compound Engine',
+      name: 'Groq Compound Mini',
       icon: '⚡',
       category: 'fast',
-      params: 'Ultra-Fast',
-      desc: 'محرك مركب فائق السرعة للمهام اللحظية والتعديلات السريعة.',
-      priority: 3
-    },
-    {
-      id: 'nvidia/nemotron-3.5-lightning:free',
-      provider: 'openrouter',
-      name: 'Nemotron Lightning',
-      icon: '⚡',
-      category: 'fast',
-      params: 'Lightning Fast',
-      desc: 'استجابة فائقة السرعة للمراجعات السريعة والفحص.',
-      priority: 3
-    },
-    {
-      id: 'qwen/qwen3.6-27b',
-      provider: 'groq',
-      name: 'Qwen 3.6 27B Utility',
-      icon: '⚡',
-      category: 'fast',
-      params: '27B Utility',
-      desc: 'نموذج خفيف وسريع للمهام التشغيلية المباشرة.',
+      params: 'Mini Router',
+      desc: 'وكيل سريع مركب للمهام اليومية الخفيفة والفحص السريع.',
       priority: 3
     }
   ];
@@ -921,6 +891,40 @@
       };
     },
 
+    setupModelDropdown() {
+      const pill = $('model-pill-trigger');
+      const menu = $('model-dropdown-menu');
+      if (!pill || !menu) return;
+
+      const renderMenu = () => {
+        menu.innerHTML = DEV_AGENTS.map(agent => {
+          const isActive = agent.id === state.selectedAgentId;
+          const providerText = agent.provider === 'groq' ? '⚡ Groq Fast' : '🌐 OpenRouter';
+          return `
+            <button type="button" class="dropdown-opt ${isActive ? 'active' : ''}" onclick="window._selectAgentFromDropdown('${agent.id}')">
+              <div class="opt-title">
+                <span>${agent.icon || '🧠'} ${this.escapeHtml(agent.name)}</span>
+                ${isActive ? '<span style="color:#fbbf24; font-size:12px;">✓</span>' : ''}
+              </div>
+              <div class="opt-desc">${this.escapeHtml(agent.desc)} · ${agent.params} (${providerText})</div>
+            </button>
+          `;
+        }).join('');
+      };
+
+      pill.onclick = (e) => {
+        e.stopPropagation();
+        renderMenu();
+        menu.classList.toggle('show');
+      };
+
+      document.addEventListener('click', (e) => {
+        if (menu && !menu.contains(e.target) && !pill.contains(e.target)) {
+          menu.classList.remove('show');
+        }
+      });
+    },
+
     renderAttachmentPreviews() {
       const container = $('attachment-preview-container');
       if (!container) return;
@@ -932,13 +936,20 @@
       }
 
       container.classList.remove('hidden');
-      container.innerHTML = state.attachments.map(a => `
-        <div class="attachment-chip">
-          <span>${a.type.startsWith('image/') ? '🖼️' : '📄'}</span>
-          <span>${this.escapeHtml(a.name)}</span>
-          <button type="button" class="attachment-chip-del" onclick="window._removeDevAttachment('${a.id}')">✕</button>
-        </div>
-      `).join('');
+      container.innerHTML = state.attachments.map(a => {
+        const isImg = a.type.startsWith('image/');
+        const thumbHtml = isImg && a.dataUrl 
+          ? `<img src="${a.dataUrl}" class="preview-thumb" alt="Preview">`
+          : `<span style="font-size:16px;">📄</span>`;
+
+        return `
+          <div class="preview-item">
+            ${thumbHtml}
+            <span class="preview-name" title="${this.escapeHtml(a.name)}">${this.escapeHtml(a.name)}</span>
+            <button type="button" class="preview-remove" onclick="window._removeDevAttachment('${a.id}')" title="Remove">✕</button>
+          </div>
+        `;
+      }).join('');
     },
 
     handleSend() {
@@ -1029,8 +1040,8 @@
 
       const contentHtml = msg.role === 'ai' ? this.parseMarkdown(msg.content) : this.escapeHtml(msg.content);
       row.innerHTML = `
-        ${modelBadgeHtml}
         <div class="msg-content">${contentHtml}</div>
+        ${modelBadgeHtml}
       `;
       container.appendChild(row);
 
@@ -1052,8 +1063,8 @@
       const icon = matchedAgent?.icon || '🧠';
 
       row.innerHTML = `
-        <div class="msg-model-tag"><span>${icon}</span> <span class="model-tag-name">${this.escapeHtml(modelName)}</span></div>
         <div class="msg-content"><span style="color:var(--text-dim);">جاري التحليل وتجهيز التعديل...</span></div>
+        <div class="msg-model-tag"><span>${icon}</span> <span class="model-tag-name">${this.escapeHtml(modelName)}</span></div>
       `;
       container.appendChild(row);
       this.scrollToBottom();
