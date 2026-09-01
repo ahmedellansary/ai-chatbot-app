@@ -332,28 +332,27 @@ html, body {
   color: var(--text-main);
 }
 
-/* ─── Pull To Refresh Indicator ─── */
+/* ─── Modern Circular Pull To Refresh Indicator ─── */
 .pull-refresh-indicator {
   position: fixed;
-  top: 16px;
+  top: 14px;
   left: 50%;
-  transform: translate(-50%, -100px);
-  background: #232328;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 999px;
-  padding: 8px 20px;
+  transform: translate(-50%, -80px) scale(0.85);
+  width: 42px;
+  height: 42px;
+  background: rgba(30, 30, 34, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 50%;
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  font-weight: 600;
-  color: #f4f4f5;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+  justify-content: center;
+  color: var(--accent-color);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.7);
   z-index: 9999;
   opacity: 0;
   pointer-events: none;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
 }
 
@@ -363,22 +362,23 @@ html, body {
 
 .pull-refresh-indicator.refreshing {
   opacity: 1;
+  transform: translate(-50%, 20px) scale(1);
+}
+
+.pull-refresh-spinner {
+  width: 21px;
+  height: 21px;
   color: var(--accent-color);
-  border-color: rgba(218, 119, 86, 0.5);
+  transition: transform 0.08s linear;
 }
 
-.pull-refresh-indicator .pull-icon {
-  font-size: 15px;
-  display: inline-block;
+.pull-refresh-indicator.refreshing .pull-refresh-spinner {
+  animation: modernSpin 0.7s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 
-.pull-refresh-indicator.refreshing .pull-icon {
-  animation: spinRefresh 0.7s linear infinite;
-}
-
-@keyframes spinRefresh {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+@keyframes modernSpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 /* ─── Chat Messages Area ─── */
@@ -714,6 +714,92 @@ html, body {
 .claude-plus-btn:hover {
   background: var(--bg-card-hover);
   color: #fff;
+}
+
+/* Skills Trigger Button (✨) */
+.claude-skills-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--bg-pill);
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.claude-skills-btn:hover {
+  background: var(--bg-card-hover);
+  color: var(--accent-color);
+  transform: scale(1.05);
+}
+
+/* Skills Vertical Popup Menu */
+.skills-vertical-menu {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 0;
+  background: #1e1e24;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  padding: 8px;
+  display: none;
+  flex-direction: column;
+  gap: 6px;
+  width: 250px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.75);
+  z-index: 100;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  animation: dropdownPop 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.skills-vertical-menu.show {
+  display: flex;
+}
+
+.skills-menu-opt {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-main);
+  font-family: var(--font-sans);
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: all 0.15s ease;
+}
+
+.skills-menu-opt:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.skills-menu-opt .skill-opt-icon {
+  font-size: 20px;
+}
+
+.skills-menu-opt .skill-opt-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.skills-menu-opt .skill-opt-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.skills-menu-opt .skill-opt-desc {
+  font-size: 11px;
+  color: var(--text-dim);
 }
 
 /* Model Selector Pill */
