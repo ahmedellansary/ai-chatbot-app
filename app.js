@@ -670,7 +670,7 @@
         $('attach-btn')?.addEventListener('click', () => $('file-upload-input')?.click());
       }
     } else {
-      if (titleText) titleText.textContent = `نيترون · ${state.currentMode}`;
+      if (titleText) titleText.textContent = `X.v1 · ${state.currentMode}`;
       if (dot) dot.style.background = '#10b981';
       if (indicator) {
         indicator.innerHTML = `
@@ -695,7 +695,7 @@
     container.innerHTML = `
       <div class="welcome-screen">
         <div class="brand-icon" style="width:44px;height:44px;font-size:20px;border-radius:12px;">✦</div>
-        <h1 class="welcome-title">مرحباً بك في نيترون</h1>
+        <h1 class="welcome-title">مرحباً بك في X.v1</h1>
         <p class="welcome-sub">مساعد الذكاء الاصطناعي الذاتي. اسأل أي سؤال أو ادخل وضع المطور لتعديل التطبيق.</p>
         <div class="welcome-chips">
           <button class="welcome-chip" onclick="window._suggest('اشرح لي الذكاء الاصطناعي في 3 نقاط مبسطة')">🧠 ما هو الذكاء الاصطناعي؟</button>
@@ -806,7 +806,7 @@
               <line x1="4.93" y1="19.07" x2="19.07" y2="4.93"></line>
             </svg>
           </div>
-          <div class="claude-disclaimer-text">Claude is AI and can make mistakes.<br>Please double-check responses.</div>
+          <div class="claude-disclaimer-text">X.v1 is AI and can make mistakes.<br>Please double-check responses.</div>
         </div>
       `;
     }
@@ -1653,7 +1653,7 @@
   window._shareMsgText = (btn) => {
     const text = btn.closest('.message-row')?.querySelector('.msg-content')?.innerText || '';
     if (navigator.share) {
-      navigator.share({ title: 'Claude', text });
+      navigator.share({ title: 'X.v1', text });
     } else {
       window._copyMsgText(btn);
     }
