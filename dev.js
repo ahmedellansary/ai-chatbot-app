@@ -271,6 +271,18 @@
       return { sha: data.sha, content };
     },
 
+    async listFiles() {
+      const url = `https://api.github.com/repos/${DevConfigVault.githubUser}/${DevConfigVault.githubRepo}/git/trees/${DevConfigVault.branch}?recursive=1&t=${Date.now()}`;
+      const res = await fetch(url, { headers: this.getHeaders() });
+      if (!res.ok) throw new Error(`HTTP ${res.status}: Failed to list repo files`);
+      const data = await res.json();
+      const files = (data.tree || [])
+        .filter(item => item.type === 'blob')
+        .map(item => item.path)
+        .filter(path => !path.startsWith('.') && !path.includes('node_modules') && !path.includes('scratch/'));
+      return files;
+    },
+
     async commitFile(path, content, message, skipCacheBump = false) {
       let sha = null;
       try {
@@ -938,6 +950,47 @@
         DevState.loadConversation(state.conversations[0].id);
       } else {
         DevState.newConversation();
+      }
+    },
+
+    async loadDevPrompt() {
+      try {
+        const saved = localStorage.getItem('dev_system_prompt');
+        if (saved && saved.trim()) {
+          state.devPrompt = saved.trim();
+        } else {
+          const res = await fetch('./dev_prompt.txt?t=' + Date.now());
+          if (res.ok) {
+            state.devPrompt = await res.text();
+          }
+        }
+      } catch (e) {
+        console.warn('[DevPrompt] Load fallback:', e.message);
+      }
+      this.syncLiveRepoMap();
+    },
+
+    async syncLiveRepoMap() {
+      try {
+        const files = await DevGitHubService.listFiles();
+        if (files && files.length > 0) {
+          state.liveRepoFiles = files;
+          const mapHeader = `\n\n═══════════════════════════════════════════════════════════════\n🗺️ LIVE GITHUB REPO DIRECTORY MAP (Auto-Synced on Startup):\n═══════════════════════════════════════════════════════════════\nActive Repository Files in main branch:\n` + 
+            files.map(f => `- ${f}`).join('\n') + 
+            `\n\nUse this live file directory to know exactly which file to inspect and propose modifications for when requested by the user.`;
+
+          if (!state.devPrompt) state.devPrompt = '';
+
+          // Replace old live map section if exists, or append
+          if (state.devPrompt.includes('LIVE GITHUB REPO DIRECTORY MAP')) {
+            state.devPrompt = state.devPrompt.replace(/═══════+\s*🗺️ LIVE GITHUB REPO DIRECTORY MAP[\s\S]*$/, mapHeader.trim());
+          } else {
+            state.devPrompt += mapHeader;
+          }
+          console.log('[DevStudio] Live Repo Map Synced:', files.length, 'files');
+        }
+      } catch (e) {
+        console.log('[DevStudio] Live Repo Map sync skipped:', e.message);
       }
     },
 
