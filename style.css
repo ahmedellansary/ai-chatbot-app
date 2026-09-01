@@ -410,6 +410,105 @@ html, body {
   100% { transform: rotate(360deg); }
 }
 
+/* ─── Bottom Refresh Confirmation Modal ─── */
+.bottom-refresh-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.68);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.bottom-refresh-modal.show {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.bottom-refresh-card {
+  background: #18181c;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 18px;
+  padding: 22px 24px;
+  max-width: 340px;
+  width: 100%;
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.85);
+  text-align: center;
+  direction: rtl;
+  transform: scale(0.92);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.bottom-refresh-modal.show .bottom-refresh-card {
+  transform: scale(1);
+}
+
+.bottom-refresh-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #fff;
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.bottom-refresh-desc {
+  font-size: 13.5px;
+  color: var(--text-muted);
+  margin: 10px 0 18px;
+  line-height: 1.5;
+}
+
+.bottom-refresh-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.btn-refresh-confirm {
+  flex: 1;
+  padding: 10px 16px;
+  background: linear-gradient(135deg, var(--accent-color), var(--accent-color-dark));
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.btn-refresh-confirm:hover {
+  opacity: 0.95;
+  transform: translateY(-1px);
+}
+
+.btn-refresh-cancel {
+  flex: 1;
+  padding: 10px 16px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-muted);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.btn-refresh-cancel:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+}
+
 /* ─── Chat Messages Area ─── */
 #chat-area {
   flex: 1;
