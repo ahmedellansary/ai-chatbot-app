@@ -552,34 +552,40 @@ if (typeof $$ === 'undefined') {
       gate.classList.add('hidden');
     }
 
+    let isVerifying = false;
     const handleGateSubmit = async () => {
+      if (isVerifying) return;
       const password = pinInput ? pinInput.value.trim() : '';
       if (!password) {
         showToast('يرجى كتابة كلمة السر', 'warning');
         return;
       }
 
-      const isValid = await verifyPassword(password, MASTER_AUTH_RECORD);
+      isVerifying = true;
+      try {
+        const isValid = await verifyPassword(password, MASTER_AUTH_RECORD);
 
-      if (isValid) {
-        sessionStorage.setItem('xv1_authenticated', 'true');
-        localStorage.removeItem('nytron_app_unlocked');
-        localStorage.removeItem('claude_app_unlocked');
-        localStorage.removeItem('owner_unlocked');
-        gate.classList.add('hidden');
-        showToast('🔐 تم فتح التطبيق بنجاح! مرحباً بك.', 'success');
-      } else {
-        showToast('❌ كلمة السر غير صحيحة!', 'error');
-        if (pinInput) {
-          pinInput.value = '';
-          pinInput.style.borderColor = 'var(--error)';
-          setTimeout(() => pinInput.style.borderColor = '', 1000);
+        if (isValid) {
+          sessionStorage.setItem('xv1_authenticated', 'true');
+          localStorage.removeItem('nytron_app_unlocked');
+          localStorage.removeItem('claude_app_unlocked');
+          localStorage.removeItem('owner_unlocked');
+          gate.classList.add('hidden');
+          showToast('🔐 تم فتح التطبيق بنجاح! مرحباً بك.', 'success');
+        } else {
+          showToast('❌ كلمة السر غير صحيحة!', 'error');
+          if (pinInput) {
+            pinInput.value = '';
+            pinInput.style.borderColor = 'var(--error)';
+            setTimeout(() => pinInput.style.borderColor = '', 1000);
+          }
         }
+      } finally {
+        isVerifying = false;
       }
     };
 
     if (form) form.onsubmit = (e) => { e.preventDefault(); handleGateSubmit(); };
-    if (submitBtn) submitBtn.onclick = handleGateSubmit;
   }
 
   function promptOwnerAuth(onSuccess) {
