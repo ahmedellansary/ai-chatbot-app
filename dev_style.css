@@ -1261,8 +1261,15 @@ pre code {
 .dropdown-opt .opt-tag.openrouter {
   color: #60a5fa;
   background: rgba(59, 130, 246, 0.12);
+}
+
 .dropdown-opt.active .opt-title {
   color: #fbbf24;
+}
+
+/* Global Hidden Utility */
+.hidden {
+  display: none !important;
 }
 
 /* Electric Send Button (⚡) */
@@ -1681,8 +1688,7 @@ pre code {
 }
 
 .custom-modal.hidden {
-  opacity: 0;
-  pointer-events: none;
+  display: none !important;
 }
 
 .custom-modal-card {
