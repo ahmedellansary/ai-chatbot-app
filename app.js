@@ -739,18 +739,77 @@
       }).join('') + '</div>';
     }
 
-    row.innerHTML = `
-      <div class="msg-content">
-        ${parsed}
-        ${attachmentsHtml}
-      </div>
-      ${msg.role === 'ai' && msg.model ? `
-        <div class="message-meta">
-          <span class="meta-badge">✦ ${escapeHtml(msg.model)}</span>
-          ${msg.usedFallback ? '<span class="meta-badge" style="color:var(--warning);">⚡ Fallback</span>' : ''}
+    if (msg.role === 'user') {
+      row.innerHTML = `
+        <div class="msg-content">
+          ${parsed}
+          ${attachmentsHtml}
         </div>
-      ` : ''}
-    `;
+      `;
+    } else {
+      // AI Message with Claude Action Toolbar & Disclaimer Note
+      row.innerHTML = `
+        <div class="msg-content">
+          ${parsed}
+          ${attachmentsHtml}
+        </div>
+
+        <!-- Claude Actions Toolbar (Copy, Share, Play, Like, Dislike, Retry) -->
+        <div class="claude-actions-bar">
+          <button class="claude-action-btn" onclick="window._copyMsgText(this)" title="نسخ">
+            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
+          </button>
+
+          <button class="claude-action-btn" onclick="window._shareMsgText(this)" title="مشاركة">
+            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path>
+              <polyline points="16 6 12 2 8 6"></polyline>
+              <line x1="12" y1="2" x2="12" y2="15"></line>
+            </svg>
+          </button>
+
+          <button class="claude-action-btn" onclick="window._playMsgSpeech(this)" title="استماع">
+            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="5 3 19 12 5 21 5 3"></polygon>
+            </svg>
+          </button>
+
+          <button class="claude-action-btn" onclick="window._likeMsg(this)" title="إعجاب">
+            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path>
+            </svg>
+          </button>
+
+          <button class="claude-action-btn" onclick="window._dislikeMsg(this)" title="لم يعجبني">
+            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-3"></path>
+            </svg>
+          </button>
+
+          <button class="claude-action-btn" onclick="window._retryMsg('${msg.id}')" title="إعادة المحاولة">
+            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Claude Starburst Emblem & Disclaimer Note -->
+        <div class="claude-footer-note">
+          <div class="claude-terracotta-star">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="color:var(--claude-terracotta);">
+              <line x1="12" y1="2" x2="12" y2="22"></line>
+              <line x1="2" y1="12" x2="22" y2="12"></line>
+              <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
+              <line x1="4.93" y1="19.07" x2="19.07" y2="4.93"></line>
+            </svg>
+          </div>
+          <div class="claude-disclaimer-text">Claude is AI and can make mistakes.<br>Please double-check responses.</div>
+        </div>
+      `;
+    }
 
     return row;
   }
@@ -1290,15 +1349,33 @@
     setupEmergencyControls();
     setupPullToRefresh();
     setupAttachmentHandler();
+    setupVoiceHandlers();
 
     const input = $('user-input');
     const sendBtn = $('send-btn');
+    const micBtn = $('mic-btn');
+    const voiceBtn = $('voice-mode-btn');
+
+    function updateSendBtnState() {
+      const hasText = !!input.value.trim();
+      const hasAtt = state.attachments && state.attachments.length > 0;
+      const canSend = (hasText || hasAtt) && !state.isStreaming;
+
+      if (canSend) {
+        sendBtn.classList.remove('hidden');
+        if (micBtn) micBtn.style.display = 'none';
+        if (voiceBtn) voiceBtn.style.display = 'none';
+      } else {
+        sendBtn.classList.add('hidden');
+        if (micBtn) micBtn.style.display = 'flex';
+        if (voiceBtn) voiceBtn.style.display = 'flex';
+      }
+    }
 
     input.addEventListener('input', () => {
       input.style.height = 'auto';
-      input.style.height = Math.min(input.scrollHeight, 180) + 'px';
-      const hasAtt = state.attachments && state.attachments.length > 0;
-      sendBtn.disabled = (!input.value.trim() && !hasAtt) || state.isStreaming;
+      input.style.height = Math.min(input.scrollHeight, 150) + 'px';
+      updateSendBtnState();
     });
 
     input.addEventListener('keydown', e => {
@@ -1309,7 +1386,7 @@
           const text = input.value.trim();
           input.value = '';
           input.style.height = 'auto';
-          sendBtn.disabled = true;
+          updateSendBtnState();
           sendMessage(text);
         }
       }
@@ -1321,8 +1398,73 @@
       if ((!text && !hasAtt) || state.isStreaming) return;
       input.value = '';
       input.style.height = 'auto';
-      sendBtn.disabled = true;
+      updateSendBtnState();
       sendMessage(text);
+    });
+  }
+
+  // ─── Voice & Speech Handlers (الميكروفون والصوت) ───
+  function setupVoiceHandlers() {
+    const micBtn = $('mic-btn');
+    const voiceModeBtn = $('voice-mode-btn');
+    const input = $('user-input');
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let recognition = null;
+
+    if (SpeechRecognition) {
+      recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = true;
+      recognition.lang = 'ar-EG';
+
+      recognition.onstart = () => {
+        micBtn?.classList.add('recording');
+        showToast('🎙️ جاري الاستماع...', 'info');
+      };
+
+      recognition.onresult = (event) => {
+        let transcript = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          transcript += event.results[i][0].transcript;
+        }
+        if (input) {
+          input.value = transcript;
+          input.dispatchEvent(new Event('input'));
+        }
+      };
+
+      recognition.onerror = (e) => {
+        console.warn('Speech error:', e.error);
+        micBtn?.classList.remove('recording');
+      };
+
+      recognition.onend = () => {
+        micBtn?.classList.remove('recording');
+      };
+    }
+
+    micBtn?.addEventListener('click', () => {
+      if (!recognition) {
+        showToast('المتصفح لا يدعم التعرف على الصوت', 'error');
+        return;
+      }
+      try {
+        if (micBtn.classList.contains('recording')) {
+          recognition.stop();
+        } else {
+          recognition.start();
+        }
+      } catch (e) {
+        console.warn(e);
+      }
+    });
+
+    voiceModeBtn?.addEventListener('click', () => {
+      showToast('🔊 وضع الصوت التفاعلي جاهز', 'info');
+      if (recognition) {
+        micBtn?.click();
+      }
     });
   }
 
@@ -1483,7 +1625,7 @@
   window._suggest = (text) => {
     newConversation();
     $('user-input').value = text;
-    $('send-btn').disabled = false;
+    $('send-btn').classList.remove('hidden');
     $('send-btn').click();
   };
 
@@ -1497,6 +1639,61 @@
       btn.textContent = 'تم النسخ!';
       setTimeout(() => btn.textContent = 'نسخ', 2000);
     });
+  };
+
+  window._copyMsgText = (btn) => {
+    const text = btn.closest('.message-row')?.querySelector('.msg-content')?.innerText || '';
+    if (text) {
+      navigator.clipboard.writeText(text).then(() => {
+        showToast('تم النسخ بنجاح', 'success');
+      });
+    }
+  };
+
+  window._shareMsgText = (btn) => {
+    const text = btn.closest('.message-row')?.querySelector('.msg-content')?.innerText || '';
+    if (navigator.share) {
+      navigator.share({ title: 'Claude', text });
+    } else {
+      window._copyMsgText(btn);
+    }
+  };
+
+  window._playMsgSpeech = (btn) => {
+    const text = btn.closest('.message-row')?.querySelector('.msg-content')?.innerText || '';
+    if (!text) return;
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 1.0;
+      utterance.pitch = 1.0;
+      window.speechSynthesis.speak(utterance);
+      showToast('🔊 جاري تشغيل الصوت...', 'info');
+    } else {
+      showToast('المتصفح لا يدعم تحويل النص لصوت', 'error');
+    }
+  };
+
+  window._likeMsg = (btn) => {
+    btn.style.color = '#10b981';
+    showToast('شكراً على تقييمك الإيجابي', 'success');
+  };
+
+  window._dislikeMsg = (btn) => {
+    btn.style.color = '#ef4444';
+    showToast('تم تسجيل ملاحظتك', 'info');
+  };
+
+  window._retryMsg = (msgId) => {
+    const conv = getActiveConv();
+    if (!conv) return;
+    const idx = conv.messages.findIndex(m => m.id === msgId);
+    if (idx > 0 && conv.messages[idx - 1].role === 'user') {
+      const userText = conv.messages[idx - 1].content;
+      conv.messages.splice(idx, 1);
+      renderAllMessages(conv.messages);
+      sendMessage(userText);
+    }
   };
 
   document.addEventListener('DOMContentLoaded', init);
