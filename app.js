@@ -1256,32 +1256,45 @@
 
   // ─── Pull to Refresh Touch Gesture (السحب للتحديث) ───
   function setupPullToRefresh() {
-    const chatArea = $('chat-area');
     const indicator = $('pull-refresh-indicator');
-    if (!chatArea || !indicator) return;
+    if (!indicator) return;
 
     const icon = indicator.querySelector('.pull-icon');
     const text = indicator.querySelector('.pull-text');
+    const chatArea = $('chat-area');
 
     let startY = 0;
     let distance = 0;
-    let isPulling = false;
-    const THRESHOLD = 70;
+    let isTracking = false;
+    const THRESHOLD = 65;
 
-    chatArea.addEventListener('touchstart', (e) => {
-      if (chatArea.scrollTop <= 5) {
+    window.addEventListener('touchstart', (e) => {
+      const scrollPos = chatArea ? chatArea.scrollTop : 0;
+      if (scrollPos <= 5 && e.touches.length === 1) {
         startY = e.touches[0].clientY;
-        isPulling = true;
+        isTracking = true;
+        distance = 0;
       }
     }, { passive: true });
 
-    chatArea.addEventListener('touchmove', (e) => {
-      if (!isPulling) return;
+    window.addEventListener('touchmove', (e) => {
+      if (!isTracking) return;
       const currentY = e.touches[0].clientY;
+      const scrollPos = chatArea ? chatArea.scrollTop : 0;
+
+      if (scrollPos > 5) {
+        isTracking = false;
+        indicator.classList.remove('visible');
+        return;
+      }
+
       distance = currentY - startY;
 
-      if (distance > 15 && chatArea.scrollTop <= 5) {
+      if (distance > 15) {
         indicator.classList.add('visible');
+        const pullProgress = Math.min(distance, 90);
+        indicator.style.transform = `translate(-50%, ${pullProgress - 50}px)`;
+
         if (distance >= THRESHOLD) {
           if (icon) icon.textContent = '🔄';
           if (text) text.textContent = 'أفلت للتحديث الآن';
@@ -1296,24 +1309,23 @@
       }
     }, { passive: true });
 
-    chatArea.addEventListener('touchend', () => {
-      if (!isPulling) return;
-      isPulling = false;
+    window.addEventListener('touchend', () => {
+      if (!isTracking) return;
+      isTracking = false;
 
       if (distance >= THRESHOLD) {
         indicator.classList.add('refreshing');
+        indicator.style.transform = 'translate(-50%, 15px)';
         if (icon) icon.textContent = '⚙️';
-        if (text) text.textContent = 'جاري تحديث التطبيق...';
-        if (navigator.vibrate) {
-          try { navigator.vibrate(20); } catch {}
-        }
-        showToast('🔄 جاري تحديث التطبيق...', 'info');
+        if (text) text.textContent = 'جاري التحديث...';
+        showToast('🔄 جاري التحديث...', 'info');
 
         setTimeout(() => {
           location.reload();
-        }, 350);
+        }, 300);
       } else {
         indicator.classList.remove('visible');
+        indicator.style.transform = '';
       }
       distance = 0;
     });
