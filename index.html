@@ -4,111 +4,123 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#131314">
-  <meta name="description" content="نيترون — مساعد الذكاء الاصطناعي">
+  <meta name="description" content="نيترون — المساعد الذكي المتقدم">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="نيترون">
 
   <title>نيترون</title>
   <link rel="manifest" href="./manifest.json">
-  <link rel="stylesheet" href="./style.css?v=2026">
+  <link rel="stylesheet" href="./style.css">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✦</text></svg>">
-  <script>
-    // Auto-clear old PWA caches
-    if ('caches' in window) {
-      caches.keys().then(keys => {
-        keys.forEach(k => { if (k === 'ai-chat-v1') caches.delete(k); });
-      });
-    }
-  </script>
 </head>
 <body>
 <div id="app">
 
-  <!-- ═══ Sidebar Drawer ═══ -->
+  <!-- ═══ Drawer Sidebar (القائمة الجانبية) ═══ -->
   <aside id="sidebar">
     <div class="sidebar-header">
       <div class="brand-logo">
         <div class="brand-icon">✦</div>
         <span>نيترون</span>
       </div>
-      <button class="header-btn" id="close-sidebar-btn" aria-label="إغلاق">✕</button>
+      <button class="icon-btn" id="close-sidebar-btn" aria-label="إغلاق">✕</button>
     </div>
 
-    <div style="padding: 0 12px; display: flex; flex-direction: column; gap: 8px;">
-      <button class="sidebar-action-btn" id="btn-new-chat">
+    <!-- Main Navigation Actions -->
+    <div class="sidebar-nav">
+      <button class="nav-btn primary" id="btn-new-chat">
         <span>＋</span>
         <span>محادثة جديدة</span>
       </button>
-      <button class="sidebar-action-btn dev-btn" id="btn-dev-chat">
+      <button class="nav-btn dev" id="btn-dev-chat">
         <span>🛠️</span>
         <span>شات المطور (تعديل التطبيق)</span>
       </button>
     </div>
 
-    <div class="sidebar-section-title">المحادثات الأخيرة</div>
+    <!-- Emergency Controls (أزرار الطوارئ) -->
+    <div class="emergency-box">
+      <div class="emergency-title">🚨 تحكم الطوارئ (Safety Controls)</div>
+      <button class="emergency-btn rollback" id="btn-emergency-rollback">
+        <span>⏪</span>
+        <span>استرجاع فوري لآخر نسخة</span>
+      </button>
+      <button class="emergency-btn fix" id="btn-emergency-fix">
+        <span>🔍</span>
+        <span>مراجعة وإصلاح آخر تعديل</span>
+      </button>
+    </div>
+
+    <div class="sidebar-section-title">المحادثات السابقة</div>
     <div id="conversations-list"></div>
 
     <div class="sidebar-footer">
       <button class="footer-btn" id="install-btn" style="display:none;">
         <span>📲</span>
-        <span>تثبيت التطبيق</span>
+        <span>تثبيت التطبيق على الموبايل</span>
       </button>
       <button class="footer-btn" onclick="localStorage.clear(); location.reload()">
         <span>🗑️</span>
-        <span>مسح السجل</span>
+        <span>مسح السجل والكاش</span>
       </button>
     </div>
   </aside>
 
-  <!-- ═══ Main View ═══ -->
+  <!-- ═══ Main View (الواجهة الرئيسية) ═══ -->
   <main id="main">
 
     <!-- Top Header -->
     <header id="header">
-      <button class="header-btn" id="sidebar-toggle" aria-label="القائمة">☰</button>
+      <button class="icon-btn" id="sidebar-toggle" aria-label="القائمة">☰</button>
 
-      <!-- Clean Model Selector Pill -->
-      <button class="model-pill-btn" id="model-pill-trigger">
-        <span class="model-dot-indicator"></span>
-        <span id="header-model-label">نيترون · MID</span>
-        <span style="font-size: 10px; opacity: 0.6;">▾</span>
-      </button>
+      <!-- Center Model Pill Dropdown -->
+      <div style="position: relative;">
+        <button class="model-pill" id="model-pill-trigger">
+          <span class="status-dot"></span>
+          <span id="header-title-text">نيترون · MID</span>
+          <span style="font-size: 9px; opacity: 0.6;">▼</span>
+        </button>
 
-      <!-- Model Dropdown -->
-      <div class="mode-dropdown" id="mode-dropdown-menu">
-        <button class="dropdown-item" data-mode="HIGH">
-          <span>⚡ HIGH (أقوى الموديلز)</span>
-        </button>
-        <button class="dropdown-item active" data-mode="MID">
-          <span>⚖️ MID (متوازن وسريع)</span>
-        </button>
-        <button class="dropdown-item" data-mode="FAST">
-          <span>🚀 FAST (الأسرع استجابة)</span>
-        </button>
+        <div class="model-dropdown" id="model-dropdown-menu">
+          <button class="dropdown-opt" data-mode="HIGH">
+            <div class="opt-title">⚡ وضع HIGH (أقوى الموديلز)</div>
+            <div class="opt-desc">Nemotron Ultra 550B + MiniMax M3</div>
+          </button>
+          <button class="dropdown-opt active" data-mode="MID">
+            <div class="opt-title">⚖️ وضع MID (متوازن وذكي)</div>
+            <div class="opt-desc">Nemotron 120B + GPT OSS 120B</div>
+          </button>
+          <button class="dropdown-opt" data-mode="FAST">
+            <div class="opt-title">🚀 وضع FAST (الأسرع استجابة)</div>
+            <div class="opt-desc">Groq Compound + Qwen 3.6 27B</div>
+          </button>
+        </div>
       </div>
 
-      <button class="header-btn" id="header-new-chat-btn" title="محادثة جديدة">＋</button>
+      <button class="icon-btn" id="header-new-chat-btn" title="محادثة جديدة">＋</button>
     </header>
 
-    <!-- Chat Message Feed -->
+    <!-- Chat Messages Feed -->
     <div id="chat-area">
       <div class="chat-container" id="chat-container"></div>
     </div>
 
-    <!-- Floating Input Bar -->
+    <!-- Floating Input Bar (Claude & ChatGPT Style) -->
     <div id="input-section">
       <div class="input-container">
         <textarea
           id="user-input"
           class="chat-textarea"
-          placeholder="كيف يمكنني مساعدتك اليوم؟"
+          placeholder="اكتب رسالتك أو اطلب تعديلاً..."
           rows="1"
           autocomplete="off"
         ></textarea>
-        <div class="input-bottom-bar">
-          <div class="input-actions-left"></div>
-          <button id="send-btn" class="send-button" disabled aria-label="إرسال">↑</button>
+        <div class="input-actions-bar">
+          <div class="input-left-info" id="input-mode-indicator">
+            <span class="mode-tag">الشات الطبيعي</span>
+          </div>
+          <button id="send-btn" class="send-btn" disabled aria-label="إرسال">↑</button>
         </div>
       </div>
     </div>
@@ -123,7 +135,7 @@
 
 </div>
 
-<script src="./keys.js?v=2026"></script>
-<script type="module" src="./app.js?v=2026"></script>
+<!-- Single Unified Application Bundle (No external imports that could fail) -->
+<script src="./app.js"></script>
 </body>
 </html>
