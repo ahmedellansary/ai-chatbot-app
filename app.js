@@ -652,55 +652,6 @@
   // 6. MARKDOWN & UI MESSAGE RENDERER (MessageRenderer)
   // ─────────────────────────────────────────────────────────────────
   const MessageRenderer = {
-    // Pre-response sanity check to enforce system_prompt MUST-ADD rules
-    preResponseSanity(text) {
-      const unsafePatterns = [
-        /\bsk-[A-Za-z0-9-_]{8,}\b/i,
-        /\bghp_[A-Za-z0-9]{36,}\b/i,
-        /\bgithub_pat_[A-Za-z0-9_\-]{20,}\b/i,
-        /-----BEGIN PRIVATE KEY-----/i,
-        /API[_-]?KEY\s*[:=]/i,
-        /(?:https?:\\/\\/)?[\w.-]+(?:\\:\d+)?\\/.*(\.pem|\.key|passwd|shadow)/i,
-        /\b[A-Za-z0-9]{40}\b/ // generic long token heuristic
-      ];
-
-      // quick secret scan
-      for (const re of unsafePatterns) {
-        if (re.test(String(text))) {
-          return { blocked: true, reason: 'Detected potential secret or token in generated output', cleanedContent: '' };
-        }
-      }
-
-      // detect attempts to reference absolute filesystem paths or local env
-      if (/([A-Za-z]:\\\\|\\/etc\\/|\\/home\\/|\\/root\\/)/.test(String(text))) {
-        return { blocked: true, reason: 'Detected references to filesystem paths', cleanedContent: '' };
-      }
-
-      // detect JSON proposal delimiters and validate
-      const begin = '---BEGIN_JSON_PROPOSAL---';
-      const end = '---END_JSON_PROPOSAL---';
-      if (text.includes(begin) || text.includes(end)) {
-        const b = text.indexOf(begin);
-        const e = text.indexOf(end);
-        if (b === -1 || e === -1 || e <= b) {
-          return { blocked: true, reason: 'Malformed JSON proposal delimiters', cleanedContent: '' };
-        }
-        const jsonStr = text.substring(b + begin.length, e).trim();
-        try {
-          const parsed = JSON.parse(jsonStr);
-          // basic schema check
-          if (!parsed.file || !parsed.content) {
-            return { blocked: true, reason: 'JSON proposal missing required fields (file/content)', cleanedContent: '' };
-          }
-        } catch (e) {
-          return { blocked: true, reason: 'Invalid JSON inside proposal block', cleanedContent: '' };
-        }
-      }
-
-      // If nothing suspicious, return cleaned content (no modifications)
-      return { blocked: false, reason: '', cleanedContent: String(text) };
-    },
-
     escapeHtml(text) {
       return String(text ?? '')
         .replace(/&/g, '&amp;')
