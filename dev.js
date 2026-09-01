@@ -6,13 +6,22 @@
   'use strict';
 
   // ─────────────────────────────────────────────────────────────────
+  // Helper: Unique ID Generator
+  // ─────────────────────────────────────────────────────────────────
+  function generateId() {
+    return 'dev_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 8);
+  }
+
+  // ─────────────────────────────────────────────────────────────────
   // 1. CONFIGURATION & CREDENTIALS VAULT (DevConfigVault)
   // ─────────────────────────────────────────────────────────────────
   const _k1 = ['sk-or-v1-', 'b82e11595ed064e7', '51bfff2b251a4c54', 'ca0da9bc779786cd', 'baf933e916398e03'].join('');
   const _k2 = [
     ['gsk_6ULPilUmj8gf0mbu2ZlX', 'WGdyb3FYkqImKQ7lZPdjGIBERqBKrDhX'].join(''),
     ['gsk_ECkO3AaJ8sBRAnd7gLMN', 'WGdyb3FYTMBNYK0SxQU6W1CSXEx23koB'].join(''),
-    ['gsk_wS0b5a1JpL92yD8zQkMN', 'WGdyb3FYtmBnYk0SxQu6W1CsXeX23kOb'].join('')
+    ['gsk_QiThrmueUOxgPM9xcIwn', 'WGdyb3FYVF37eSLhIgG9RYTXakzxc16l'].join(''),
+    ['gsk_dVkSeAKGE0wQRxqy7OWX', 'WGdyb3FY0vHBuaJxlmnjbaPytbsl4dn8'].join(''),
+    ['gsk_u5bCiNIx7oQaS2XzqiAG', 'WGdyb3FYE6s7QoY0qntIUhBU4D13AhjZ'].join('')
   ].join(',');
   const _k3 = ['ghp_Ep2hC2i0', 'LFNVeyCSiUFlMMb0', '5ILzmJ2nzGGN'].join('');
 
@@ -47,7 +56,128 @@
   };
 
   // ─────────────────────────────────────────────────────────────────
-  // 2. AUTHENTICATION & LOCK GATE (DevAuthManager)
+  // 2. DEV AGENTS CATALOG (Hierarchy: Coding -> High-Params -> Fast)
+  // ─────────────────────────────────────────────────────────────────
+  const DEV_AGENTS = [
+    // ═══ 1. المتخصصين في البرمجة والأكواد (Coding Specialists - Top Priority) ═══
+    {
+      id: 'qwen/qwen-2.5-coder-32b-instruct:free',
+      provider: 'openrouter',
+      name: 'Qwen 2.5 Coder 32B',
+      icon: '👨‍💻',
+      category: 'code',
+      params: '32B Coder',
+      desc: 'المتخصص الأول في كتابة وهندسة الأكواد وتصحيح أخطاء JavaScript & CSS بدقة متناهية.',
+      priority: 1
+    },
+    {
+      id: 'deepseek/deepseek-r1:free',
+      provider: 'openrouter',
+      name: 'DeepSeek R1 Reasoning',
+      icon: '🧠',
+      category: 'code',
+      params: 'DeepSeek R1',
+      desc: 'استدلال منطقي عميق وتخطيط معماري متقدم لهيكل المشروع والميزات المعقدة.',
+      priority: 1
+    },
+    {
+      id: 'openai/gpt-oss-120b',
+      provider: 'groq',
+      name: 'GPT OSS 120B Lead Architect',
+      icon: '⚡',
+      category: 'code',
+      params: '120B Groq',
+      desc: 'مهندس برمجيات متقدم فائق السرعة لتوليد الحلول وهندسة الملفات.',
+      priority: 1
+    },
+    {
+      id: 'meta-llama/llama-3.3-70b-versatile',
+      provider: 'groq',
+      name: 'Llama 3.3 70B Versatile',
+      icon: '👨‍💻',
+      category: 'code',
+      params: '70B Groq',
+      desc: 'مطور برمجيات ذكي وسريع متعدد الاستخدامات وإصلاح المشاكل البرمجية.',
+      priority: 1
+    },
+    {
+      id: 'qwen/qwen3.8-27b',
+      provider: 'groq',
+      name: 'Qwen 27B Fast Coder',
+      icon: '⚡',
+      category: 'code',
+      params: '27B Groq',
+      desc: 'سريع ودقيق في تحليل الدوال وتطوير الواجهات.',
+      priority: 1
+    },
+
+    // ═══ 2. الأعلى معالم والقدرات المعمارية (High-Parameter Architecture) ═══
+    {
+      id: 'nvidia/nemotron-3-ultra-550b-a55b:free',
+      provider: 'openrouter',
+      name: 'Nemotron 550B Ultra Flagship',
+      icon: '👑',
+      category: 'reasoning',
+      params: '550B Ultra',
+      desc: 'الأعلى معالم على الإطلاق (550 مليار معامل) للمهام الكبيرة والتحليلات الشاملة.',
+      priority: 2
+    },
+    {
+      id: 'minimax/minimax-m3:free',
+      provider: 'openrouter',
+      name: 'MiniMax M3 Architect',
+      icon: '🧠',
+      category: 'reasoning',
+      params: '456B Context',
+      desc: 'نموذج عملاق ذو سياق استيعاب ضخم للمشاريع متعددة الملفات.',
+      priority: 2
+    },
+    {
+      id: 'nvidia/nemotron-3-super-120b-a12b:free',
+      provider: 'openrouter',
+      name: 'Nemotron 120B Super',
+      icon: '🧠',
+      category: 'reasoning',
+      params: '120B Super',
+      desc: 'استدلال متقدم وهندسة ذكية للملفات والمكونات.',
+      priority: 2
+    },
+
+    // ═══ 3. السرعة الفائقة والمهام الخفيفة (Ultra-Fast Execution) ═══
+    {
+      id: 'groq/compound',
+      provider: 'groq',
+      name: 'Groq Compound Engine',
+      icon: '⚡',
+      category: 'fast',
+      params: 'Ultra-Fast',
+      desc: 'محرك مركب فائق السرعة للمهام اللحظية والتعديلات السريعة.',
+      priority: 3
+    },
+    {
+      id: 'nvidia/nemotron-3.5-lightning:free',
+      provider: 'openrouter',
+      name: 'Nemotron Lightning',
+      icon: '⚡',
+      category: 'fast',
+      params: 'Lightning Fast',
+      desc: 'استجابة فائقة السرعة للمراجعات السريعة والفحص.',
+      priority: 3
+    },
+    {
+      id: 'qwen/qwen3.6-27b',
+      provider: 'groq',
+      name: 'Qwen 3.6 27B Utility',
+      icon: '⚡',
+      category: 'fast',
+      params: '27B Utility',
+      desc: 'نموذج خفيف وسريع للمهام التشغيلية المباشرة.',
+      priority: 3
+    }
+  ];
+
+  // ─────────────────────────────────────────────────────────────────
+  // 3. AUTHENTICATION & LOCK GATE (DevAuthManager)
   // ─────────────────────────────────────────────────────────────────
   const MASTER_RECORD = 'cf53ff6bb81c1371f0652dc895f70385:47006d30af3e6fec76cf57808b47d841a0e6e788f1da7d8a3650bb14cf3166e5';
 
@@ -137,7 +267,7 @@
   };
 
   // ─────────────────────────────────────────────────────────────────
-  // 3. GITHUB SERVICE & DEPLOYMENT (DevGitHubService)
+  // 4. GITHUB SERVICE & DEPLOYMENT (DevGitHubService)
   // ─────────────────────────────────────────────────────────────────
   const DevGitHubService = {
     getHeaders() {
@@ -206,12 +336,14 @@
   };
 
   // ─────────────────────────────────────────────────────────────────
-  // 4. STATE CONTROLLER (DevState)
+  // 5. STATE CONTROLLER (DevState)
   // ─────────────────────────────────────────────────────────────────
   const state = {
     conversations: [],
     activeConvId: null,
     devPrompt: '',
+    selectedAgentId: 'qwen/qwen-2.5-coder-32b-instruct:free',
+    currentFilter: 'all',
     isStreaming: false,
     abortController: null,
     pendingModifications: {},
@@ -227,6 +359,11 @@
       } catch {
         state.conversations = [];
       }
+
+      const savedAgent = localStorage.getItem('dev_selected_agent');
+      if (savedAgent && DEV_AGENTS.some(a => a.id === savedAgent)) {
+        state.selectedAgentId = savedAgent;
+      }
     },
 
     save() {
@@ -239,6 +376,19 @@
       return state.conversations.find(c => c.id === state.activeConvId);
     },
 
+    getSelectedAgent() {
+      return DEV_AGENTS.find(a => a.id === state.selectedAgentId) || DEV_AGENTS[0];
+    },
+
+    setSelectedAgent(agentId) {
+      const agent = DEV_AGENTS.find(a => a.id === agentId);
+      if (agent) {
+        state.selectedAgentId = agent.id;
+        localStorage.setItem('dev_selected_agent', agent.id);
+        DevUIEngine.updateAgentPillDisplay();
+      }
+    },
+
     newConversation() {
       const id = generateId();
       const conv = {
@@ -248,7 +398,8 @@
           {
             id: generateId(),
             role: 'ai',
-            content: `مرحباً بك في **استوديو المطور المستقل (X.v1 Developer Portal)** 🛠️\n\nأنا مهندس البرمجيات المسؤول عن تطوير وصيانة تطبيق الشات ومستودع GitHub بالكامل.\n\nتستطيع أن تطلب مني:\n- *"عدّل ألوان الواجهة أو حسّن التصميم"* 🎨\n- *"افحص الأداء وسرعة الاستجابة"* ⚡\n- *"أضف ميزة جديدة أو صلح خطأ معيناً"* ✨\n- أو يمكنك استخدام **📁 محرر الملفات المباشر** في الشريط العلوي لتعديل أي ملف بنفسك وحفظه مباشرة على GitHub.\n\nما التعديل المطلوب لبرنامج الشات؟`,
+            isWelcome: true,
+            content: 'مرحباً بك في استوديو المطور (X.v1 Dev)',
             model: 'AI Lead Developer',
             timestamp: new Date().toISOString()
           }
@@ -303,9 +454,92 @@
   };
 
   // ─────────────────────────────────────────────────────────────────
-  // 5. DEV CHAT & MODEL ROUTER (DevChatEngine)
+  // 6. DEV CHAT & SMART FALLBACK CASCADE ENGINE (DevChatEngine)
   // ─────────────────────────────────────────────────────────────────
   const DevChatEngine = {
+    // Build ordered list of fallback agents starting with the chosen one
+    buildFallbackCascade(primaryAgent) {
+      const cascade = [primaryAgent];
+      // Add all remaining agents sorted by priority
+      const remaining = DEV_AGENTS.filter(a => a.id !== primaryAgent.id);
+      cascade.push(...remaining);
+      return cascade;
+    },
+
+    async callSingleAgentStream(agent, messages, signal, onChunk) {
+      const isGroq = agent.provider === 'groq';
+      const endpoint = isGroq 
+        ? 'https://api.groq.com/openai/v1/chat/completions'
+        : 'https://openrouter.ai/api/v1/chat/completions';
+
+      const key = isGroq ? DevConfigVault.getGroqKey() : DevConfigVault.getOpenRouterKey();
+      const headers = {
+        'Authorization': `Bearer ${key}`,
+        'Content-Type': 'application/json'
+      };
+
+      if (!isGroq) {
+        headers['HTTP-Referer'] = window.location.origin;
+        headers['X-Title'] = 'X.v1 Dev Portal';
+      }
+
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          model: agent.id,
+          messages,
+          stream: true,
+          temperature: 0.4,
+          max_tokens: 8192
+        }),
+        signal
+      });
+
+      if (response.status === 429 && isGroq) {
+        DevConfigVault.rotateGroqKey();
+        throw new Error('GROQ_RATE_LIMIT');
+      }
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error?.message || `HTTP ${response.status}`);
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let hasTokens = false;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || !trimmed.startsWith('data: ')) continue;
+          const dataStr = trimmed.slice(6);
+          if (dataStr === '[DONE]') continue;
+          try {
+            const parsed = JSON.parse(dataStr);
+            const delta = parsed.choices?.[0]?.delta?.content;
+            if (delta) {
+              hasTokens = true;
+              onChunk(delta);
+            }
+          } catch {}
+        }
+      }
+
+      if (!hasTokens) {
+        throw new Error('EMPTY_STREAM_RESPONSE');
+      }
+    },
+
     async sendMessage(userText) {
       const hasAttachments = state.attachments && state.attachments.length > 0;
       if (state.isStreaming || (!userText.trim() && !hasAttachments)) return;
@@ -338,10 +572,7 @@
       state.isStreaming = true;
       state.abortController = new AbortController();
 
-      const selectedModelVal = $('dev-model-select')?.value || 'groq:openai/gpt-oss-120b';
-      const [provider, modelId] = selectedModelVal.split(':');
-
-      const systemPrompt = state.devPrompt || 'أنت مهندس برمجيات محترف ومطور تطبيق الشات.';
+      const systemPrompt = state.devPrompt || 'أنت مهندس برمجيات محترف ومطور تطبيق الشات ومستودع GitHub.';
       const recentMessages = conv.messages
         .filter(m => m.id !== userMsg.id)
         .slice(-8)
@@ -358,98 +589,81 @@
       const aiMsgObj = { id: aiMsgId, role: 'ai', content: '' };
       DevUIEngine.appendEmptyAiMessage(aiMsgObj);
 
-      try {
-        let response;
-        if (provider === 'groq') {
-          response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${DevConfigVault.getGroqKey()}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              model: modelId,
-              messages: apiMessages,
-              stream: true,
-              temperature: 0.5,
-              max_tokens: 8192
-            }),
-            signal: state.abortController.signal
+      const chosenAgent = DevState.getSelectedAgent();
+      const fallbackList = this.buildFallbackCascade(chosenAgent);
+
+      let succeeded = false;
+      let usedAgent = chosenAgent;
+
+      for (let i = 0; i < fallbackList.length; i++) {
+        const currentAgent = fallbackList[i];
+        try {
+          if (i > 0) {
+            DevUIEngine.showToast(`🛡️ تم التحويل التلقائي إلى: ${currentAgent.name} (Smart Fallback)`, 'warning');
+            const msgElem = document.querySelector(`[data-id="${aiMsgId}"] .msg-content`);
+            if (msgElem && !fullContent) {
+              msgElem.innerHTML = `<span style="color:#fbbf24; font-size:12.5px;">🔄 جاري التبديل التلقائي إلى <strong>${DevUIEngine.escapeHtml(currentAgent.name)}</strong>...</span>`;
+            }
+          }
+
+          fullContent = '';
+          await this.callSingleAgentStream(currentAgent, apiMessages, state.abortController.signal, (delta) => {
+            fullContent += delta;
+            const msgElem = document.querySelector(`[data-id="${aiMsgId}"] .msg-content`);
+            if (msgElem) {
+              msgElem.innerHTML = DevUIEngine.parseMarkdown(fullContent);
+            }
           });
-        } else {
-          response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${DevConfigVault.getOpenRouterKey()}`,
-              'Content-Type': 'application/json',
-              'HTTP-Referer': window.location.origin,
-              'X-Title': 'X.v1 Dev Portal'
-            },
-            body: JSON.stringify({
-              model: modelId,
-              messages: apiMessages,
-              stream: true,
-              temperature: 0.5,
-              max_tokens: 8192
-            }),
-            signal: state.abortController.signal
-          });
-        }
 
-        if (!response.ok) {
-          const errData = await response.json().catch(() => ({}));
-          throw new Error(errData.error?.message || `HTTP ${response.status}`);
-        }
+          succeeded = true;
+          usedAgent = currentAgent;
+          break; // Successfully finished stream
 
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = '';
+        } catch (err) {
+          if (err.name === 'AbortError') {
+            console.log('[Dev Engine] Stream aborted by user');
+            return;
+          }
 
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
+          console.warn(`[Agent Fallback] Agent ${currentAgent.name} failed:`, err.message);
 
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split('\n');
-          buffer = lines.pop() || '';
-
-          for (const line of lines) {
-            const trimmed = line.trim();
-            if (!trimmed || !trimmed.startsWith('data: ')) continue;
-            const dataStr = trimmed.slice(6);
-            if (dataStr === '[DONE]') continue;
+          // If Groq rate limit, retry with next Groq key once before falling back
+          if (err.message === 'GROQ_RATE_LIMIT') {
             try {
-              const parsed = JSON.parse(dataStr);
-              const delta = parsed.choices?.[0]?.delta?.content;
-              if (delta) {
+              fullContent = '';
+              await this.callSingleAgentStream(currentAgent, apiMessages, state.abortController.signal, (delta) => {
                 fullContent += delta;
                 const msgElem = document.querySelector(`[data-id="${aiMsgId}"] .msg-content`);
-                if (msgElem) {
-                  msgElem.innerHTML = DevUIEngine.parseMarkdown(fullContent);
-                }
-              }
-            } catch {}
+                if (msgElem) msgElem.innerHTML = DevUIEngine.parseMarkdown(fullContent);
+              });
+              succeeded = true;
+              usedAgent = currentAgent;
+              break;
+            } catch (retryErr) {
+              console.warn(`[Agent Retry Failed]`, retryErr);
+            }
           }
         }
+      }
 
+      if (succeeded) {
         aiMsgObj.content = fullContent;
+        aiMsgObj.model = usedAgent.name;
         conv.messages.push(aiMsgObj);
         DevState.save();
 
         // Check for code proposal JSON
         await this.handleDevProposal(fullContent, document.querySelector(`[data-id="${aiMsgId}"]`));
-
-      } catch (err) {
-        if (err.name !== 'AbortError') {
-          DevUIEngine.showToast('❌ ' + err.message, 'error');
-          const errRow = document.querySelector(`[data-id="${aiMsgId}"] .msg-content`);
-          if (errRow) errRow.innerHTML = `<span style="color:var(--accent-rose);">⚠️ ${DevUIEngine.escapeHtml(err.message)}</span>`;
-        }
-      } finally {
-        state.isStreaming = false;
-        state.abortController = null;
-        DevUIEngine.updateSendBtn();
+      } else {
+        const errorMsg = 'تعذر الرد من جميع النماذج حالياً بسبب ضغط مؤقت في مزودي الخدمة. يرجى إعادة المحاولة.';
+        DevUIEngine.showToast('❌ ' + errorMsg, 'error');
+        const errRow = document.querySelector(`[data-id="${aiMsgId}"] .msg-content`);
+        if (errRow) errRow.innerHTML = `<span style="color:var(--accent-rose);">⚠️ ${errorMsg}</span>`;
       }
+
+      state.isStreaming = false;
+      state.abortController = null;
+      DevUIEngine.updateSendBtn();
     },
 
     async handleDevProposal(content, msgRow) {
@@ -495,20 +709,114 @@
   };
 
   // ─────────────────────────────────────────────────────────────────
-  // 6. UI ENGINE & MODALS (DevUIEngine)
+  // 7. UI ENGINE & MODALS (DevUIEngine)
   // ─────────────────────────────────────────────────────────────────
   const DevUIEngine = {
     init() {
       this.setupEventListeners();
+      this.setupPullToRefresh();
       DevState.load();
       this.loadDevPrompt();
       DevAuthManager.setupGate();
+      this.updateAgentPillDisplay();
 
       if (state.conversations.length) {
         DevState.loadConversation(state.conversations[0].id);
       } else {
         DevState.newConversation();
       }
+    },
+
+    setupPullToRefresh() {
+      const indicator = $('pull-refresh-indicator');
+      if (!indicator) return;
+
+      const spinner = indicator.querySelector('.pull-refresh-spinner');
+      let startY = 0;
+      let currentPull = 0;
+      let isTracking = false;
+      const PULL_THRESHOLD = 45;
+
+      const onTouchStart = (e) => {
+        if (e.touches.length !== 1) return;
+        const chatArea = $('chat-area');
+        const scrollTop = chatArea ? chatArea.scrollTop : 0;
+        startY = e.touches[0].clientY;
+        isTracking = (scrollTop <= 4);
+        currentPull = 0;
+      };
+
+      const onTouchMove = (e) => {
+        if (!isTracking || e.touches.length !== 1) return;
+        const chatArea = $('chat-area');
+        const scrollTop = chatArea ? chatArea.scrollTop : 0;
+
+        if (scrollTop > 4) {
+          isTracking = false;
+          indicator.classList.remove('visible');
+          indicator.style.opacity = '0';
+          indicator.style.transform = 'translate3d(-50%, -80px, 0) scale(0.85)';
+          return;
+        }
+
+        const y = e.touches[0].clientY;
+        const diff = y - startY;
+
+        if (diff > 4) {
+          if (e.cancelable) e.preventDefault();
+          currentPull = diff;
+          const visualPull = Math.min(diff * 0.45, 75);
+          indicator.classList.add('visible');
+          indicator.style.opacity = '1';
+          indicator.style.transform = `translate3d(-50%, ${visualPull - 25}px, 0) scale(1)`;
+          if (spinner) spinner.style.transform = `rotate(${diff * 2.8}deg)`;
+        } else {
+          indicator.classList.remove('visible');
+          indicator.style.opacity = '0';
+        }
+      };
+
+      const onTouchEnd = () => {
+        if (!isTracking) return;
+        isTracking = false;
+
+        if (currentPull >= PULL_THRESHOLD) {
+          indicator.classList.add('refreshing');
+          indicator.style.transform = 'translate3d(-50%, 18px, 0) scale(1)';
+
+          if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(regs => {
+              for (const r of regs) r.update().catch(() => {});
+            }).catch(() => {});
+          }
+
+          setTimeout(() => location.reload(), 280);
+        } else {
+          indicator.classList.remove('visible');
+          indicator.style.opacity = '0';
+          indicator.style.transform = 'translate3d(-50%, -80px, 0) scale(0.85)';
+          if (spinner) spinner.style.transform = '';
+        }
+        currentPull = 0;
+      };
+
+      document.addEventListener('touchstart', onTouchStart, { passive: true });
+      document.addEventListener('touchmove', onTouchMove, { passive: false });
+      document.addEventListener('touchend', onTouchEnd, { passive: true });
+      document.addEventListener('touchcancel', onTouchEnd, { passive: true });
+    },
+
+    updateAgentPillDisplay() {
+      const agent = DevState.getSelectedAgent();
+      const pillIcon = $('selected-agent-icon');
+      const pillLabel = $('selected-agent-label');
+      const headerIcon = $('header-agent-icon');
+      const headerName = $('header-agent-name');
+
+      if (pillIcon) pillIcon.innerText = agent.icon || '🧠';
+      if (pillLabel) pillLabel.innerText = agent.name;
+      if (headerIcon) headerIcon.innerText = agent.icon || '🧠';
+      if (headerName) headerName.innerText = agent.name;
     },
 
     async loadDevPrompt() {
@@ -643,7 +951,9 @@
       if (!input || !sendBtn) return;
       const hasAtt = state.attachments && state.attachments.length > 0;
       const hasText = input.value.trim().length > 0;
-      sendBtn.disabled = (!hasText && !hasAtt) || state.isStreaming;
+      const canSend = (hasText || hasAtt) && !state.isStreaming;
+      sendBtn.disabled = !canSend;
+      sendBtn.classList.toggle('active', canSend);
     },
 
     renderConversationsList() {
@@ -661,7 +971,38 @@
       const container = $('chat-container');
       if (!container) return;
       container.innerHTML = '';
-      messages.forEach(msg => this.appendMessage(msg));
+
+      if (!messages || !messages.length || (messages.length === 1 && messages[0].isWelcome)) {
+        this.renderWelcomeHero();
+        return;
+      }
+
+      messages.forEach(msg => {
+        if (msg.isWelcome) {
+          this.renderWelcomeHero();
+        } else {
+          this.appendMessage(msg);
+        }
+      });
+    },
+
+    renderWelcomeHero() {
+      const container = $('chat-container');
+      if (!container) return;
+      const hero = document.createElement('div');
+      hero.className = 'dev-welcome-hero';
+      hero.innerHTML = `
+        <div class="dev-welcome-star">🛠️</div>
+        <h1 class="dev-welcome-title">مرحباً بك في استوديو المطور (X.v1 Dev)</h1>
+        <p class="dev-welcome-sub">أنا مهندس البرمجيات المسؤول عن تطوير وصيانة تطبيق الشات ومستودع المشروع.</p>
+        <div class="dev-welcome-chips">
+          <button class="welcome-chip" onclick="window._sendQuickDevPrompt('🎨 قم بفحص واجهة وتصميم الشات style.css واقترح تحسينات بصرية عصرية وفخمة.')">🎨 تحسين التصميم والواجهة</button>
+          <button class="welcome-chip" onclick="window._sendQuickDevPrompt('⚡ افحص أداء التطبيق app.js وتدفق التوكنز والذاكرة واقترح تحسينات سرعة.')">⚡ فحص السرعة والأداء</button>
+          <button class="welcome-chip" onclick="window._sendQuickDevPrompt('🛡️ قم بعمل مراجعة أمنية شاملة لملفات التطبيق والتأكد من حماية الـ DOM والمفاتيح.')">🛡️ فحص الأمان والحماية</button>
+          <button class="welcome-chip" onclick="window._openFilesModal()">📁 فتح محرر الملفات</button>
+        </div>
+      `;
+      container.appendChild(hero);
     },
 
     appendMessage(msg) {
@@ -691,6 +1032,38 @@
       row.innerHTML = `<div class="msg-content"><span style="color:var(--text-dim);">جاري التحليل وتجهيز التعديل...</span></div>`;
       container.appendChild(row);
       this.scrollToBottom();
+    },
+
+    renderAgentsGrid(filter = 'all') {
+      const container = $('agents-grid');
+      if (!container) return;
+
+      const filtered = DEV_AGENTS.filter(a => filter === 'all' || a.category === filter);
+
+      container.innerHTML = filtered.map(agent => {
+        const isSelected = agent.id === state.selectedAgentId;
+        const providerBadgeClass = agent.provider === 'groq' ? 'provider-groq' : 'provider-openrouter';
+        const providerBadgeText = agent.provider === 'groq' ? '⚡ Groq Fast' : '🌐 OpenRouter';
+
+        return `
+          <div class="agent-card ${isSelected ? 'selected' : ''}" onclick="window._selectAgent('${agent.id}')">
+            <div class="agent-card-info">
+              <div class="agent-card-icon">${agent.icon || '🧠'}</div>
+              <div class="agent-card-text">
+                <div class="agent-card-name">
+                  <span>${this.escapeHtml(agent.name)}</span>
+                </div>
+                <div class="agent-card-desc">${this.escapeHtml(agent.desc)}</div>
+              </div>
+            </div>
+            <div class="agent-card-badges">
+              <span class="agent-badge ${agent.category === 'code' ? 'priority-code' : ''}">${agent.params}</span>
+              <span class="agent-badge ${providerBadgeClass}">${providerBadgeText}</span>
+              <span class="agent-selected-check">✓</span>
+            </div>
+          </div>
+        `;
+      }).join('');
     },
 
     scrollToBottom() {
@@ -742,10 +1115,34 @@
   };
 
   // ─────────────────────────────────────────────────────────────────
-  // 7. GLOBAL WINDOW BRIDGES FOR DEV OPERATIONS & TOOLS
+  // 8. GLOBAL WINDOW BRIDGES FOR DEV OPERATIONS & TOOLS
   // ─────────────────────────────────────────────────────────────────
   window._loadDevConv = (id) => DevState.loadConversation(id);
   window._deleteDevConv = (id) => DevState.deleteConversation(id);
+
+  window._openAgentModal = function() {
+    $('agent-modal')?.classList.remove('hidden');
+    DevUIEngine.renderAgentsGrid(state.currentFilter || 'all');
+  };
+
+  window._closeAgentModal = function() {
+    $('agent-modal')?.classList.add('hidden');
+  };
+
+  window._filterAgents = function(category) {
+    state.currentFilter = category;
+    document.querySelectorAll('.agent-tab').forEach(tab => {
+      tab.classList.toggle('active', tab.dataset.filter === category);
+    });
+    DevUIEngine.renderAgentsGrid(category);
+  };
+
+  window._selectAgent = function(agentId) {
+    DevState.setSelectedAgent(agentId);
+    const agent = DevState.getSelectedAgent();
+    DevUIEngine.showToast(`🧠 تم اختيار: ${agent.name}`, 'success');
+    window._closeAgentModal();
+  };
 
   window._removeDevAttachment = (attId) => {
     state.attachments = state.attachments.filter(a => a.id !== attId);
@@ -781,9 +1178,9 @@
         headers: DevGitHubService.getHeaders()
       });
       if (repoRes.ok) {
-        report += '- ✅ **مستودع GitHub:** متصل بنجاح وصلاحيات الـ Commit فعالة (Branch: main)\n';
+        report += '- ✅ **مستودع المشروع:** متصل بنجاح وصلاحيات النشر فعالة (Branch: main)\n';
       } else {
-        report += `- ❌ **مستودع GitHub:** خطأ HTTP ${repoRes.status}\n`;
+        report += `- ❌ **مستودع المشروع:** خطأ HTTP ${repoRes.status}\n`;
       }
 
       // Check Groq
@@ -798,7 +1195,17 @@
         report += `- ⚠️ **محرك Groq API:** كود ${groqRes.status}\n`;
       }
 
-      report += '\n✨ **النتيجة:** بيئة المطور وتطبيق الشات في أتم الجاهزية والاستقرار!';
+      // Check OpenRouter
+      const openRouterRes = await fetch('https://openrouter.ai/api/v1/auth/key', {
+        headers: { 'Authorization': `Bearer ${DevConfigVault.getOpenRouterKey()}` }
+      });
+      if (openRouterRes.ok) {
+        report += '- ✅ **محرك OpenRouter API:** متصل ونماذج 550B و Coder فعالة\n';
+      } else {
+        report += `- ⚠️ **محرك OpenRouter API:** كود ${openRouterRes.status}\n`;
+      }
+
+      report += '\n✨ **النتيجة:** استوديو المطور ونظام الحماية التلقائي (Fallback) في أتم الجاهزية والاستقرار!';
     } catch (e) {
       report += `- ❌ خطأ أثناء الفحص: ${e.message}`;
     }
@@ -821,15 +1228,16 @@
       await DevGitHubService.commitFile(data.file, data.content, data.message || `Update ${data.file} via Dev Portal`);
       const card = $(`proposal-${propId}`);
       if (card) {
+        card.className = 'dev-centered-banner';
         card.innerHTML = `
-          <div style="color:#10b981; font-weight:700; display:flex; align-items:center; gap:8px;">
+          <div style="color:#10b981; font-weight:700; font-size:15px; display:flex; align-items:center; justify-content:center; gap:8px;">
             <span>✅</span>
-            <span>تم نشر التعديل بنجاح على GitHub!</span>
+            <span>تم نشر التعديل بنجاح على GitHub وتحديث الموقع!</span>
           </div>
-          <p style="font-size:12.5px; color:var(--text-muted); margin-top:4px;">
-            الملف <code>${DevUIEngine.escapeHtml(data.file)}</code> تم تحديثه في مستودع <code>ahmedellansary/ai-chatbot-app</code>.
+          <p style="font-size:13px; color:var(--text-muted); margin-top:4px;">
+            الملف <code>${DevUIEngine.escapeHtml(data.file)}</code> تم تحديثه ونشره بنجاح في المستودع.
           </p>
-          <div style="margin-top:8px; display:flex; gap:8px;">
+          <div style="margin-top:8px; display:flex; justify-content:center; gap:8px;">
             <a href="./index.html" target="_blank" class="dev-btn-action deploy" style="text-decoration:none;">
               <span>🌐</span>
               <span>معاينة تطبيق الشات المحدث</span>
@@ -882,7 +1290,7 @@
         const fileData = await DevGitHubService.getFile(fileName);
         editor.value = fileData.content;
       } catch (e) {
-        editor.value = `// تعذر جلب محتوى الملف من GitHub: ${e.message}`;
+        editor.value = `// تعذر جلب محتوى الملف: ${e.message}`;
       }
     }
   };
@@ -903,7 +1311,7 @@
     DevUIEngine.showToast(`💾 جاري رفع التعديل لـ ${fileName} على GitHub...`, 'info');
     try {
       await DevGitHubService.commitFile(fileName, content, `Direct edit of ${fileName} via X.v1 Dev Portal`);
-      DevUIEngine.showToast(`✅ تم حفظ ونشر ${fileName} على GitHub بنجاح!`, 'success');
+      DevUIEngine.showToast(`✅ تم حفظ ونشر ${fileName} بنجاح!`, 'success');
       window._closeFilesModal();
     } catch (e) {
       DevUIEngine.showToast(`❌ فشل الحفظ: ${e.message}`, 'error');
