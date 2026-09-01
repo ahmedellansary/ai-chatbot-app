@@ -205,7 +205,7 @@
             </div>
           </div>
 
-          <!-- Right Controls (Mic, Waveform Voice & Send) -->
+          <!-- Right Controls (Mic, Waveform & Send) -->
           <div class="input-bottom-right">
             <!-- Mic Button -->
             <button class="claude-voice-btn" id="mic-btn" title="Voice Input">
@@ -216,17 +216,9 @@
               </svg>
             </button>
 
-            <!-- Audio Waveform Button -->
-            <button class="claude-waveform-pill" id="voice-mode-btn" title="Voice Mode">
-              <span class="wave-bar"></span>
-              <span class="wave-bar"></span>
-              <span class="wave-bar"></span>
-              <span class="wave-bar"></span>
-            </button>
-
-            <!-- Send Button (Visible when typing) -->
-            <button id="send-btn" class="claude-send-btn hidden" aria-label="Send">
-              <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <!-- Send Button (دائماً ظاهر وواضح) -->
+            <button id="send-btn" class="claude-send-btn disabled" aria-label="Send" title="Send message">
+              <svg viewBox="0 0 24 24" width="17" height="17" stroke="currentColor" stroke-width="2.8" fill="none" stroke-linecap="round" stroke-linejoin="round">
                 <line x1="12" y1="19" x2="12" y2="5"></line>
                 <polyline points="5 12 12 5 19 12"></polyline>
               </svg>
