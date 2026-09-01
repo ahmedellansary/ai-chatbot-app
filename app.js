@@ -749,7 +749,7 @@
     const indicator = $('input-mode-indicator');
 
     if (conv?.isDev) {
-      if (titleText) titleText.textContent = '🛠️ شات المطور';
+      if (titleText) titleText.textContent = 'DEV';
       if (dot) dot.style.background = '#fbbf24';
       if (indicator) {
         indicator.innerHTML = buildDevModelOptions();
@@ -766,7 +766,7 @@
         $('attach-btn')?.addEventListener('click', () => $('file-upload-input')?.click());
       }
     } else {
-      if (titleText) titleText.textContent = `نيترون · ${state.currentMode}`;
+      if (titleText) titleText.textContent = state.currentMode;
       if (dot) dot.style.background = '#10b981';
       if (indicator) {
         indicator.innerHTML = `
