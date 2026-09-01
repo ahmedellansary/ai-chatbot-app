@@ -455,7 +455,9 @@ async function sendMessage(userText) {
   }
 }
 
-// ─── Dev Mode Auto Execution ───
+// ─── Dev Mode Interactive Confirmation ───
+window._pendingDevModifications = {};
+
 async function handleDevFileAutoExecution(content, bubbleEl) {
   const jsonMatch = content.match(/```json\s*(\{[\s\S]*?\})\s*```/) || content.match(/(\{[\s\S]*"file"[\s\S]*"content"[\s\S]*\})/);
   if (!jsonMatch) return;
@@ -463,21 +465,25 @@ async function handleDevFileAutoExecution(content, bubbleEl) {
   try {
     const data = JSON.parse(jsonMatch[1]);
     if (data.file && data.content) {
-      showToast(`🔄 جاري رفع ${data.file} على GitHub...`, 'info');
-      await uploadFile(data.file, data.content, `🛠️ Dev Chat: ${data.message || 'Auto-update'}`);
-      showToast(`✅ تم تحديث ${data.file} بنجاح!`, 'success');
+      const propId = generateId();
+      window._pendingDevModifications[propId] = data;
 
-      // Append interactive card
+      // Append interactive confirmation proposal card
       const card = document.createElement('div');
-      card.className = 'dev-execution-card';
+      card.id = `proposal-${propId}`;
+      card.className = 'dev-proposal-card';
       card.innerHTML = `
         <div class="dev-card-header">
-          <span>✅ تم تعديل ملف <code>${data.file}</code> ورفعه على GitHub</span>
+          <span>🛠️ تعديل جاهز لملف: <code>${escapeHtml(data.file)}</code></span>
         </div>
-        <p style="font-size:12px; color: var(--text-secondary); line-height: 1.5;">${data.message || 'تم تحديث الملف بنجاح.'}</p>
+        <p class="dev-card-desc">📝 <strong>التفاصيل:</strong> ${escapeHtml(data.message || 'تم إعداد التعديل البرمجي بنجاح.')}</p>
         <div class="dev-card-actions">
-          <button class="dev-card-btn reload" onclick="location.reload()">🔄 إعادة تحميل التطبيق وتطبيق التعديل</button>
-          <button class="dev-card-btn secondary" onclick="window._rollbackDev('${data.file}')">⏪ تراجع عن التعديل</button>
+          <button class="dev-card-btn deploy" onclick="window._deployProposal('${propId}')">
+            🚀 نشر التعديل على GitHub وتطبيق التحديث
+          </button>
+          <button class="dev-card-btn cancel" onclick="window._cancelProposal('${propId}')">
+            ✕ إلغاء
+          </button>
         </div>
       `;
       bubbleEl.appendChild(card);
@@ -749,17 +755,71 @@ window._copyCode = (btn) => {
   });
 };
 
-window._rollbackDev = async (file) => {
-  showToast('🔄 جاري التراجع...', 'info');
-  try {
-    const commits = await getCommitHistory(file, 4);
-    if (commits.length < 2) throw new Error('لا توجد نسخة سابقة');
-    await rollbackFile(file, commits[1].sha);
-    showToast(`✅ تم التراجع عن تعديل ${file}`, 'success');
-    setTimeout(() => location.reload(), 1200);
-  } catch (e) {
-    showToast('❌ ' + e.message, 'error');
+window._deployProposal = async (propId) => {
+  const data = window._pendingDevModifications[propId];
+  if (!data) return;
+
+  const card = document.getElementById(`proposal-${propId}`);
+  if (card) {
+    card.innerHTML = `
+      <div class="dev-card-header">
+        <span>🔄 جاري النشر على GitHub...</span>
+      </div>
+      <p class="dev-card-desc">جاري رفع وتحديث ملف <code>${escapeHtml(data.file)}</code> في المستودع.</p>
+    `;
   }
+
+  try {
+    showToast(`🔄 جاري رفع ${data.file} على GitHub...`, 'info');
+    await uploadFile(data.file, data.content, `🛠️ Dev Chat: ${data.message || 'Update'}`);
+    showToast(`✅ تم النشر على GitHub بنجاح!`, 'success');
+
+    if (card) {
+      card.innerHTML = `
+        <div class="dev-card-header" style="color:var(--success);">
+          <span>✅ تم النشر على GitHub وتحديث الملف بنجاح!</span>
+        </div>
+        <p class="dev-card-desc">📁 الملف: <code>${escapeHtml(data.file)}</code> — ${escapeHtml(data.message || 'جاهز للاستخدام')}</p>
+        <div class="dev-card-actions">
+          <button class="dev-card-btn reload" onclick="location.reload()">
+            🔄 إعادة تحميل التطبيق وتطبيق التعديل الآن
+          </button>
+          <button class="dev-card-btn secondary" onclick="window._rollbackDev('${data.file}')">
+            ⏪ تراجع عن التعديل
+          </button>
+        </div>
+      `;
+    }
+  } catch (e) {
+    showToast('❌ فشل النشر: ' + e.message, 'error');
+    if (card) {
+      card.innerHTML = `
+        <div class="dev-card-header" style="color:var(--error);">
+          <span>❌ فشل النشر على GitHub</span>
+        </div>
+        <p class="dev-card-desc">${escapeHtml(e.message)}</p>
+        <div class="dev-card-actions">
+          <button class="dev-card-btn deploy" onclick="window._deployProposal('${propId}')">
+            🔄 إعادة المحاولة
+          </button>
+        </div>
+      `;
+    }
+  }
+};
+
+window._cancelProposal = (propId) => {
+  const card = document.getElementById(`proposal-${propId}`);
+  if (card) {
+    card.innerHTML = `
+      <div class="dev-card-header" style="color:var(--text-muted);">
+        <span>✕ تم إلغاء التعديل</span>
+      </div>
+    `;
+    setTimeout(() => card.remove(), 2000);
+  }
+  delete window._pendingDevModifications[propId];
+  showToast('تم إلغاء التعديل', 'info');
 };
 
 document.addEventListener('DOMContentLoaded', init);
