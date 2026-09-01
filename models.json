@@ -2,7 +2,6 @@
   { "id": "openai/gpt-oss-120b", "name": "GPT OSS 120B Lead Architect", "provider": "groq" },
   { "id": "qwen/qwen3.8-27b", "name": "Qwen 3.8 27B Fast Coder", "provider": "groq" },
   { "id": "groq/compound", "name": "AGENT_ROUTER (Compound)", "provider": "groq" },
-  { "id": "qwen/qwen3.6-27b", "name": "Qwen 3.6 27B Logic Coder", "provider": "groq" },
   { "id": "openai/gpt-oss-20b", "name": "GPT OSS 20B Rapid Coder", "provider": "groq" },
   { "id": "minimax/minimax-m3:free", "name": "MiniMax M3 Architect", "provider": "openrouter" },
   { "id": "minimax/minimax-m2.7:free", "name": "MiniMax M2.7 Reasoning", "provider": "openrouter" },
