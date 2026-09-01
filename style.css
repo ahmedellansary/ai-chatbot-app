@@ -986,31 +986,43 @@ html, body {
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  background: var(--accent-color);
-  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+  color: #71717a;
   border: none;
-  cursor: pointer;
+  cursor: not-allowed;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 2px 10px rgba(218, 119, 86, 0.4);
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+  opacity: 0.5;
+  box-shadow: none;
 }
 
-.claude-send-btn:hover:not(.disabled) {
-  background: var(--accent-color-dark);
-  transform: scale(1.06);
+.claude-send-btn.active,
+.claude-send-btn:not(.disabled):not([disabled]) {
+  background: var(--accent-color) !important;
+  color: #ffffff !important;
+  cursor: pointer !important;
+  pointer-events: auto !important;
+  opacity: 1 !important;
+  box-shadow: 0 3px 12px rgba(218, 119, 86, 0.45) !important;
+}
+
+.claude-send-btn.active:hover {
+  background: var(--accent-color-dark) !important;
+  transform: scale(1.08);
 }
 
 .claude-send-btn.disabled,
 .claude-send-btn[disabled] {
   background: rgba(255, 255, 255, 0.08) !important;
-  color: #52525b !important;
+  color: #71717a !important;
   cursor: not-allowed !important;
   pointer-events: none !important;
   box-shadow: none !important;
   transform: none !important;
-  opacity: 0.6;
+  opacity: 0.5 !important;
 }
 
 /* ─── Attachment Previews ─── */
