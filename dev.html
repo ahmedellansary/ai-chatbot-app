@@ -9,11 +9,11 @@
   <meta name="apple-mobile-web-app-title" content="X.v1 Dev">
 
   <title>X.v1 — Developer Portal & Codebase Studio</title>
-  <link rel="manifest" href="./dev-manifest.json?v=49">
-  <link rel="stylesheet" href="./dev_style.css?v=49">
-  <link rel="icon" type="image/png" href="./icons/dev-icon-192.png?v=49">
-  <link rel="apple-touch-icon" href="./icons/dev-icon-192.png?v=49">
-  <link rel="apple-touch-icon" sizes="512x512" href="./icons/dev-icon-512.png?v=49">
+  <link rel="manifest" href="./dev-manifest.json?v=52">
+  <link rel="stylesheet" href="./dev_style.css?v=52">
+  <link rel="icon" type="image/png" href="./icons/dev-icon-192.png?v=52">
+  <link rel="apple-touch-icon" href="./icons/dev-icon-192.png?v=52">
+  <link rel="apple-touch-icon" sizes="512x512" href="./icons/dev-icon-512.png?v=52">
 </head>
 <body>
 <div id="app">
@@ -91,14 +91,18 @@
         </button>
         <div class="repo-status-badge">
           <span class="status-dot"></span>
-          <span>ahmedellansary/ai-chatbot-app : main</span>
+          <span>X.v1 Production Codebase</span>
         </div>
       </div>
 
       <div class="header-right">
-        <button class="icon-btn" onclick="window._openFilesModal()" title="استعراض وتعديل ملفات التطبيق مباشرة">
+        <button class="icon-btn" onclick="window._openFilesModal()" title="استعراض وتعديل ملفات التطبيق">
           <span>📁</span>
-          <span>محرر الملفات المباشر</span>
+          <span>محرر الملفات</span>
+        </button>
+        <button class="icon-btn" onclick="window._openAgentModal()" title="اختيار المهندس أو النموذج الذكي">
+          <span id="header-agent-icon">👨‍💻</span>
+          <span id="header-agent-name" style="font-weight:600; color:#fbbf24;">Qwen 2.5 Coder 32B</span>
         </button>
         <button class="icon-btn" onclick="window._openRollbackModal()" title="سجل النسخ والاسترجاع الطارئ">
           <span>⏪</span>
@@ -111,12 +115,20 @@
       </div>
     </header>
 
+    <!-- Modern Circular Pull to Refresh Indicator (سحب للتحديث في استوديو المطور) -->
+    <div id="pull-refresh-indicator" class="pull-refresh-indicator" aria-hidden="true">
+      <svg class="pull-refresh-spinner" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round">
+        <path d="M21 12a9 9 0 1 1-6.219-8.56"></path>
+        <polyline points="21 3 21 9 15 9"></polyline>
+      </svg>
+    </div>
+
     <!-- Chat Messages Feed -->
     <div id="chat-area">
       <div class="chat-container" id="chat-container"></div>
     </div>
 
-    <!-- Floating Input Bar -->
+    <!-- Floating Input Bar (مطابق لتصميم الشات الرئيسي الفخم) -->
     <div id="input-section">
       <div class="input-container">
         <!-- Attachment Previews -->
@@ -124,33 +136,34 @@
 
         <textarea
           id="user-input"
-          class="dev-textarea"
-          placeholder="اكتب طلب التطوير أو التعديل لملفات التطبيق (مثال: عدل تصميم الشات، أضف ميزة جديدة، صلح خطأ معين...)"
+          class="chat-textarea"
+          placeholder="اكتب طلب التطوير أو التعديل لملفات التطبيق..."
           rows="1"
           autocomplete="off"
         ></textarea>
 
         <div class="input-bottom-bar">
-          <div class="input-actions-left">
+          <div class="input-bottom-left">
             <input type="file" id="attach-input" multiple style="display:none;" accept="image/*,.js,.css,.html,.txt,.json,.py,.md">
-            <button type="button" class="dev-action-icon-btn" id="attach-btn" title="إرفاق ملفات أو لقطات شاشة (Attach Files/Screenshots)">
-              <span>📎</span>
+            <button type="button" class="claude-plus-btn" id="attach-btn" title="إرفاق ملفات أو لقطات شاشة (Attach Files/Screenshots)">
+              <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
             </button>
 
-            <div class="model-select-wrapper">
-              <span class="model-select-icon">🧠</span>
-              <select id="dev-model-select" class="dev-model-dropdown">
-                <option value="groq:openai/gpt-oss-120b">GPT OSS 120B (Groq 8K)</option>
-                <option value="openrouter:nvidia/nemotron-3-ultra-550b-a55b:free">Nemotron 550B (OpenRouter)</option>
-                <option value="groq:qwen/qwen3.8-27b">Qwen 27B (Groq)</option>
-              </select>
-            </div>
+            <!-- Modern Simple Agent Selector Pill Button -->
+            <button type="button" class="claude-model-pill" id="agent-selector-pill-btn" onclick="window._openAgentModal()" title="تغيير مهندس البرمجيات / الموديل">
+              <span id="selected-agent-icon" style="font-size:14px;">👨‍💻</span>
+              <span id="selected-agent-label">Qwen 2.5 Coder 32B</span>
+              <svg viewBox="0 0 12 12" width="10" height="10" fill="currentColor"><path d="M2 4l4 4 4-4z"/></svg>
+            </button>
           </div>
 
-          <div class="input-actions-right">
-            <button id="send-btn" class="dev-send-btn" disabled>
-              <span class="send-btn-text">إرسال وتجهيز التعديل</span>
-              <span class="send-btn-icon">⚡</span>
+          <div class="input-bottom-right">
+            <!-- Electric Send Button (علامة الكهرباء ⚡) -->
+            <button id="send-btn" class="claude-send-btn dev-electric-send-btn" aria-label="Send" title="إرسال طلب التطوير" disabled>
+              <span class="send-btn-icon" style="font-size:17px; line-height:1;">⚡</span>
             </button>
           </div>
         </div>
@@ -159,13 +172,42 @@
 
   </main>
 
+  <!-- ═══ Simple & Modern Agent / Model Selection Modal ═══ -->
+  <div id="agent-modal" class="custom-modal hidden">
+    <div class="custom-modal-card" style="max-width: 650px;">
+      <div class="custom-modal-header">
+        <div class="modal-header-title">
+          <span>🧠</span>
+          <span>اختيار مهندس البرمجيات / نموذج الذكاء الاصطناعي</span>
+        </div>
+        <button class="icon-btn" onclick="window._closeAgentModal()">✕</button>
+      </div>
+      <div class="modal-body" style="gap: 12px;">
+        <div class="agent-modal-hint">
+          <span>🛡️ <strong>نظام الحماية التلقائي (Smart Fallback):</strong> مرتبين من المتخصصين بالبرمجة والأعلى معالم إلى الأقل، مع تحويل تلقائي فوري في حال انشغال أي موديل.</span>
+        </div>
+
+        <!-- Filter tabs -->
+        <div class="agent-filter-tabs">
+          <button class="agent-tab active" data-filter="all" onclick="window._filterAgents('all')">الكل</button>
+          <button class="agent-tab" data-filter="code" onclick="window._filterAgents('code')">👨‍💻 كود وبرمجة</button>
+          <button class="agent-tab" data-filter="reasoning" onclick="window._filterAgents('reasoning')">🧠 ذكاء عالي</button>
+          <button class="agent-tab" data-filter="fast" onclick="window._filterAgents('fast')">⚡ سرعة فائقة</button>
+        </div>
+
+        <!-- Agent List Container -->
+        <div id="agents-grid" class="agents-grid"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- ═══ File Explorer & Live Code Editor Modal ═══ -->
   <div id="files-modal" class="custom-modal hidden">
     <div class="custom-modal-card" style="max-width: 900px; height: 88vh;">
       <div class="custom-modal-header">
         <div class="modal-header-title">
           <span>📁</span>
-          <span>مستعرض ومحرر ملفات المشروع المباشر (Direct Code Editor)</span>
+          <span>محرر الملفات (Code Editor)</span>
         </div>
         <button class="icon-btn" onclick="window._closeFilesModal()">✕</button>
       </div>
@@ -269,7 +311,6 @@
   <div id="toast-container"></div>
 </div>
 
-<script src="./config.js?v=46"></script>
-<script src="./dev.js?v=46"></script>
+<script src="./dev.js?v=52"></script>
 </body>
 </html>
