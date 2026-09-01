@@ -1430,6 +1430,43 @@ if (typeof $$ === 'undefined') {
     panel.querySelector('.startup-check-btn.danger').textContent = 'مراجعة وإصلاح';
   }
 
+  // ─── Owner / App Lock Helpers (guarded) ───
+  // Provide safe fallbacks if the build/deployed bundle lacks these functions,
+  // to avoid ReferenceError during initialization which breaks event binding.
+  if (typeof isAppUnlocked !== 'function') {
+    function isAppUnlocked() {
+      return localStorage.getItem('nytron_app_unlocked') === '1';
+    }
+  }
+
+  if (typeof isOwnerUnlocked !== 'function') {
+    function isOwnerUnlocked() {
+      // Owner unlocked if explicit owner flag present or app-level unlock exists
+      return localStorage.getItem('owner_unlocked') === '1' || isAppUnlocked();
+    }
+  }
+
+  if (typeof updateOwnerLockUI !== 'function') {
+    function updateOwnerLockUI() {
+      try {
+        const btn = document.getElementById('btn-toggle-owner-lock');
+        const badge = document.getElementById('owner-lock-badge');
+        const unlocked = isOwnerUnlocked();
+        if (btn) {
+          // Use concise labels; keep Arabic/English neutral icons
+          btn.textContent = unlocked ? '🔓 Owner: Unlocked' : '🔒 Owner: Locked';
+          btn.setAttribute('aria-pressed', unlocked ? 'true' : 'false');
+        }
+        if (badge) {
+          badge.textContent = unlocked ? 'مفتوح' : 'مقفل';
+        }
+      } catch (e) {
+        // Non-fatal; ensure no throw during early init
+        console.warn('updateOwnerLockUI fallback failed', e);
+      }
+    }
+  }
+
   function setupEventListeners() {
     // Universal delegated click handler for all buttons
     document.addEventListener('click', (e) => {
