@@ -60,6 +60,7 @@ html, body {
 
 #app {
   display: flex;
+  flex-direction: row;
   height: 100%;
   height: var(--app-height, 100vh);
   max-height: var(--app-height, 100vh);
@@ -68,12 +69,13 @@ html, body {
   position: relative;
 }
 
-/* ─── Drawer Sidebar ─── */
+/* ─── Drawer Sidebar (على اليسار) ─── */
 #sidebar {
   width: var(--sidebar-w);
   height: 100%;
   background: var(--bg-sidebar);
-  border-left: 1px solid var(--border-subtle);
+  border-right: 1px solid var(--border-subtle);
+  border-left: none;
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
@@ -332,27 +334,27 @@ html, body {
 
 /* ─── Pull To Refresh Indicator ─── */
 .pull-refresh-indicator {
-  position: absolute;
-  top: calc(var(--header-h) + 6px);
+  position: fixed;
+  top: 16px;
   left: 50%;
-  transform: translate(-50%, -60px);
-  background: rgba(30, 30, 34, 0.95);
-  border: 1px solid var(--border-subtle);
+  transform: translate(-50%, -100px);
+  background: #232328;
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 999px;
-  padding: 6px 16px;
+  padding: 8px 20px;
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 600;
-  color: var(--text-muted);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
-  z-index: 40;
+  color: #f4f4f5;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+  z-index: 9999;
   opacity: 0;
   pointer-events: none;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
 }
 
 .pull-refresh-indicator.visible {
@@ -362,16 +364,16 @@ html, body {
 .pull-refresh-indicator.refreshing {
   opacity: 1;
   color: var(--accent-color);
-  border-color: rgba(218, 119, 86, 0.4);
+  border-color: rgba(218, 119, 86, 0.5);
 }
 
 .pull-refresh-indicator .pull-icon {
-  font-size: 14px;
+  font-size: 15px;
   display: inline-block;
 }
 
 .pull-refresh-indicator.refreshing .pull-icon {
-  animation: spinRefresh 0.8s linear infinite;
+  animation: spinRefresh 0.7s linear infinite;
 }
 
 @keyframes spinRefresh {
@@ -1345,10 +1347,11 @@ html, body {
 @media (max-width: 768px) {
   #sidebar {
     position: fixed;
-    right: 0;
+    left: 0;
+    right: auto;
     top: 0;
-    transform: translateX(100%);
-    box-shadow: -8px 0 32px rgba(0,0,0,0.6);
+    transform: translateX(-100%);
+    box-shadow: 8px 0 32px rgba(0,0,0,0.6);
   }
 
   #sidebar.open {
