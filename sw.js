@@ -1,4 +1,4 @@
-const CACHE_NAME = 'nytron-chat-v4';
+const CACHE_NAME = 'nytron-openmaic-v5';
 
 // Install immediately
 self.addEventListener('install', event => {
