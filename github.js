@@ -1,20 +1,37 @@
-// ═══════════════════════════════════════════════════
-//  AI CHAT — GitHub API Integration (Dev Mode)
-// ═══════════════════════════════════════════════════
+// GitHub API helpers that do not ship with committed credentials.
+const appConfig = window.AppConfig || {};
+const getGitHubToken = appConfig.getGitHubToken || (() => {
+  try {
+    const runtimeConfig = (window && window.__APP_CONFIG__) || {};
+    const runtimeValue = runtimeConfig.GITHUB_TOKEN;
+    if (runtimeValue !== undefined && runtimeValue !== null && String(runtimeValue).trim()) {
+      return String(runtimeValue).trim();
+    }
 
-const _k3 = ['ghp_Ep2hC2i0', 'LFNVeyCSiUFlMMb0', '5ILzmJ2nzGGN'].join('');
-const getGitHubToken = () => localStorage.getItem('GITHUB_TOKEN') || _k3;
+    return (localStorage.getItem('GITHUB_TOKEN') || '').trim();
+  } catch {
+    return '';
+  }
+});
 
-const GITHUB_USER   = 'ahmedellansary';
-const GITHUB_REPO   = 'ai-chatbot-app';
+const GITHUB_USER = 'ahmedellansary';
+const GITHUB_REPO = 'ai-chatbot-app';
 const GITHUB_BRANCH = 'main';
-const GITHUB_API    = 'https://api.github.com';
+const GITHUB_API = 'https://api.github.com';
 
-const getGHHeaders = () => ({
-  'Authorization': `Bearer ${getGitHubToken()}`,
-  'Accept': 'application/vnd.github.v3+json',
-  'Content-Type': 'application/json',
-  'User-Agent': 'AI-ChatBot-App'
+const getGHHeaders = appConfig.getGitHubHeaders || (() => {
+  const headers = {
+    'Accept': 'application/vnd.github.v3+json',
+    'Content-Type': 'application/json',
+    'User-Agent': 'AI-ChatBot-App'
+  };
+
+  const token = getGitHubToken();
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  return headers;
 });
 
 async function getFileSHA(path) {
