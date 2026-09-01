@@ -907,8 +907,28 @@
     return document.getElementById(id);
   }
 
-  function generateId() {
-    return Date.now().toString(36) + Math.random().toString(36).slice(2);
+  // PWA Install Prompt Handler
+  let deferredPrompt = null;
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    const installBtn = $('dev-install-btn');
+    if (installBtn) {
+      installBtn.style.display = 'flex';
+      installBtn.onclick = async () => {
+        if (!deferredPrompt) return;
+        deferredPrompt.prompt();
+        const choice = await deferredPrompt.userChoice;
+        if (choice.outcome === 'accepted') {
+          installBtn.style.display = 'none';
+        }
+        deferredPrompt = null;
+      };
+    }
+  });
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
   }
 
   // Auto-init on DOM ready
