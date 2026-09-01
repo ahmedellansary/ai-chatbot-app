@@ -52,52 +52,24 @@
   <main id="ops-main">
     <!-- Quick Action / Multi-Step Controls -->
     <section class="quick-controls-card">
-      <div class="controls-header">
-        <div class="controls-title">
-          <span>⚡</span>
-          <h3>الاسترجاع السريع والمتعدد (Multi-Step Rewind)</h3>
-        </div>
-        <div class="status-indicator">
-          <span class="pulse-green"></span>
-          <span>GitHub API متصل</span>
-        </div>
-      </div>
-
-      <div class="controls-grid">
+      <div class="controls-row">
         <!-- Rewind 1 Step -->
-        <div class="control-box">
-          <div class="control-box-info">
-            <h4>⏪ استرجاع خطوة واحدة</h4>
-            <p>التراجع الفوري عن آخر تعديل تم نشره على المستودع والعودة للنسخة السابقة مباشرة.</p>
-          </div>
-          <button id="rollback-1-btn" class="ops-action-btn single-rewind-btn">
-            <span>تراجع عن آخر تعديل (-1)</span>
-            <span>⏪</span>
-          </button>
-        </div>
+        <button id="rollback-1-btn" class="ops-action-btn single-rewind-btn">
+          <span>⏪ تراجع عن آخر تعديل (-1)</span>
+        </button>
 
         <!-- Rewind N Steps -->
-        <div class="control-box">
-          <div class="control-box-info">
-            <h4>⏮️ استرجاع متعدد مخصص</h4>
-            <p>حدد عدد التعديلات التي تريد الرجوع عنها مرة واحدة.</p>
-          </div>
-          <div class="multi-step-form">
-            <div class="step-input-wrapper">
-              <label for="rewind-steps-select">عدد التعديلات:</label>
-              <select id="rewind-steps-select" class="ops-select">
-                <option value="2">خطوتين للخلف (-2)</option>
-                <option value="3">3 خطوات للخلف (-3)</option>
-                <option value="4">4 خطوات للخلف (-4)</option>
-                <option value="5">5 خطوات للخلف (-5)</option>
-                <option value="10">10 خطوات للخلف (-10)</option>
-              </select>
-            </div>
-            <button id="rollback-n-btn" class="ops-action-btn multi-rewind-btn">
-              <span>تنفيذ الاسترجاع المحدد</span>
-              <span>⏮️</span>
-            </button>
-          </div>
+        <div class="multi-step-form">
+          <select id="rewind-steps-select" class="ops-select" aria-label="عدد التعديلات">
+            <option value="2">2 خطوات للخلف (-2)</option>
+            <option value="3">3 خطوات للخلف (-3)</option>
+            <option value="4">4 خطوات للخلف (-4)</option>
+            <option value="5">5 خطوات للخلف (-5)</option>
+            <option value="10">10 خطوات للخلف (-10)</option>
+          </select>
+          <button id="rollback-n-btn" class="ops-action-btn multi-rewind-btn">
+            <span>⏮️ تراجع (-N)</span>
+          </button>
         </div>
       </div>
     </section>
@@ -106,13 +78,11 @@
     <section class="ops-content-section">
       <div class="ops-tabs-nav">
         <button id="tab-timeline-btn" class="ops-tab-btn active">
-          <span>📜</span>
-          <span>شجرة النسخ والتعديلات (Snapshots)</span>
+          <span>📜 النسخ السابقة</span>
           <span id="tab-commits-badge" class="tab-badge">0</span>
         </button>
         <button id="tab-logs-btn" class="ops-tab-btn">
-          <span>📋</span>
-          <span>سجل العمليات والأنشطة (Live Audit Log)</span>
+          <span>📋 سجل العمليات</span>
           <span id="tab-logs-badge" class="tab-badge">0</span>
         </button>
       </div>
@@ -120,14 +90,14 @@
       <!-- Tab 1: Timeline & Commits Tree -->
       <div id="tab-timeline-view" class="tab-view active">
         <div class="filter-bar">
-          <input type="text" id="commit-search-input" class="ops-search-input" placeholder="🔍 ابحث في رسائل التعديلات أو أسماء الملفات...">
+          <input type="text" id="commit-search-input" class="ops-search-input" placeholder="🔍 بحث في التعديلات...">
           <button id="fetch-more-commits-btn" class="secondary-btn">تحميل المزيد</button>
         </div>
 
         <div id="commits-timeline-container" class="timeline-container">
           <div class="loading-spinner-box">
             <div class="spinner"></div>
-            <span>جاري قراءة شجرة الـ Commits من GitHub...</span>
+            <span>جاري قراءة النسخ من GitHub...</span>
           </div>
         </div>
       </div>
@@ -135,14 +105,14 @@
       <!-- Tab 2: Live Activity Logs -->
       <div id="tab-logs-view" class="tab-view">
         <div class="filter-bar">
-          <input type="text" id="log-search-input" class="ops-search-input" placeholder="🔍 ابحث في سجل العمليات...">
+          <input type="text" id="log-search-input" class="ops-search-input" placeholder="🔍 بحث في السجل...">
           <select id="log-type-filter" class="ops-select small-select">
-            <option value="all">جميع السجلات</option>
-            <option value="deploy">عمليات النشر (Deploy)</option>
-            <option value="rollback">عمليات الاسترجاع (Rollback)</option>
-            <option value="error">الأخطاء (Errors)</option>
+            <option value="all">الكل</option>
+            <option value="deploy">نشر</option>
+            <option value="rollback">استرجاع</option>
+            <option value="error">أخطاء</option>
           </select>
-          <button id="clear-logs-btn" class="danger-outline-btn">مسح السجل</button>
+          <button id="clear-logs-btn" class="danger-outline-btn">مسح</button>
         </div>
 
         <div id="audit-logs-container" class="logs-container">
