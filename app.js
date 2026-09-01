@@ -1993,6 +1993,52 @@
     }
   };
 
+  window._openSettingsModal = function() {
+    const modal = $('settings-modal');
+    const textarea = $('settings-system-prompt');
+    if (!modal) return;
+    if (textarea) {
+      textarea.value = state.systemPrompt || localStorage.getItem('system_prompt') || '';
+    }
+    modal.classList.remove('hidden');
+    UIEngine.closeSidebar();
+  };
+
+  window._closeSettingsModal = function() {
+    const modal = $('settings-modal');
+    if (modal) modal.classList.add('hidden');
+  };
+
+  window._saveCustomSystemPrompt = function() {
+    const textarea = $('settings-system-prompt');
+    if (!textarea) return;
+    const val = textarea.value.trim();
+    if (!val) {
+      MessageRenderer.showToast('يرجى كتابة تعليمات صالحة أو استعادة الافتراضي', 'warning');
+      return;
+    }
+    state.systemPrompt = val;
+    localStorage.setItem('system_prompt', val);
+    MessageRenderer.showToast('✅ تم حفظ تعليمات النظام بنجاح!', 'success');
+    window._closeSettingsModal();
+  };
+
+  window._resetDefaultSystemPrompt = async function() {
+    try {
+      const res = await fetch('./system_prompt.txt?t=' + Date.now());
+      if (res.ok) {
+        const text = await res.text();
+        state.systemPrompt = text;
+        localStorage.setItem('system_prompt', text);
+        const textarea = $('settings-system-prompt');
+        if (textarea) textarea.value = text;
+        MessageRenderer.showToast('🔄 تمت استعادة التعليمات الافتراضية بنجاح!', 'info');
+      }
+    } catch (e) {
+      MessageRenderer.showToast('تعذر جلب الملف الافتراضي: ' + e.message, 'error');
+    }
+  };
+
   // ─────────────────────────────────────────────────────────────────
   // 11. BOOTSTRAP & LIFECYCLE INITIALIZATION
   // ─────────────────────────────────────────────────────────────────
