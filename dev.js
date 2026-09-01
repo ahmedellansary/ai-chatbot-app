@@ -626,13 +626,18 @@
       const aiMsgId = generateId();
       const chosenAgent = DevState.getSelectedAgent();
       const estimatedTokens = Math.ceil((textForPayload.length + (systemPrompt?.length || 0)) / 3.5);
+      const aiMsgObj = { id: aiMsgId, role: 'ai', content: '', model: state.isMultiAgentMode ? '👥 Multi-Agent Consensus' : chosenAgent.name };
+      DevUIEngine.appendEmptyAiMessage(aiMsgObj);
 
       if (state.isMultiAgentMode) {
         try {
           await this.runDevMultiAgentConsensus(textForPayload, apiMessages, aiMsgId, aiMsgObj, conv, estimatedTokens);
         } catch (err) {
           if (err.name !== 'AbortError') {
-            DevUIEngine.showToast('❌ ' + err.message, 'error');
+            const errRow = document.querySelector(`[data-id="${aiMsgId}"] .msg-content`);
+            if (errRow) {
+              errRow.innerHTML = `<span style="color:var(--accent-rose); font-size:13px;">⚠️ ${DevUIEngine.escapeHtml(err.message || 'حدث خطأ أثناء معالجة الطلب. يرجى المحاولة ثانية.')}</span>`;
+            }
           }
         } finally {
           state.isStreaming = false;
@@ -719,7 +724,6 @@
         await this.handleDevProposal(fullContent, document.querySelector(`[data-id="${aiMsgId}"]`));
       } else {
         const errorMsg = 'تعذر الرد من جميع النماذج حالياً بسبب ضغط مؤقت في مزودي الخدمة. يرجى إعادة المحاولة.';
-        DevUIEngine.showToast('❌ ' + errorMsg, 'error');
         const errRow = document.querySelector(`[data-id="${aiMsgId}"] .msg-content`);
         if (errRow) errRow.innerHTML = `<span style="color:var(--accent-rose);">⚠️ ${errorMsg}</span>`;
       }
