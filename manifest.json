@@ -1,34 +1,35 @@
 {
+  "id": "/ai-chatbot-app-chat",
   "name": "X.v1 — AI Chat",
   "short_name": "X.v1",
   "description": "مساعدك الذكي المتقدم",
   "start_url": "./index.html",
-  "scope": "./",
+  "scope": "./index.html",
   "display": "standalone",
   "background_color": "#0c0c0e",
   "theme_color": "#0c0c0e",
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "./icons/icon-192.png?v=49",
+      "src": "./icons/icon-192.png?v=50",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "./icons/icon-512.png?v=49",
+      "src": "./icons/icon-512.png?v=50",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "./icons/icon-192.png?v=49",
+      "src": "./icons/icon-192.png?v=50",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "./icons/icon-512.png?v=49",
+      "src": "./icons/icon-512.png?v=50",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
