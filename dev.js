@@ -585,9 +585,15 @@
           fullContent = '';
           await this.callSingleAgentStream(currentAgent, apiMessages, state.abortController.signal, (delta) => {
             fullContent += delta;
-            const msgElem = document.querySelector(`[data-id="${aiMsgId}"] .msg-content`);
-            if (msgElem) {
-              msgElem.innerHTML = DevUIEngine.parseMarkdown(fullContent);
+            const msgRow = document.querySelector(`[data-id="${aiMsgId}"]`);
+            if (msgRow) {
+              const hasAr = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFE]/.test(fullContent);
+              msgRow.className = `message-row ai ${hasAr ? 'is-rtl' : 'is-ltr'}`;
+              msgRow.setAttribute('dir', hasAr ? 'rtl' : 'ltr');
+              const msgElem = msgRow.querySelector('.msg-content');
+              if (msgElem) {
+                msgElem.innerHTML = DevUIEngine.parseMarkdown(fullContent);
+              }
             }
           });
 
@@ -819,6 +825,8 @@
         input.addEventListener('input', () => {
           input.style.height = 'auto';
           input.style.height = Math.min(input.scrollHeight, 180) + 'px';
+          const hasAr = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFE]/.test(input.value || '');
+          input.setAttribute('dir', hasAr ? 'rtl' : 'ltr');
           this.updateSendBtn();
         });
 
@@ -1026,8 +1034,9 @@
       const container = $('chat-container');
       if (!container) return;
       const row = document.createElement('div');
-      const isAr = /[\u0600-\u06FF]/.test(msg.content || '');
-      row.className = `message-row ${msg.role} ${isAr ? 'is-rtl' : 'is-ltr'}`;
+      const hasAr = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFE]/.test(msg.content || '');
+      row.className = `message-row ${msg.role} ${hasAr ? 'is-rtl' : 'is-ltr'}`;
+      row.setAttribute('dir', hasAr ? 'rtl' : 'ltr');
       row.dataset.id = msg.id;
 
       let modelBadgeHtml = '';
@@ -1056,6 +1065,7 @@
       if (!container) return;
       const row = document.createElement('div');
       row.className = 'message-row ai is-rtl';
+      row.setAttribute('dir', 'rtl');
       row.dataset.id = msgObj.id;
 
       const modelName = msgObj.model || 'جاري التحليل...';
