@@ -527,19 +527,11 @@ if (typeof $$ === 'undefined') {
   }
 
   function isAppUnlocked() {
-    return localStorage.getItem('nytron_app_unlocked') === 'true';
+    return sessionStorage.getItem('xv1_authenticated') === 'true';
   }
 
   function isOwnerUnlocked() {
     return isAppUnlocked();
-  }
-
-  function updateOwnerLockUI() {
-    const icon = $('owner-lock-icon');
-    const text = $('owner-lock-text');
-    const unlocked = isAppUnlocked();
-    if (icon) icon.textContent = unlocked ? '🔓' : '🔒';
-    if (text) text.textContent = unlocked ? 'قفل التطبيق' : 'فتح التطبيق';
   }
 
   function setupAppLockGate() {
@@ -570,10 +562,11 @@ if (typeof $$ === 'undefined') {
       const isValid = await verifyPassword(password, MASTER_AUTH_RECORD);
 
       if (isValid) {
-        localStorage.setItem('nytron_app_unlocked', 'true');
-        localStorage.setItem('owner_unlocked', 'true');
+        sessionStorage.setItem('xv1_authenticated', 'true');
+        localStorage.removeItem('nytron_app_unlocked');
+        localStorage.removeItem('claude_app_unlocked');
+        localStorage.removeItem('owner_unlocked');
         gate.classList.add('hidden');
-        updateOwnerLockUI();
         showToast('🔐 تم فتح التطبيق بنجاح! مرحباً بك.', 'success');
       } else {
         showToast('❌ كلمة السر غير صحيحة!', 'error');
@@ -797,12 +790,12 @@ if (typeof $$ === 'undefined') {
     container.innerHTML = `
       <div class="welcome-screen">
         <div class="brand-icon" style="width:44px;height:44px;font-size:20px;border-radius:12px;">✦</div>
-        <h1 class="welcome-title">مرحباً بك في X.v1</h1>
-        <p class="welcome-sub">مساعد الذكاء الاصطناعي الذاتي. اسأل أي سؤال أو ادخل وضع المطور لتعديل التطبيق.</p>
+        <h1 class="welcome-title">How can I help you today?</h1>
+        <p class="welcome-sub">X.v1 intelligent assistant. Ask any question or switch to Dev Mode.</p>
         <div class="welcome-chips">
-          <button class="welcome-chip" onclick="window._suggest('اشرح لي الذكاء الاصطناعي في 3 نقاط مبسطة')">🧠 ما هو الذكاء الاصطناعي؟</button>
-          <button class="welcome-chip" onclick="window._startDevPrompt('غيّر لغة الواجهة إلى الإنجليزية وخلي اتجاه النصوص LTR')">🛠️ تغيير الواجهة إلى English</button>
-          <button class="welcome-chip" onclick="window._suggest('اكتب لي خطة عمل لتطبيق ويب حديث')">💼 خطة عمل لتطبيق ويب</button>
+          <button class="welcome-chip" onclick="window._suggest('Explain quantum computing simply in 3 points')">🧠 Explain a concept</button>
+          <button class="welcome-chip" onclick="window._startDevPrompt('مرحباً بك في وضع المطور، ما هي التعديلات التي تريد برمجتها في التطبيق؟')">🛠️ وضع المطور (برمجة وتعديل التطبيق)</button>
+          <button class="welcome-chip" onclick="window._suggest('Write a full product roadmap for a web app')">💼 Product roadmap</button>
         </div>
       </div>
     `;
@@ -901,7 +894,7 @@ if (typeof $$ === 'undefined') {
         <!-- Starburst Emblem & Disclaimer Note -->
         <div class="claude-footer-note">
           <div class="claude-terracotta-star">✦</div>
-          <div class="claude-disclaimer-text">X.v1 نموذج ذكاء اصطناعي، يرجى مراجعة المعلومات الهامة.</div>
+          <div class="claude-disclaimer-text">X.v1 is an AI model. Please verify important information.</div>
         </div>
       `;
     }
@@ -1721,7 +1714,7 @@ if (typeof $$ === 'undefined') {
     };
   }
 
-  // ─── Pull to Refresh Touch Gesture (السحب للتحديث) ───
+  // ─── Pull to Refresh Touch Gesture (السحب للتحديث باللمس) ───
   function setupPullToRefresh() {
     const indicator = $('pull-refresh-indicator');
     if (!indicator) return;
@@ -1730,63 +1723,74 @@ if (typeof $$ === 'undefined') {
     const text = indicator.querySelector('.pull-text');
 
     let startY = 0;
-    let distance = 0;
+    let currentPull = 0;
     let isTracking = false;
-    const THRESHOLD = 45;
+    const THRESHOLD = 55;
 
-    window.addEventListener('touchstart', (e) => {
+    document.addEventListener('touchstart', (e) => {
       const chatArea = $('chat-area');
       const scrollTop = chatArea ? chatArea.scrollTop : 0;
-      if (scrollTop <= 10 && e.touches.length === 1) {
+      if (scrollTop <= 2 && e.touches.length === 1) {
         startY = e.touches[0].clientY;
         isTracking = true;
-        distance = 0;
+        currentPull = 0;
       }
     }, { passive: true });
 
-    window.addEventListener('touchmove', (e) => {
+    document.addEventListener('touchmove', (e) => {
       if (!isTracking) return;
-      const currentY = e.touches[0].clientY;
-      distance = currentY - startY;
+      const y = e.touches[0].clientY;
+      const diff = y - startY;
 
-      if (distance > 10) {
+      if (diff > 0) {
+        const chatArea = $('chat-area');
+        if (chatArea && chatArea.scrollTop > 2) {
+          isTracking = false;
+          return;
+        }
+
+        if (e.cancelable) e.preventDefault();
+
+        currentPull = Math.min(diff * 0.5, 90);
         indicator.classList.add('visible');
-        const pullProgress = Math.min(distance * 0.6, 75);
-        indicator.style.transform = `translate(-50%, ${pullProgress - 35}px)`;
+        indicator.style.opacity = '1';
+        indicator.style.transform = `translate(-50%, ${currentPull - 40}px)`;
 
-        if (distance >= THRESHOLD) {
+        if (diff >= THRESHOLD) {
           if (icon) icon.textContent = '🔄';
-          if (text) text.textContent = 'أفلت للتحديث';
-          indicator.style.color = 'var(--claude-terracotta)';
+          if (text) text.textContent = 'Release to refresh';
+          indicator.style.color = 'var(--accent-color)';
         } else {
           if (icon) icon.textContent = '↓';
-          if (text) text.textContent = 'اسحب للتحديث...';
-          indicator.style.color = 'var(--text-muted)';
+          if (text) text.textContent = 'Pull to refresh';
+          indicator.style.color = '#fff';
         }
       } else {
         indicator.classList.remove('visible');
+        indicator.style.opacity = '0';
       }
-    }, { passive: true });
+    }, { passive: false });
 
-    window.addEventListener('touchend', () => {
+    document.addEventListener('touchend', () => {
       if (!isTracking) return;
       isTracking = false;
 
-      if (distance >= THRESHOLD) {
+      if (currentPull >= THRESHOLD * 0.35) {
         indicator.classList.add('refreshing');
-        indicator.style.transform = 'translate(-50%, 15px)';
+        indicator.style.transform = 'translate(-50%, 20px)';
         if (icon) icon.textContent = '🔄';
-        if (text) text.textContent = 'جاري التحديث...';
+        if (text) text.textContent = 'Refreshing...';
 
         setTimeout(() => {
-          location.reload();
+          window.location.reload();
         }, 250);
       } else {
         indicator.classList.remove('visible');
-        indicator.style.transform = '';
+        indicator.style.opacity = '0';
+        indicator.style.transform = 'translate(-50%, -100px)';
       }
-      distance = 0;
-    });
+      currentPull = 0;
+    }, { passive: true });
   }
 
   // ─── OpenMAIC Global Helpers & Handlers ───
