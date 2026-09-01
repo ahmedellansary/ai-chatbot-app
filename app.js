@@ -1822,9 +1822,17 @@ if (typeof $$ === 'undefined') {
         indicator.classList.add('refreshing');
         indicator.style.transform = 'translate3d(-50%, 18px, 0) scale(1)';
 
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.getRegistrations().then(regs => {
+            for (const r of regs) {
+              r.update().catch(() => {});
+            }
+          }).catch(() => {});
+        }
+
         setTimeout(() => {
           window.location.reload();
-        }, 220);
+        }, 280);
       } else {
         indicator.classList.remove('visible');
         indicator.style.opacity = '0';
