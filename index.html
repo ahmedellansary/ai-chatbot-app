@@ -36,10 +36,14 @@
       </div>
     </div>
 
-    <div style="padding: 0 12px;">
+    <div style="padding: 0 12px; display: flex; flex-direction: column; gap: 6px;">
       <button id="btn-new-chat">
         <span>✦</span>
         محادثة جديدة
+      </button>
+      <button id="btn-dev-chat" class="dev-mode-btn">
+        <span>🛠️</span>
+        شات المطور (تعديل التطبيق)
       </button>
     </div>
 
@@ -47,10 +51,6 @@
     <div id="conversations-list"></div>
 
     <div class="sidebar-footer">
-      <button class="sidebar-btn dev-mode-btn" id="dev-mode-sidebar-btn">
-        <span>🛠️</span>
-        وضع المطور
-      </button>
       <button class="sidebar-btn" id="install-btn" style="display:none;">
         <span>📲</span>
         تثبيت التطبيق
