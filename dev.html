@@ -119,6 +119,9 @@
     <!-- Floating Input Bar -->
     <div id="input-section">
       <div class="input-container">
+        <!-- Attachment Previews -->
+        <div id="attachment-preview-container" class="attachment-preview-bar hidden"></div>
+
         <textarea
           id="user-input"
           class="dev-textarea"
@@ -128,19 +131,28 @@
         ></textarea>
 
         <div class="input-bottom-bar">
-          <div style="display:flex; align-items:center; gap:8px;">
-            <span style="font-size:11.5px; color:var(--text-dim);">موديل المطور:</span>
-            <select id="dev-model-select" class="icon-btn" style="padding: 4px 10px; font-size:12px; background:#141419; color:#fbbf24; border-color:rgba(255,255,255,0.1);">
-              <option value="groq:openai/gpt-oss-120b">GPT OSS 120B (Groq - فائق السرعة 8K)</option>
-              <option value="openrouter:nvidia/nemotron-3-ultra-550b-a55b:free">Nemotron 550B (OpenRouter)</option>
-              <option value="groq:qwen/qwen3.8-27b">Qwen 27B (Groq)</option>
-            </select>
+          <div class="input-actions-left">
+            <input type="file" id="attach-input" multiple style="display:none;" accept="image/*,.js,.css,.html,.txt,.json,.py,.md">
+            <button type="button" class="dev-action-icon-btn" id="attach-btn" title="إرفاق ملفات أو لقطات شاشة (Attach Files/Screenshots)">
+              <span>📎</span>
+            </button>
+
+            <div class="model-select-wrapper">
+              <span class="model-select-icon">🧠</span>
+              <select id="dev-model-select" class="dev-model-dropdown">
+                <option value="groq:openai/gpt-oss-120b">GPT OSS 120B (Groq 8K)</option>
+                <option value="openrouter:nvidia/nemotron-3-ultra-550b-a55b:free">Nemotron 550B (OpenRouter)</option>
+                <option value="groq:qwen/qwen3.8-27b">Qwen 27B (Groq)</option>
+              </select>
+            </div>
           </div>
 
-          <button id="send-btn" class="dev-send-btn" disabled>
-            <span>إرسال وتجهيز التعديل</span>
-            <span>⚡</span>
-          </button>
+          <div class="input-actions-right">
+            <button id="send-btn" class="dev-send-btn" disabled>
+              <span class="send-btn-text">إرسال وتجهيز التعديل</span>
+              <span class="send-btn-icon">⚡</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
