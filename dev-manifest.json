@@ -1,7 +1,7 @@
 {
   "id": "/ai-chatbot-app-dev",
   "name": "X.v1 Dev Studio",
-  "short_name": "X.v1 Dev",
+  "short_name": "Dev",
   "description": "X.v1 Developer Portal & Codebase Studio",
   "start_url": "./dev.html",
   "scope": "./dev.html",
