@@ -812,12 +812,7 @@
       }
 
       if (msg.role === 'user') {
-        row.innerHTML = `
-          <div class="msg-content" ${dirAttr}>
-            ${parsed}
-            ${attachmentsHtml}
-          </div>
-        `;
+        row.innerHTML = `<div class="msg-content" ${dirAttr}>${parsed}${attachmentsHtml}</div>`;
       } else {
         row.innerHTML = `
           <div class="msg-content" ${dirAttr}>
