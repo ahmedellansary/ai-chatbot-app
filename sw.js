@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ai-chat-v2';
+const CACHE_NAME = 'ai-chat-v3';
 
 // Install immediately
 self.addEventListener('install', event => {
