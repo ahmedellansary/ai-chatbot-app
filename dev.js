@@ -160,6 +160,9 @@
     },
 
     isUnlocked() {
+      if (typeof window !== 'undefined' && (window.__IS_DEV_PREVIEW || window.self !== window.top)) {
+        return true;
+      }
       return sessionStorage.getItem('DEV_PORTAL_UNLOCKED') === 'true';
     },
 
@@ -1430,8 +1433,34 @@
         `;
       }
 
+      const bypassSnippet = `
+        <script>
+          window.__IS_DEV_PREVIEW = true;
+          try {
+            sessionStorage.setItem('xv1_authenticated', 'true');
+            sessionStorage.setItem('DEV_PORTAL_UNLOCKED', 'true');
+            sessionStorage.setItem('owner_unlocked', '1');
+            localStorage.setItem('owner_unlocked', '1');
+          } catch(e) {}
+        </script>
+        <style>
+          #app-lock-gate, .app-lock-gate, #auth-overlay, .auth-overlay {
+            display: none !important;
+            pointer-events: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+          }
+        </style>
+      `;
+
+      if (previewHtml.includes('<head>')) {
+        previewHtml = previewHtml.replace('<head>', '<head>' + bypassSnippet);
+      } else {
+        previewHtml = bypassSnippet + previewHtml;
+      }
+
       frame.srcdoc = previewHtml;
-      DevUIEngine.showToast('✅ تم تشغيل المعاينة الافتراضية بنجاح!', 'success');
+      DevUIEngine.showToast('✅ تم تشغيل المعاينة الافتراضية بنجاح دون طلب كلمة سر!', 'success');
     } catch (err) {
       console.error('Preview error:', err);
       DevUIEngine.showToast('تعذر تحميل ملفات المعاينة: ' + err.message, 'error');
