@@ -3,191 +3,115 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="theme-color" content="#7c5cfc">
-  <meta name="description" content="نيترون — مساعدك الذكي المتقدم مع أقوى موديلز الذكاء الاصطناعي">
+  <meta name="theme-color" content="#131314">
+  <meta name="description" content="نيترون — مساعد الذكاء الاصطناعي">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="نيترون">
 
-  <!-- Open Graph -->
-  <meta property="og:title" content="نيترون — AI Chat">
-  <meta property="og:description" content="مساعدك الذكي المتقدم">
-  <meta property="og:type" content="website">
-
-  <title>نيترون — AI Chat</title>
+  <title>نيترون</title>
   <link rel="manifest" href="./manifest.json">
   <link rel="stylesheet" href="./style.css">
-
-  <!-- Favicon SVG inline -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✦</text></svg>">
 </head>
 <body>
 <div id="app">
 
-  <!-- ═══ Sidebar ═══ -->
+  <!-- ═══ Sidebar Drawer ═══ -->
   <aside id="sidebar">
     <div class="sidebar-header">
-      <div class="app-logo">
-        <div class="logo-icon">✦</div>
-        <div>
-          <div class="logo-text">نيترون</div>
-          <span class="logo-sub">AI Chat</span>
-        </div>
+      <div class="brand-logo">
+        <div class="brand-icon">✦</div>
+        <span>نيترون</span>
       </div>
+      <button class="header-btn" id="close-sidebar-btn" aria-label="إغلاق">✕</button>
     </div>
 
-    <div style="padding: 0 12px; display: flex; flex-direction: column; gap: 6px;">
-      <button id="btn-new-chat">
-        <span>✦</span>
-        محادثة جديدة
+    <div style="padding: 0 12px; display: flex; flex-direction: column; gap: 8px;">
+      <button class="sidebar-action-btn" id="btn-new-chat">
+        <span>＋</span>
+        <span>محادثة جديدة</span>
       </button>
-      <button id="btn-dev-chat" class="dev-mode-btn">
+      <button class="sidebar-action-btn dev-btn" id="btn-dev-chat">
         <span>🛠️</span>
-        شات المطور (تعديل التطبيق)
+        <span>شات المطور (تعديل التطبيق)</span>
       </button>
     </div>
 
-    <div class="sidebar-section-title">المحادثات</div>
+    <div class="sidebar-section-title">المحادثات الأخيرة</div>
     <div id="conversations-list"></div>
 
     <div class="sidebar-footer">
-      <button class="sidebar-btn" id="install-btn" style="display:none;">
+      <button class="footer-btn" id="install-btn" style="display:none;">
         <span>📲</span>
-        تثبيت التطبيق
+        <span>تثبيت التطبيق</span>
       </button>
-      <button class="sidebar-btn" onclick="localStorage.clear(); location.reload()">
+      <button class="footer-btn" onclick="localStorage.clear(); location.reload()">
         <span>🗑️</span>
-        مسح الكل
+        <span>مسح السجل</span>
       </button>
     </div>
   </aside>
 
-  <!-- ═══ Main ═══ -->
+  <!-- ═══ Main View ═══ -->
   <main id="main">
 
-    <!-- Header -->
+    <!-- Top Header -->
     <header id="header">
-      <button id="sidebar-toggle" aria-label="القائمة">☰</button>
+      <button class="header-btn" id="sidebar-toggle" aria-label="القائمة">☰</button>
 
-      <div class="header-model-info">
-        <div class="current-model-badge">
-          <span class="model-dot"></span>
-          <span class="model-name-short">اختر مود للبدء</span>
-        </div>
+      <!-- Clean Model Selector Pill -->
+      <button class="model-pill-btn" id="model-pill-trigger">
+        <span class="model-dot-indicator"></span>
+        <span id="header-model-label">نيترون · MID</span>
+        <span style="font-size: 10px; opacity: 0.6;">▾</span>
+      </button>
+
+      <!-- Model Dropdown -->
+      <div class="mode-dropdown" id="mode-dropdown-menu">
+        <button class="dropdown-item" data-mode="HIGH">
+          <span>⚡ HIGH (أقوى الموديلز)</span>
+        </button>
+        <button class="dropdown-item active" data-mode="MID">
+          <span>⚖️ MID (متوازن وسريع)</span>
+        </button>
+        <button class="dropdown-item" data-mode="FAST">
+          <span>🚀 FAST (الأسرع استجابة)</span>
+        </button>
       </div>
 
-      <!-- Mode Selector -->
-      <div class="mode-selector" role="group" aria-label="اختر قوة الموديل">
-        <button class="mode-btn" data-mode="HIGH" title="أقوى موديلز — Nemotron 550B">
-          HIGH
-        </button>
-        <button class="mode-btn active" data-mode="MID" title="توازن بين القوة والسرعة">
-          MID
-        </button>
-        <button class="mode-btn" data-mode="FAST" title="أسرع استجابة">
-          FAST
-        </button>
-      </div>
-
-      <div class="header-actions">
-        <button class="icon-btn" title="إعدادات" onclick="document.querySelector('.dev-mode-btn').click()">⚙️</button>
-      </div>
+      <button class="header-btn" id="header-new-chat-btn" title="محادثة جديدة">＋</button>
     </header>
 
-    <!-- Chat Area -->
-    <div id="chat-area" role="log" aria-live="polite" aria-label="المحادثة"></div>
+    <!-- Chat Message Feed -->
+    <div id="chat-area">
+      <div class="chat-container" id="chat-container"></div>
+    </div>
 
-    <!-- Input Area -->
-    <div id="input-area">
-      <div class="input-wrapper">
+    <!-- Floating Input Bar -->
+    <div id="input-section">
+      <div class="input-container">
         <textarea
           id="user-input"
-          class="input-box"
-          placeholder="اكتب رسالتك هنا... (Enter للإرسال، Shift+Enter لسطر جديد)"
+          class="chat-textarea"
+          placeholder="كيف يمكنني مساعدتك اليوم؟"
           rows="1"
-          maxlength="32000"
-          aria-label="صندوق الرسائل"
           autocomplete="off"
-          spellcheck="true"
         ></textarea>
-        <button id="send-btn" disabled aria-label="إرسال">➤</button>
-      </div>
-      <div class="input-footer">
-        <span class="input-hint">Enter للإرسال · Shift+Enter سطر جديد</span>
-        <span class="char-count" id="char-count"></span>
+        <div class="input-bottom-bar">
+          <div class="input-actions-left"></div>
+          <button id="send-btn" class="send-button" disabled aria-label="إرسال">↑</button>
+        </div>
       </div>
     </div>
 
   </main>
 
-  <!-- ═══ Dev Panel ═══ -->
-  <aside id="dev-panel" role="complementary" aria-label="لوحة المطور">
-    <div class="dev-panel-header">
-      <div class="dev-panel-title">🛠️ وضع المطور</div>
-      <button class="icon-btn" id="close-dev-btn" aria-label="إغلاق">✕</button>
-    </div>
-
-    <div class="dev-panel-body">
-
-      <!-- Modify App -->
-      <div class="dev-section">
-        <div class="dev-section-title">تعديل التطبيق</div>
-        <div class="dev-section-body">
-          <textarea
-            id="dev-instruction"
-            class="dev-input"
-            placeholder="اكتب التعديل المطلوب... مثال: أضف زر تغيير الخط في الواجهة"
-            rows="4"
-          ></textarea>
-          <button class="dev-btn primary" id="dev-run-btn">
-            ⚡ تنفيذ التعديل
-          </button>
-          <button class="dev-btn danger" id="dev-rollback-btn">
-            ⏪ استرجاع النسخة السابقة
-          </button>
-          <div id="dev-status" class="dev-status info" style="display:none;"></div>
-        </div>
-      </div>
-
-      <!-- System Prompt -->
-      <div class="dev-section">
-        <div class="dev-section-title">🧠 تعليمات الشخصية</div>
-        <div class="dev-section-body">
-          <p style="font-size:12px; color: var(--text-muted); margin-bottom: 8px; line-height: 1.5;">
-            هذه التعليمات تُطبَّق على كل محادثة. عدّل عليها لتخصيص شخصية الذكاء الاصطناعي.
-          </p>
-          <textarea
-            id="sys-prompt-area"
-            placeholder="اكتب تعليماتك هنا..."
-            rows="6"
-          ></textarea>
-          <button class="dev-btn primary" id="save-sys-prompt-btn">
-            💾 حفظ التعليمات
-          </button>
-        </div>
-      </div>
-
-      <!-- GitHub / Deploy -->
-      <div class="dev-section">
-        <div class="dev-section-title">🚀 النشر على GitHub Pages</div>
-        <div class="dev-section-body">
-          <p style="font-size:12px; color: var(--text-muted); margin-bottom: 10px; line-height: 1.5;">
-            انشر التطبيق على الإنترنت مجاناً عبر GitHub Pages وشاركه على الموبايل.
-          </p>
-          <button class="dev-btn" id="deploy-btn">
-            🌐 نشر على GitHub Pages
-          </button>
-        </div>
-      </div>
-
-    </div>
-  </aside>
-
   <!-- Overlay -->
   <div id="overlay"></div>
 
   <!-- Toast Container -->
-  <div id="toast-container" aria-live="assertive"></div>
+  <div id="toast-container"></div>
 
 </div>
 
