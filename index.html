@@ -11,8 +11,8 @@
   <meta name="apple-mobile-web-app-title" content="X.v1">
 
   <title>X.v1</title>
-  <link rel="manifest" href="./manifest.json?v=43">
-  <link rel="stylesheet" href="./style.css?v=43">
+  <link rel="manifest" href="./manifest.json?v=44">
+  <link rel="stylesheet" href="./style.css?v=44">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✦</text></svg>">
 </head>
 <body>
@@ -44,13 +44,13 @@
         <span>🛠️</span>
         <span>Dev Mode</span>
       </button>
+      <button class="footer-btn" onclick="window._openSettingsModal()">
+        <span>⚙️</span>
+        <span>Settings & Instructions</span>
+      </button>
       <button class="footer-btn" id="install-btn" style="display:none;">
         <span>📲</span>
         <span>Install App</span>
-      </button>
-      <button class="footer-btn" onclick="window._clearAppCache()">
-        <span>🧹</span>
-        <span>Clear Cache</span>
       </button>
     </div>
   </aside>
@@ -245,6 +245,59 @@
     </div>
   </div>
 
+  <!-- ═══ Settings & System Instructions Modal ═══ -->
+  <div id="settings-modal" class="custom-modal hidden" aria-hidden="true">
+    <div class="custom-modal-card settings-card">
+      <div class="custom-modal-header">
+        <div class="modal-header-title">
+          <span>⚙️</span>
+          <span>Settings & Instructions</span>
+        </div>
+        <div class="modal-header-actions">
+          <button class="icon-btn" onclick="window._closeSettingsModal()" title="Close">✕</button>
+        </div>
+      </div>
+      <div class="settings-modal-body">
+        
+        <!-- System Instructions Section -->
+        <div class="settings-section">
+          <div class="settings-section-header">
+            <div class="settings-section-title">
+              <span>🧠</span>
+              <span>تعليمات النظام (System Prompt)</span>
+            </div>
+            <button class="settings-action-btn" onclick="window._resetDefaultSystemPrompt()">استعادة الافتراضي</button>
+          </div>
+          <p class="settings-section-desc">هذه التعليمات توجه سلوك وأسلوب الذكاء الاصطناعي في كافة المحادثات.</p>
+          <textarea
+            id="settings-system-prompt"
+            class="settings-textarea"
+            rows="7"
+            placeholder="اكتب تعليمات الذكاء الاصطناعي هنا..."
+          ></textarea>
+          <button class="settings-save-btn" onclick="window._saveCustomSystemPrompt()">
+            <span>💾</span>
+            <span>حفظ التعليمات</span>
+          </button>
+        </div>
+
+        <!-- Storage & Cache Section -->
+        <div class="settings-section" style="margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border-subtle);">
+          <div class="settings-section-title">
+            <span>🧹</span>
+            <span>إدارة الذاكرة والتخزين المؤقت</span>
+          </div>
+          <p class="settings-section-desc">تنظيف ملفات الكاش والـ Service Worker مع الحفاظ التام على سجل محادثاتك.</p>
+          <button class="footer-btn settings-clear-btn" onclick="window._clearAppCache()">
+            <span>🧹</span>
+            <span>مسح الكاش وتحديث التطبيق</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
   <!-- ═══ Full Screen App Lock Gate ═══ -->
   <div id="app-lock-gate" class="app-lock-gate hidden" aria-live="polite">
     <div class="lock-gate-card">
@@ -280,7 +333,7 @@
 </div>
 
 <!-- Unified Application Script Bundle -->
-<script src="./config.js?v=43"></script>
-<script src="./app.js?v=43"></script>
+<script src="./config.js?v=44"></script>
+<script src="./app.js?v=44"></script>
 </body>
 </html>
