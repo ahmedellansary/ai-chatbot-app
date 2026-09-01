@@ -791,7 +791,7 @@
     container.innerHTML = `
       <div class="welcome-screen">
         <div class="brand-icon" style="width:44px;height:44px;font-size:20px;border-radius:12px;">✦</div>
-        <h1 class="welcome-title">مرحباً بك في نيترون</h1>
+        <h1 class="welcome-title">مرحباً بك في X.v1</h1>
         <p class="welcome-sub">مساعد الذكاء الاصطناعي الذاتي. اسأل أي سؤال أو ادخل وضع المطور لتعديل التطبيق.</p>
         <div class="welcome-chips">
           <button class="welcome-chip" onclick="window._suggest('اشرح لي الذكاء الاصطناعي في 3 نقاط مبسطة')">🧠 ما هو الذكاء الاصطناعي؟</button>
@@ -895,7 +895,7 @@
         <!-- Starburst Emblem & Disclaimer Note -->
         <div class="claude-footer-note">
           <div class="claude-terracotta-star">✦</div>
-          <div class="claude-disclaimer-text">نيترون نموذج ذكاء اصطناعي، يرجى مراجعة المعلومات الهامة.</div>
+          <div class="claude-disclaimer-text">X.v1 نموذج ذكاء اصطناعي، يرجى مراجعة المعلومات الهامة.</div>
         </div>
       `;
     }
