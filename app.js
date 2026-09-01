@@ -1212,6 +1212,10 @@
     });
 
     $('header-new-chat-btn')?.addEventListener('click', newConversation);
+    $('header-reload-btn')?.addEventListener('click', () => {
+      showToast('🔄 جاري تحديث التطبيق...', 'info');
+      setTimeout(() => location.reload(), 150);
+    });
 
     $('btn-dev-chat')?.addEventListener('click', () => {
       startDevChat();
@@ -1261,43 +1265,35 @@
 
     const icon = indicator.querySelector('.pull-icon');
     const text = indicator.querySelector('.pull-text');
-    const chatArea = $('chat-area');
 
     let startY = 0;
     let distance = 0;
     let isTracking = false;
-    const THRESHOLD = 65;
+    const THRESHOLD = 50; // Extra sensitive so it triggers easily on mobile
 
-    window.addEventListener('touchstart', (e) => {
-      const scrollPos = chatArea ? chatArea.scrollTop : 0;
-      if (scrollPos <= 5 && e.touches.length === 1) {
+    document.addEventListener('touchstart', (e) => {
+      const chatArea = $('chat-area');
+      const scrollTop = chatArea ? chatArea.scrollTop : 0;
+      if (scrollTop <= 10 && e.touches.length === 1) {
         startY = e.touches[0].clientY;
         isTracking = true;
         distance = 0;
       }
     }, { passive: true });
 
-    window.addEventListener('touchmove', (e) => {
+    document.addEventListener('touchmove', (e) => {
       if (!isTracking) return;
       const currentY = e.touches[0].clientY;
-      const scrollPos = chatArea ? chatArea.scrollTop : 0;
-
-      if (scrollPos > 5) {
-        isTracking = false;
-        indicator.classList.remove('visible');
-        return;
-      }
-
       distance = currentY - startY;
 
-      if (distance > 15) {
+      if (distance > 10) {
         indicator.classList.add('visible');
-        const pullProgress = Math.min(distance, 90);
-        indicator.style.transform = `translate(-50%, ${pullProgress - 50}px)`;
+        const pullProgress = Math.min(distance, 80);
+        indicator.style.transform = `translate(-50%, ${pullProgress - 40}px)`;
 
         if (distance >= THRESHOLD) {
           if (icon) icon.textContent = '🔄';
-          if (text) text.textContent = 'أفلت للتحديث الآن';
+          if (text) text.textContent = 'أفلت للتحديث';
           indicator.style.color = '#fbbf24';
         } else {
           if (icon) icon.textContent = '↓';
@@ -1309,7 +1305,7 @@
       }
     }, { passive: true });
 
-    window.addEventListener('touchend', () => {
+    document.addEventListener('touchend', () => {
       if (!isTracking) return;
       isTracking = false;
 
@@ -1322,7 +1318,7 @@
 
         setTimeout(() => {
           location.reload();
-        }, 300);
+        }, 250);
       } else {
         indicator.classList.remove('visible');
         indicator.style.transform = '';
