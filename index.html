@@ -213,21 +213,32 @@
     </div>
   </div>
 
-  <!-- ═══ Owner Security Authentication Modal (قفل المالك السري) ═══ -->
-  <div id="owner-auth-modal" class="owner-modal hidden" aria-live="polite">
-    <div class="owner-modal-card">
-      <div class="owner-modal-icon">🔐</div>
-      <h3 class="owner-modal-title">التحقق من هوية المالك</h3>
-      <p class="owner-modal-desc">وضع المطور والتعديل على GitHub محمي برمز سري خاص بالمالك فقط لمنع أي تعديل خارجي.</p>
-      
-      <div class="pin-input-wrap">
-        <input type="password" id="owner-pin-input" class="owner-pin-input" placeholder="أدخل رمز الـ PIN السري" maxlength="12" autocomplete="off">
-      </div>
+  <!-- ═══ Full Screen App Lock Gate (شاشة القفل العامة للتطبيق) ═══ -->
+  <div id="app-lock-gate" class="app-lock-gate hidden" aria-live="polite">
+    <div class="lock-gate-card">
+      <div class="lock-gate-star">✳️</div>
+      <h2 class="lock-gate-title">Claude</h2>
+      <p class="lock-gate-sub">التطبيق محمي ومقفل بالكامل. يرجى إدخال رمز المرور السري للدخول.</p>
 
-      <div class="owner-modal-actions">
-        <button id="owner-auth-submit" class="owner-modal-btn primary">تأكيد ودخول</button>
-        <button id="owner-auth-cancel" class="owner-modal-btn cancel">إلغاء</button>
-      </div>
+      <form id="lock-gate-form" class="lock-gate-form" onsubmit="event.preventDefault()">
+        <div class="lock-input-group">
+          <input
+            type="password"
+            id="gate-pin-input"
+            class="lock-gate-input"
+            placeholder="رمز PIN للدخول"
+            maxlength="12"
+            autocomplete="off"
+            inputmode="numeric"
+          >
+          <button type="submit" id="gate-unlock-btn" class="lock-gate-btn" aria-label="دخول">
+            <span>فتح</span>
+            <span>🔓</span>
+          </button>
+        </div>
+      </form>
+
+      <div class="lock-gate-footer">🔐 مشفر ومحمي بالكامل برمز المالك</div>
     </div>
   </div>
 
