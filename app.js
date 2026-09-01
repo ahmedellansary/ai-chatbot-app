@@ -1399,16 +1399,9 @@
       });
 
       input?.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-          e.preventDefault();
-          const hasAtt = state.attachments && state.attachments.length > 0;
-          const text = input.value.trim();
-          if (!state.isStreaming && (text || hasAtt)) {
-            input.value = '';
-            this.adjustTextareaHeight();
-            this.updateSendBtnState();
-            ChatEngine.sendMessage(text);
-          }
+        if (e.key === 'Enter') {
+          // Enter creates a newline naturally without sending
+          setTimeout(() => this.adjustTextareaHeight(), 10);
         }
       });
 
