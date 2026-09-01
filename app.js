@@ -1212,10 +1212,6 @@
     });
 
     $('header-new-chat-btn')?.addEventListener('click', newConversation);
-    $('header-reload-btn')?.addEventListener('click', () => {
-      showToast('🔄 جاري تحديث التطبيق...', 'info');
-      setTimeout(() => location.reload(), 150);
-    });
 
     $('btn-dev-chat')?.addEventListener('click', () => {
       startDevChat();
