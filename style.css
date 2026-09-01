@@ -1088,6 +1088,116 @@ html, body {
   color: #fecaca;
 }
 
+/* ─── Owner PIN Authentication Modal ─── */
+.owner-modal {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 300;
+  padding: 16px;
+  transition: opacity 0.2s ease;
+}
+
+.owner-modal.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.owner-modal-card {
+  width: 100%;
+  max-width: 380px;
+  background: #1e1e24;
+  border: 1px solid rgba(218, 119, 86, 0.4);
+  border-radius: 20px;
+  padding: 24px 20px;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  animation: fadeIn 0.2s ease;
+}
+
+.owner-modal-icon {
+  font-size: 36px;
+  margin-bottom: 2px;
+}
+
+.owner-modal-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.owner-modal-desc {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.pin-input-wrap {
+  width: 100%;
+  margin: 6px 0 10px;
+}
+
+.owner-pin-input {
+  width: 100%;
+  background: #121215;
+  border: 1.5px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 12px;
+  text-align: center;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.25em;
+  color: #fff;
+  outline: none;
+  font-family: var(--font-mono);
+  transition: border-color 0.2s ease;
+}
+
+.owner-pin-input:focus {
+  border-color: var(--claude-terracotta);
+}
+
+.owner-modal-actions {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+}
+
+.owner-modal-btn {
+  flex: 1;
+  padding: 12px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  font-family: var(--font-sans);
+  transition: all 0.15s ease;
+}
+
+.owner-modal-btn.primary {
+  background: var(--claude-terracotta);
+  color: #fff;
+}
+
+.owner-modal-btn.primary:hover {
+  background: var(--claude-terracotta-dark);
+}
+
+.owner-modal-btn.cancel {
+  background: var(--bg-card);
+  color: var(--text-muted);
+}
+
 /* ─── Toast Notifications ─── */
 #toast-container {
   position: fixed;
