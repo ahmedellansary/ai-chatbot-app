@@ -1463,36 +1463,38 @@
       } else if (targetFile.includes('style.css')) {
         const res = await fetch('./index.html?t=' + Date.now());
         let baseHtml = res.ok ? await res.text() : '<!DOCTYPE html><html><head><meta charset="utf-8"></head><body></body></html>';
-        if (baseHtml.includes('style.css')) {
+        // If content is full stylesheet
+        if (proposal.content.length > 10000) {
           previewHtml = baseHtml.replace(/<link[^>]*href=["'][^"']*style\.css[^"']*["'][^>]*>/i, `<style>${proposal.content}</style>`);
         } else {
-          previewHtml = baseHtml.replace('</head>', `<style>${proposal.content}</style></head>`);
+          // If content is a surgical patch, inject it as an override layer in head!
+          previewHtml = baseHtml.replace('</head>', `<style id="patch-override">${proposal.content}</style></head>`);
         }
       } else if (targetFile.includes('app.js')) {
         const res = await fetch('./index.html?t=' + Date.now());
         let baseHtml = res.ok ? await res.text() : '<!DOCTYPE html><html><head><meta charset="utf-8"></head><body></body></html>';
-        if (baseHtml.includes('app.js')) {
+        if (proposal.content.length > 20000) {
           previewHtml = baseHtml.replace(/<script[^>]*src=["'][^"']*app\.js[^"']*["'][^>]*><\/script>/i, `<script>${proposal.content}<\/script>`);
         } else {
-          previewHtml = baseHtml.replace('</body>', `<script>${proposal.content}<\/script></body>`);
+          previewHtml = baseHtml.replace('</body>', `<script id="patch-override">${proposal.content}<\/script></body>`);
         }
       } else if (targetFile.includes('dev.html')) {
         previewHtml = proposal.content;
       } else if (targetFile.includes('dev_style.css')) {
         const res = await fetch('./dev.html?t=' + Date.now());
         let baseHtml = res.ok ? await res.text() : '<!DOCTYPE html><html><head><meta charset="utf-8"></head><body></body></html>';
-        if (baseHtml.includes('dev_style.css')) {
+        if (proposal.content.length > 10000) {
           previewHtml = baseHtml.replace(/<link[^>]*href=["'][^"']*dev_style\.css[^"']*["'][^>]*>/i, `<style>${proposal.content}</style>`);
         } else {
-          previewHtml = baseHtml.replace('</head>', `<style>${proposal.content}</style></head>`);
+          previewHtml = baseHtml.replace('</head>', `<style id="patch-override">${proposal.content}</style></head>`);
         }
       } else if (targetFile.includes('dev.js')) {
         const res = await fetch('./dev.html?t=' + Date.now());
         let baseHtml = res.ok ? await res.text() : '<!DOCTYPE html><html><head><meta charset="utf-8"></head><body></body></html>';
-        if (baseHtml.includes('dev.js')) {
+        if (proposal.content.length > 20000) {
           previewHtml = baseHtml.replace(/<script[^>]*src=["'][^"']*dev\.js[^"']*["'][^>]*><\/script>/i, `<script>${proposal.content}<\/script>`);
         } else {
-          previewHtml = baseHtml.replace('</body>', `<script>${proposal.content}<\/script></body>`);
+          previewHtml = baseHtml.replace('</body>', `<script id="patch-override">${proposal.content}<\/script></body>`);
         }
       } else {
         previewHtml = `
