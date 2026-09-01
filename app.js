@@ -1316,14 +1316,39 @@
     let html = escapeHtml(text);
 
     html = html.replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) => {
-      const label = lang || 'code';
+      const label = (lang || 'code').toLowerCase();
+      const trimmed = code.trim();
+      const isWebCode = label === 'html' || label === 'svg' || (label === 'javascript' && (trimmed.includes('<') || trimmed.includes('document.')));
+      const encodedCode = encodeURIComponent(trimmed);
+
+      let runBtn = '';
+      if (isWebCode) {
+        runBtn = `<button class="sandbox-launch-btn" onclick="window._runSandbox(decodeURIComponent('${encodedCode}'))">▶️ تشغيل المحاكاة</button>`;
+      }
+
       return `<div class="code-window">
         <div class="code-header-bar">
           <span>${label}</span>
-          <button class="copy-btn" onclick="window._copyCode(this)">نسخ</button>
+          <div style="display:flex;gap:6px;align-items:center;">
+            ${runBtn}
+            <button class="copy-btn" onclick="window._copyCode(this)">نسخ</button>
+          </div>
         </div>
-        <pre><code>${code.trim()}</code></pre>
+        <pre><code>${trimmed}</code></pre>
       </div>`;
+    });
+
+    // Multi-Agent Roundtable Persona Styling
+    html = html.replace(/\[(?:الخبير التحليلي|الخبير|Architect)\]\s*([\s\S]*?)(?=\[(?:الناقد|المنسق|Critic|Synthesizer)\]|$)/gi, (m, content) => {
+      return `<div class="roundtable-persona architect"><div class="roundtable-badge"><span>🧠</span> <span>الخبير التحليلي (Architect)</span></div><div class="roundtable-body">${content.trim()}</div></div>`;
+    });
+
+    html = html.replace(/\[(?:الناقد المبتكر|الناقد|Critic)\]\s*([\s\S]*?)(?=\[(?:الخبير|المنسق|Architect|Synthesizer)\]|$)/gi, (m, content) => {
+      return `<div class="roundtable-persona critic"><div class="roundtable-badge"><span>⚡</span> <span>الناقد المبتكر (Critic)</span></div><div class="roundtable-body">${content.trim()}</div></div>`;
+    });
+
+    html = html.replace(/\[(?:المنسق التنفيذي|المنسق|Synthesizer)\]\s*([\s\S]*?)(?=\[(?:الخبير|الناقد|Architect|Critic)\]|$)/gi, (m, content) => {
+      return `<div class="roundtable-persona synthesizer"><div class="roundtable-badge"><span>🎯</span> <span>المنسق التنفيذي (Synthesizer)</span></div><div class="roundtable-body">${content.trim()}</div></div>`;
     });
 
     html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
@@ -1752,6 +1777,119 @@
     });
   }
 
+  // ─── OpenMAIC Global Helpers & Handlers ───
+  let currentSandboxCode = '';
+  let currentSlidesData = [];
+  let currentSlideIndex = 0;
+
+  window._triggerSkill = (skill) => {
+    $('sidebar')?.classList.remove('open');
+    $('overlay')?.classList.remove('active');
+    const input = $('user-input');
+    const sendBtn = $('send-btn');
+    if (!input) return;
+
+    if (skill === 'roundtable') {
+      input.value = '👥 طاولة النقاش: [اكتب موضوعك هنا ليناقشه 3 وكلاء أذكياء بعمق]';
+    } else if (skill === 'mindmap') {
+      input.value = '🗺️ أنشئ خريطة ذهنية تفاعلية شاملة لموضوع: [اكتب موضوعك]';
+    } else if (skill === 'slides') {
+      input.value = '📊 أنشئ عرض تقديمي كامل وشرائح تفاعلية حول: [اكتب موضوعك]';
+    } else if (skill === 'sandbox') {
+      input.value = '🧪 أنشئ كود تفاعلي حي (HTML/CSS/JS) أو محاكاة قابلة للتشغيل باللمس لـ: [اكتب فكرتك]';
+    }
+
+    input.focus();
+    input.dispatchEvent(new Event('input'));
+    showToast(`تم تفعيل وضع ${skill}`, 'info');
+  };
+
+  // ─── Live Sandbox Runner ───
+  window._runSandbox = (code) => {
+    currentSandboxCode = code;
+    const modal = $('sandbox-modal');
+    const frame = $('sandbox-frame');
+    if (!modal || !frame) return;
+
+    modal.classList.remove('hidden');
+    frame.srcdoc = code;
+    showToast('🚀 جاري تشغيل المحاكاة...', 'info');
+  };
+
+  window._closeSandbox = () => {
+    const modal = $('sandbox-modal');
+    if (modal) modal.classList.add('hidden');
+  };
+
+  window._reloadSandbox = () => {
+    const frame = $('sandbox-frame');
+    if (frame && currentSandboxCode) {
+      frame.srcdoc = currentSandboxCode;
+      showToast('🔄 تم إعادة التشغيل', 'info');
+    }
+  };
+
+  // ─── Interactive Slides Engine ───
+  window._openSlides = (slidesJsonStr) => {
+    try {
+      currentSlidesData = JSON.parse(decodeURIComponent(slidesJsonStr));
+    } catch {
+      currentSlidesData = [
+        { title: 'العرض التقديمي', bullets: ['مرحباً بك في العرض التفاعلي'] }
+      ];
+    }
+    currentSlideIndex = 0;
+    const modal = $('slides-modal');
+    if (modal) modal.classList.remove('hidden');
+    renderCurrentSlide();
+  };
+
+  function renderCurrentSlide() {
+    const area = $('slide-content-area');
+    const indicator = $('slide-indicator');
+    if (!area || !currentSlidesData.length) return;
+
+    const slide = currentSlidesData[currentSlideIndex];
+    indicator.textContent = `${currentSlideIndex + 1} / ${currentSlidesData.length}`;
+
+    area.innerHTML = `
+      <h2 class="slide-title">${escapeHtml(slide.title || 'شريحة')}</h2>
+      <div class="slide-bullets-wrap">
+        ${(slide.bullets || []).map(b => `<div class="slide-bullet"><span>✦</span> <span>${escapeHtml(b)}</span></div>`).join('')}
+      </div>
+    `;
+  }
+
+  window._prevSlide = () => {
+    if (currentSlideIndex > 0) {
+      currentSlideIndex--;
+      renderCurrentSlide();
+    }
+  };
+
+  window._nextSlide = () => {
+    if (currentSlideIndex < currentSlidesData.length - 1) {
+      currentSlideIndex++;
+      renderCurrentSlide();
+    }
+  };
+
+  window._closeSlides = () => {
+    const modal = $('slides-modal');
+    if (modal) modal.classList.add('hidden');
+  };
+
+  window._exportSlidesHTML = () => {
+    const html = `<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>عرض تقديمي - نيترون</title><style>body{font-family:system-ui;background:#131315;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;}.card{background:#1e1e24;padding:40px;border-radius:20px;max-width:600px;line-height:1.8;border:1px solid #da7756;}h1{color:#da7756;}</style></head><body><div class="card"><h1>${currentSlidesData[0]?.title || 'عرض'}</h1><ul>${(currentSlidesData[0]?.bullets || []).map(b=>`<li>${b}</li>`).join('')}</ul></div></body></html>`;
+    const blob = new Blob([html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'presentation.html';
+    a.click();
+    showToast('📥 تم تنزيل العرض كملف HTML', 'success');
+  };
+
   // ─── Global Helpers ───
   window._loadConv = (id) => {
     loadConversation(id);
@@ -1771,7 +1909,7 @@
   };
 
   window._copyCode = (btn) => {
-    const code = btn.closest('.code-header-bar').nextElementSibling?.querySelector('code')?.textContent || '';
+    const code = btn.closest('.code-window')?.querySelector('code')?.textContent || '';
     navigator.clipboard.writeText(code).then(() => {
       btn.textContent = 'تم النسخ!';
       setTimeout(() => btn.textContent = 'نسخ', 2000);
@@ -1790,7 +1928,7 @@
   window._shareMsgText = (btn) => {
     const text = btn.closest('.message-row')?.querySelector('.msg-content')?.innerText || '';
     if (navigator.share) {
-      navigator.share({ title: 'X.v1', text });
+      navigator.share({ title: 'نيترون AI', text });
     } else {
       window._copyMsgText(btn);
     }
