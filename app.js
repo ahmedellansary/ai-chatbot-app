@@ -243,66 +243,18 @@
       return conv;
     },
 
-    startDevChat(initialPrompt = '') {
-      if (!AuthManager.isUnlocked()) {
-        AuthManager.requireAuth(() => this.startDevChat(initialPrompt));
-        return;
-      }
-
-      const existing = state.conversations.find(c => c.isDev);
-      let devConvId = existing ? existing.id : null;
-
-      if (!existing) {
-        const id = generateId();
-        const devModel = ModelEngine.getSelectedDevModel();
-        const conv = {
-          id,
-          title: '🛠️ شات المطور',
-          messages: [
-            {
-              id: generateId(),
-              role: 'ai',
-              content: `مرحباً بك في **شات المطور الذكي** 🛠️\n\nأنا مهندس برمجيات التطبيق (AI Lead Developer). أستطيع تعديل التطبيق وتحديث ملفاته ورفعها على GitHub فوراً.\n\nتستطيع أن تطلب مني:\n- *"غيّر لغة الواجهة إلى الإنجليزية وخلي النصوص LTR"*\n- *"عدّل ألوان أو أحجام العناصر"*\n- *"أضف ميزة أو زر جديد"*\n\n🔒 **الأمان التام:** وضع المطور مقفل بكلمة السر الخاصة بك، ومعك زر **استرجاع فوري (Rollback)** وزر **مراجعة آخر تعديل فقط** لتجنب أي هلوسة. ما التعديل المطلوب؟`,
-              model: devModel ? `Developer (${devModel.name})` : 'Nemotron Lead Developer',
-              usedFallback: false,
-              timestamp: new Date().toISOString()
-            }
-          ],
-          mode: 'FAST',
-          devModelKey: state.devModelKey || (devModel ? `${devModel.provider}:${devModel.id}` : null),
-          isDev: true,
-          createdAt: new Date().toISOString()
-        };
-        state.conversations.unshift(conv);
-        this.save();
-        devConvId = id;
-      }
-
-      this.loadConversation(devConvId);
-      UIEngine.renderConversationsList();
-
-      if (initialPrompt) {
-        const input = $('user-input');
-        if (input) input.value = initialPrompt;
-        UIEngine.updateSendBtnState();
-        ChatEngine.sendMessage(initialPrompt);
-      }
-    },
-
     loadConversation(id) {
       const conv = state.conversations.find(c => c.id === id);
       if (!conv) return;
 
       state.activeConvId = id;
       state.currentMode = conv.mode || state.currentMode;
-      if (conv.isDev && conv.devModelKey) {
-        state.devModelKey = conv.devModelKey;
-      }
-
+      this.save();
       MessageRenderer.renderAllMessages(conv.messages);
+      UIEngine.renderConversationsList();
       UIEngine.updateHeaderUI();
-      UIEngine.highlightActiveConv(id);
-      MessageRenderer.scrollToBottom();
+      UIEngine.updateSendBtnState();
+      UIEngine.closeSidebar();
     },
 
     addMessage(role, content, modelInfo = null, attachments = []) {
@@ -952,28 +904,7 @@
       return { textForPayload, currentAttachments };
     },
 
-    buildSystemPrompt(isDev) {
-      if (isDev) {
-        return `أنت مهندس البرمجيات ومطور التطبيق الذكي (AI Lead Developer).
-أنت تتحدث مع المستخدم لتطوير وتعديل هذا التطبيق نفسه (ChatBot PWA).
- 
-قواعد صارمة ومهمة جداً لمنع الهلوسة:
-1. ركز بدقة على الطلب المطلوب فقط.
-2. لا تحذف أي ميزات أخرى أو تعيد كتابة ملفات غير مطلوبة.
-3. الملفات هي:
-   - index.html (الهيكل واللغة LTR/RTL)
-   - style.css (التصميم والتنسيقات)
-   - app.js (منطق الشات والموديلز)
-   - system_prompt.txt (تعليمات الذكاء الاصطناعي)
-4. عند التعديل، اشرح التعديل بودية باختصار، وضع كتلة JSON كاملة في نهاية ردك بالشكل الدقيق:
-\`\`\`json
-{
-  "file": "اسم_الملف",
-  "content": "الكود_الكامل_للملف_بعد_التعديل",
-  "message": "وصف دقيق للتعديل"
-}
-\`\`\``;
-      }
+    buildSystemPrompt() {
       return state.systemPrompt;
     },
 
@@ -983,7 +914,6 @@
 
       if (!state.activeConvId) StateController.newConversation();
       const conv = StateController.getActiveConv();
-      const isDev = conv?.isDev;
 
       const { textForPayload, currentAttachments } = this.preparePayload(userText);
 
@@ -1001,7 +931,7 @@
       state.isStreaming = true;
       state.abortController = new AbortController();
 
-      const systemPromptForCall = this.buildSystemPrompt(isDev);
+      const systemPromptForCall = this.buildSystemPrompt();
       const recentMessages = conv.messages
         .filter(m => m.id !== userMsg.id)
         .slice(-8);
@@ -1018,7 +948,7 @@
         id: aiMsgId,
         role: 'ai',
         content: '',
-        model: isDev ? 'Nemotron Developer' : null,
+        model: null,
         usedFallback: false,
         timestamp: new Date().toISOString()
       };
@@ -1027,7 +957,7 @@
       MessageRenderer.showTyping('Analyzing...');
 
       const onModelEvent = (model, isFallback) => {
-        aiMsgObj.model = isDev ? `Developer (${model.name})` : model.name;
+        aiMsgObj.model = model.name;
         aiMsgObj.usedFallback = isFallback;
 
         const connectText = isFallback ? `Switching to ${model.name}...` : `Connecting to ${model.name}...`;
@@ -1040,15 +970,12 @@
       };
 
       try {
-        const selectedModel = isDev ? ModelEngine.getSelectedDevModel() : null;
-        const stream = isDev
-          ? ModelEngine.runSingleModel(selectedModel, apiMessages, state.abortController.signal, onModelEvent)
-          : ModelEngine.chatWithFallback(state.currentMode, apiMessages, state.abortController.signal, onModelEvent);
+        const stream = ModelEngine.chatWithFallback(state.currentMode, apiMessages, state.abortController.signal, onModelEvent);
 
         let msgRow = null;
         for await (const { chunk, model, usedFallback } of stream) {
           fullContent += chunk;
-          aiMsgObj.model = isDev ? `Developer (${model.name})` : model.name;
+          aiMsgObj.model = model.name;
           aiMsgObj.usedFallback = usedFallback;
 
           if (!msgRow) {
@@ -1075,9 +1002,6 @@
         }
 
         aiMsgObj.content = fullContent;
-        if (isDev) {
-          await this.handleDevProposal(fullContent, msgRow || document.querySelector(`[data-id="${aiMsgId}"]`));
-        }
         StateController.save();
 
       } catch (err) {
@@ -1094,47 +1018,8 @@
         UIEngine.updateSendBtnState();
         MessageRenderer.scrollToBottom();
       }
-    },
-
-    async handleDevProposal(content, msgContainer) {
-      const jsonMatch = content.match(/```json\s*(\{[\s\S]*?\})\s*```/) || content.match(/(\{[\s\S]*"file"[\s\S]*"content"[\s\S]*\})/);
-      if (!jsonMatch || !msgContainer) return;
-
-      try {
-        const data = JSON.parse(jsonMatch[1]);
-        if (data.file && data.content) {
-          const propId = generateId();
-          window._pendingDevModifications[propId] = data;
-          state.lastModifiedFile = data.file;
-
-          const card = document.createElement('div');
-          card.id = `proposal-${propId}`;
-          card.className = 'dev-proposal-box';
-          card.innerHTML = `
-            <div class="dev-proposal-title">🛠️ تم إعداد التعديل لملف: <code>${MessageRenderer.escapeHtml(data.file)}</code></div>
-            <p class="dev-proposal-desc">📝 <strong>التغيير:</strong> ${MessageRenderer.escapeHtml(data.message || 'جاهز للنشر على GitHub')}</p>
-            <div class="dev-proposal-btns">
-              <button class="dev-btn-action deploy" onclick="window._deployProposal('${propId}')">
-                🚀 نشر التعديل على GitHub وتطبيق التحديث
-              </button>
-              <button class="dev-btn-action review-fix" onclick="window._reviewProposal('${propId}')">
-                🔍 مراجعة وفحص هذا التعديل
-              </button>
-              <button class="dev-btn-action cancel" onclick="window._cancelProposal('${propId}')">
-                ✕ إلغاء
-              </button>
-            </div>
-          `;
-          msgContainer.appendChild(card);
-          MessageRenderer.scrollToBottom();
-        }
-      } catch (e) {
-        console.warn('[Dev Proposal Parse Error]', e.message);
-      }
     }
   };
-
-  window._pendingDevModifications = {};
 
   // ─────────────────────────────────────────────────────────────────
   // 8. SKILLS ENGINE & SANDBOX (SkillsEngine)
@@ -1873,91 +1758,6 @@
   window._closeSlides = () => SkillsEngine.closeSlides();
   window._exportSlidesHTML = () => SkillsEngine.exportSlidesHTML();
 
-  window._deployProposal = async (propId) => {
-    if (!AuthManager.isUnlocked()) {
-      AuthManager.requireAuth(() => window._deployProposal(propId));
-      return;
-    }
-
-    const data = window._pendingDevModifications[propId];
-    if (!data) return;
-
-    const card = document.getElementById(`proposal-${propId}`);
-    if (card) {
-      card.innerHTML = `<div class="dev-proposal-title">🔄 جاري النشر على GitHub وتحديث السيرفر...</div>`;
-    }
-
-    try {
-      const localApplied = GitHubService.applyRuntimePatch(data.file, data.content);
-      if (localApplied) {
-        MessageRenderer.showToast(`✅ تم تطبيق التعديل محلياً فوراً في هذه الجلسة`, 'success');
-      }
-
-      MessageRenderer.showToast(`🔄 جاري رفع ${data.file} على GitHub...`, 'info');
-      await GitHubService.uploadFile(data.file, data.content, `🛠️ Dev Mode: ${data.message || 'Update'}`);
-      MessageRenderer.showToast(`✅ تم النشر على GitHub بنجاح!`, 'success');
-
-      if (card) {
-        const statusText = localApplied
-          ? '✅ تم تطبيق التعديل محلياً فوراً + حفظه في GitHub'
-          : `✅ تم النشر وتحديث ملف <code>${MessageRenderer.escapeHtml(data.file)}</code> بنجاح!`;
-
-        card.innerHTML = `
-          <div class="dev-proposal-title" style="color:var(--success);">${statusText}</div>
-          <p class="dev-proposal-desc">تم حفظ التعديل في المستودع، وقد تم تطبيقه محلياً فوراً إذا كان من النوع HTML/CSS/Text. يمكنك أيضاً إعادة تحميل الصفحة إذا أردت تحديث كامل التطبيق.</p>
-          <div class="dev-proposal-btns">
-            <button class="dev-btn-action reload" onclick="location.reload()">
-              🔄 تحديث كامل الصفحة
-            </button>
-            <button class="dev-btn-action cancel" onclick="window._emergencyRollback()">
-              ⏪ تراجع عن النسخة
-            </button>
-          </div>
-        `;
-      }
-    } catch (e) {
-      MessageRenderer.showToast('❌ فشل النشر: ' + e.message, 'error');
-      if (card) {
-        card.innerHTML = `
-          <div class="dev-proposal-title" style="color:var(--error);">❌ فشل النشر على GitHub</div>
-          <p class="dev-proposal-desc">${MessageRenderer.escapeHtml(e.message)}</p>
-          <div class="dev-proposal-btns">
-            <button class="dev-btn-action deploy" onclick="window._deployProposal('${propId}')">🔄 إعادة المحاولة</button>
-          </div>
-        `;
-      }
-    }
-  };
-
-  window._reviewProposal = (propId) => {
-    const data = window._pendingDevModifications[propId];
-    if (!data) return;
-
-    const reviewPrompt = `قم بمراجعة وفحص هذا التعديل المقترح على ملف ${data.file} للتأكد من عدم وجود أي خطأ أو حذف لميزات أخرى:
-الملف: ${data.file}
-التعديل: ${data.message}
-هل هناك أي مشكلة؟ إذا كان به خطأ أصلحه، وإذا كان ممتازاً أكد ذلك.`;
-
-    const input = $('user-input');
-    if (input) input.value = reviewPrompt;
-    UIEngine.updateSendBtnState();
-    ChatEngine.sendMessage(reviewPrompt);
-  };
-
-  window._cancelProposal = (propId) => {
-    const card = document.getElementById(`proposal-${propId}`);
-    if (card) card.remove();
-    delete window._pendingDevModifications[propId];
-    MessageRenderer.showToast('تم إلغاء التعديل', 'info');
-  };
-
-  window._emergencyRollback = () => {
-    if (!AuthManager.isUnlocked()) {
-      AuthManager.requireAuth(() => GitHubService.rollbackToPreviousCommit());
-      return;
-    }
-    GitHubService.rollbackToPreviousCommit();
-  };
 
   window._clearAppCache = async function() {
     try {
