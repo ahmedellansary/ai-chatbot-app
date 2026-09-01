@@ -243,44 +243,78 @@
     </div>
   </div>
 
-  <!-- ═══ Settings & System Instructions Modal ═══ -->
+  <!-- ═══ Modular Instruction Files Manager Modal ═══ -->
   <div id="settings-modal" class="custom-modal hidden" aria-hidden="true">
-    <div class="custom-modal-card settings-card">
+    <div class="custom-modal-card settings-card instructions-manager-card">
       <div class="custom-modal-header">
         <div class="modal-header-title">
-          <span>⚙️</span>
-          <span>Settings</span>
+          <span>📁</span>
+          <span>مدير ملفات التعليمات التخصصية</span>
         </div>
         <div class="modal-header-actions">
           <button class="icon-btn" onclick="window._closeSettingsModal()" title="Close">✕</button>
         </div>
       </div>
-      <div class="settings-modal-body">
+      <div class="settings-modal-body instructions-manager-body">
         
-        <!-- System Instructions Section -->
-        <div class="settings-section">
-          <div class="settings-section-header">
-            <div class="settings-section-title">
-              <span>🧠</span>
-              <span>تعليمات النظام (System Prompt)</span>
-            </div>
-            <button class="settings-action-btn" onclick="window._resetDefaultSystemPrompt()">استعادة الافتراضي</button>
+        <!-- Instruction Files Header & Actions -->
+        <div class="inst-manager-topbar">
+          <p class="settings-section-desc" style="margin:0;">ملفات تعليمات مستقلة يتم تفعيلها وتطبيقها تلقائياً حسب سياق المحادثة.</p>
+          <div class="inst-topbar-actions">
+            <button class="settings-action-btn" onclick="window._addNewInstructionFile()"><span>+</span> إضافة ملف جديد</button>
+            <button class="settings-action-btn" onclick="window._resetDefaultInstructionFiles()">استعادة الافتراضي</button>
           </div>
-          <p class="settings-section-desc">هذه التعليمات توجه سلوك وأسلوب الذكاء الاصطناعي في كافة المحادثات.</p>
+        </div>
+
+        <!-- Instruction Files Grid / List -->
+        <div id="instruction-files-list" class="instruction-files-list"></div>
+
+        <!-- Active Instruction Editor Sub-panel (When a file is selected) -->
+        <div id="instruction-editor-panel" class="instruction-editor-panel hidden">
+          <div class="inst-editor-header">
+            <div class="inst-editor-title-wrap">
+              <span id="inst-editor-icon" class="inst-editor-icon">📄</span>
+              <input type="text" id="inst-editor-name" class="inst-editor-name-input" placeholder="اسم ملف التعليمات...">
+            </div>
+            <div class="inst-editor-tools">
+              <label class="inst-toggle-label">
+                <input type="checkbox" id="inst-editor-enabled" class="inst-checkbox">
+                <span>تفعيل الملف</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="inst-editor-meta">
+            <input type="text" id="inst-editor-desc" class="inst-editor-meta-input" placeholder="وصف تخصص هذا الملف (مثال: كتابة سيناريو وفلاش باك)...">
+            <input type="text" id="inst-editor-keywords" class="inst-editor-meta-input" placeholder="كلمات مفتاحية لتفعيل الملف تلقائياً (مفصولة بفواصل: فلاش باك, سيناريو, مشهد)...">
+          </div>
+
           <textarea
-            id="settings-system-prompt"
-            class="settings-textarea"
-            rows="7"
-            placeholder="اكتب تعليمات الذكاء الاصطناعي هنا..."
+            id="inst-editor-content"
+            class="settings-textarea inst-content-textarea"
+            rows="9"
+            placeholder="اكتب بنود وقواعد هذا الملف التخصصي هنا..."
           ></textarea>
-          <button class="settings-save-btn" onclick="window._saveCustomSystemPrompt()">
-            <span>💾</span>
-            <span>حفظ التعليمات</span>
-          </button>
+
+          <div class="inst-editor-footer">
+            <div class="inst-footer-left">
+              <button id="inst-delete-btn" class="inst-delete-btn hidden" onclick="window._deleteActiveInstructionFile()">
+                <span>🗑️</span>
+                <span>حذف الملف</span>
+              </button>
+            </div>
+            <div class="inst-footer-right">
+              <button class="btn-refresh-cancel" onclick="window._closeInstructionEditor()">إغلاق المحرر</button>
+              <button class="settings-save-btn" onclick="window._saveActiveInstructionFile()">
+                <span>💾</span>
+                <span>حفظ التعديلات</span>
+              </button>
+            </div>
+          </div>
         </div>
 
         <!-- Storage & Cache Section -->
-        <div class="settings-section" style="margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border-subtle);">
+        <div class="settings-section" style="margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border-subtle);">
           <div class="settings-section-title">
             <span>🧹</span>
             <span>إدارة الذاكرة والتخزين المؤقت</span>
