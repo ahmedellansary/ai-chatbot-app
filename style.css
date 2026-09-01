@@ -556,12 +556,13 @@ html, body {
   background: var(--bg-user-bubble);
   color: var(--text-main);
   padding: 8px 14px;
-  border-radius: 16px;
-  max-width: 75%;
+  border-radius: 18px 18px 4px 18px;
+  max-width: 80%;
   width: fit-content;
+  min-width: 0;
   display: inline-block;
   font-size: 14.5px;
-  line-height: 1.5;
+  line-height: 1.45;
   white-space: pre-wrap;
   word-break: break-word;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
@@ -569,8 +570,10 @@ html, body {
 
 /* AI Message */
 .message-row.ai {
+  align-self: flex-start;
   align-items: flex-start;
   gap: 8px;
+  width: 100%;
 }
 
 .message-row.ai .msg-content {
@@ -580,12 +583,14 @@ html, body {
   line-height: 1.7;
   width: 100%;
   word-break: break-word;
+  unicode-bidi: plaintext;
 }
 
 /* ─── Action Buttons Toolbar ─── */
 .claude-actions-bar {
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 12px;
   margin-top: 8px;
   padding-top: 4px;
@@ -613,6 +618,7 @@ html, body {
 .claude-footer-note {
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 6px;
   margin-top: 10px;
   padding-top: 6px;
