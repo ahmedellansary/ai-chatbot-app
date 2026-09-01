@@ -10,8 +10,8 @@
   <meta name="apple-mobile-web-app-title" content="X.v1">
 
   <title>X.v1</title>
-  <link rel="manifest" href="./manifest.json?v=33">
-  <link rel="stylesheet" href="./style.css?v=33">
+  <link rel="manifest" href="./manifest.json?v=34">
+  <link rel="stylesheet" href="./style.css?v=34">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✦</text></svg>">
 </head>
 <body>
@@ -33,23 +33,23 @@
         <span>＋</span>
         <span>New Chat</span>
       </button>
-      <button class="nav-btn dev" id="btn-dev-chat">
-        <span>🛠️</span>
-        <span>وضع المطور (تعديل التطبيق)</span>
-      </button>
     </div>
 
     <div class="sidebar-section-title">Recent Chats</div>
     <div id="conversations-list"></div>
 
     <div class="sidebar-footer">
+      <button class="footer-btn" id="btn-dev-chat" style="color: #fbbf24; font-weight: 500;">
+        <span>🛠️</span>
+        <span>Dev Mode</span>
+      </button>
       <button class="footer-btn" id="install-btn" style="display:none;">
         <span>📲</span>
         <span>Install App</span>
       </button>
       <button class="footer-btn" onclick="localStorage.clear(); location.reload()">
         <span>🗑️</span>
-        <span>Clear History & Cache</span>
+        <span>Clear History</span>
       </button>
     </div>
   </aside>
@@ -279,7 +279,7 @@
 </div>
 
 <!-- Unified Application Script Bundle -->
-<script src="./config.js?v=33"></script>
-<script src="./app.js?v=33"></script>
+<script src="./config.js?v=34"></script>
+<script src="./app.js?v=34"></script>
 </body>
 </html>
