@@ -293,23 +293,21 @@
       <p class="lock-gate-sub">Enter your access password to unlock the workspace.</p>
 
       <form id="lock-gate-form" class="lock-gate-form" onsubmit="event.preventDefault()">
-        <div class="lock-input-group">
-          <input
-            type="password"
-            id="gate-pin-input"
-            class="lock-gate-input"
-            placeholder="Password"
-            maxlength="24"
-            autocomplete="off"
-          >
-          <button type="submit" id="gate-unlock-btn" class="lock-gate-btn" aria-label="Unlock">
-            <span>Unlock</span>
-            <span>🔓</span>
-          </button>
-        </div>
+        <input
+          type="password"
+          id="gate-pin-input"
+          class="lock-gate-input"
+          placeholder="Enter password..."
+          maxlength="32"
+          autocomplete="current-password"
+        >
+        <button type="submit" id="gate-unlock-btn" class="lock-gate-btn" aria-label="Unlock">
+          <span>Unlock Workspace</span>
+          <span>🔓</span>
+        </button>
       </form>
 
-      <div class="lock-gate-footer">🔐 Encrypted & Protected</div>
+      <div class="lock-gate-footer">🔐 End-to-End Encrypted & Secure</div>
     </div>
   </div>
 
