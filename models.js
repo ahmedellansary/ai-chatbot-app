@@ -72,7 +72,7 @@ async function callOpenRouter(model, messages, signal) {
       messages,
       stream: true,
       temperature: 0.7,
-      max_tokens: 2048
+      max_tokens: 8192
     }),
     signal
   });
@@ -99,7 +99,7 @@ async function callGroq(model, messages, signal) {
       messages,
       stream: true,
       temperature: 0.7,
-      max_tokens: 2048
+      max_tokens: 8192
     }),
     signal
   });
