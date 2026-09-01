@@ -4,7 +4,7 @@
   "short_name": "X.v1",
   "description": "مساعدك الذكي المتقدم",
   "start_url": "./index.html",
-  "scope": "./index.html",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#0c0c0e",
   "theme_color": "#0c0c0e",
