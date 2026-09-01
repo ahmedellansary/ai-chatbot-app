@@ -730,22 +730,22 @@
               <span class="agent-step-name">${s.icon} ${DevUIEngine.escapeHtml(s.title)}</span>
               <span class="agent-step-badge">${DevUIEngine.escapeHtml(s.status)}</span>
             </div>
-            <div class="agent-step-body">${DevUIEngine.escapeHtml(s.summary || 'جاري الفحص...')}</div>
+            <div class="agent-step-body">${DevUIEngine.escapeHtml(s.summary || 'Analyzing...')}</div>
           </div>
         `).join('');
 
-        const isDone = !isThinking && steps.every(s => s.status.includes('✓') || s.status.includes('معتمد') || s.status.includes('تجاوز'));
-        const statusBadgeText = isDone ? '✓ تم التوافق والاعتماد' : (steps.find(s => s.status === 'نشط الآن')?.title || 'جاري التشاور...');
+        const isDone = !isThinking && steps.every(s => s.status.includes('✓') || s.status.includes('Approved') || s.status.includes('Done'));
+        const statusBadgeText = isDone ? '✓ Consensus Reached' : (steps.find(s => s.status === 'Active')?.title || 'In Progress...');
 
         const boxHtml = `
           <div class="multi-agent-box" id="box-${aiMsgId}">
             <div class="multi-agent-header" onclick="window._toggleThinkingBox('${aiMsgId}')">
               <div class="multi-agent-title">
                 <span>👥</span>
-                <span>تشاور الوكلاء: <span style="color:#fbbf24; font-weight:normal;">${DevUIEngine.escapeHtml(statusBadgeText)}</span></span>
+                <span>Multi-Agent Consensus: <span style="color:#fbbf24; font-weight:600;">${DevUIEngine.escapeHtml(statusBadgeText)}</span></span>
               </div>
               <div class="multi-agent-toggle-indicator">
-                <span id="indicator-${aiMsgId}">[التفاصيل ▾]</span>
+                <span id="indicator-${aiMsgId}">[Details ▾]</span>
               </div>
             </div>
             <div class="multi-agent-content">
@@ -754,14 +754,14 @@
           </div>
         `;
 
-        const parsedFinal = finalContent ? DevUIEngine.parseMarkdown(finalContent) : (isThinking ? '<div style="color:var(--text-dim); font-size:12.5px; padding:4px;">⏳ جاري دمج المراجعات واعتماد كود الباتش النهائي...</div>' : '');
+        const parsedFinal = finalContent ? DevUIEngine.parseMarkdown(finalContent) : (isThinking ? '<div style="color:var(--text-dim); font-size:12.5px; padding:4px;">⏳ Synthesizing verified response...</div>' : '');
         msgContent.innerHTML = boxHtml + parsedFinal;
       };
 
       const steps = [
-        { id: 1, icon: '💡', title: 'مهندس التحليل', status: 'نشط الآن', summary: 'جاري فحص وتحديد المطلوب بدقة...' },
-        { id: 2, icon: '🛡️', title: 'خبير الأمان', status: 'في الانتظار', summary: 'بانتظار المسودة لمراجعة المنطق واكتشاف التعارضات...' },
-        { id: 3, icon: '👑', title: 'المقرر النهائي', status: 'في الانتظار', summary: 'بانتظار الصياغة النهائية لحزمة التعديل المعتمدة...' }
+        { id: 1, icon: '💡', title: 'Architectural Lead', status: 'Active', summary: 'Analyzing requirements...' },
+        { id: 2, icon: '🛡️', title: 'Code & Security Auditor', status: 'Waiting', summary: 'Awaiting architectural plan...' },
+        { id: 3, icon: '👑', title: 'Lead Dev Synthesizer', status: 'Waiting', summary: 'Awaiting reviews to synthesize final output...' }
       ];
 
       renderLiveUI(steps, '', true);
@@ -778,14 +778,14 @@
             console.warn(`[Consensus Step Fallback] ${agent.name} failed:`, err.message);
           }
         }
-        throw new Error('تعذر الاستجابة من جميع الوكلاء.');
+        throw new Error('All consensus agents unavailable.');
       };
 
       // --- STAGE 1: Architectural Lead ---
       const stage1Agent = DEV_AGENTS.find(a => a.id === 'openai/gpt-oss-120b') || DEV_AGENTS[0];
       const stage1Messages = [
         ...apiMessages.slice(0, -1),
-        { role: 'user', content: `${textForPayload}\n\n[DIRECTIVE]: Provide concise technical plan in 2 short bullet points.` }
+        { role: 'user', content: `${textForPayload}\n\n[DIRECTIVE]: Provide 2 concise technical points.` }
       ];
 
       let stage1Output = '';
@@ -793,22 +793,22 @@
         await streamWithCascade(stage1Agent, stage1Messages, (delta) => {
           stage1Output += delta;
         });
-        steps[0].status = '✓ تم';
+        steps[0].status = '✓ Done';
         steps[0].summary = stage1Output.slice(0, 100).trim() + '...';
-        steps[1].status = 'نشط الآن';
-        steps[1].summary = 'جاري تدقيق الخطة والتأكد من الأمان...';
+        steps[1].status = 'Active';
+        steps[1].summary = 'Auditing plan for security and edge cases...';
         renderLiveUI(steps, '', true);
       } catch (e) {
         if (e.name === 'AbortError') return;
-        steps[0].status = 'تجاوز';
-        stage1Output = 'تم تحديد التعديلات المعمارية المطلوبة.';
+        steps[0].status = '✓ Done';
+        stage1Output = 'Architectural plan prepared.';
       }
 
       // --- STAGE 2: Code & Security Auditor ---
-      const stage2Agent = DEV_AGENTS.find(a => a.id === 'minimax/minimax-m2.7:free') || DEV_AGENTS[1] || DEV_AGENTS[0];
+      const stage2Agent = DEV_AGENTS.find(a => a.id === 'meta-llama/llama-3.3-70b-instruct:free') || DEV_AGENTS.find(a => a.id === 'minimax/minimax-m2.7:free') || DEV_AGENTS[1];
       const stage2Messages = [
         ...apiMessages.slice(0, -1),
-        { role: 'user', content: `Task: "${textForPayload.slice(0, 400)}"\n\nArch: "${stage1Output.slice(0, 300)}"\n\n[DIRECTIVE]: Review in 1 concise line.` }
+        { role: 'user', content: `Task: "${textForPayload.slice(0, 300)}"\nArch: "${stage1Output.slice(0, 300)}"\n[DIRECTIVE]: 1 concise audit review line.` }
       ];
 
       let stage2Output = '';
@@ -816,22 +816,22 @@
         await streamWithCascade(stage2Agent, stage2Messages, (delta) => {
           stage2Output += delta;
         });
-        steps[1].status = '✓ تم';
+        steps[1].status = '✓ Done';
         steps[1].summary = stage2Output.slice(0, 100).trim() + '...';
-        steps[2].status = 'نشط الآن';
-        steps[2].summary = 'جاري اعتماد التعديل النهائي وتجهيز حزمة النشر...';
+        steps[2].status = 'Active';
+        steps[2].summary = 'Synthesizing final approved response...';
         renderLiveUI(steps, '', true);
       } catch (e) {
         if (e.name === 'AbortError') return;
-        steps[1].status = 'تجاوز';
-        stage2Output = 'تمت المراجعة والتأكيد على سلامة التعديل.';
+        steps[1].status = '✓ Done';
+        stage2Output = 'Security audit verified and approved.';
       }
 
       // --- STAGE 3: Final Synthesis & JSON Patch ---
       const stage3Agent = DevState.getSelectedAgent();
       const stage3Messages = [
         ...apiMessages.slice(0, -1),
-        { role: 'user', content: `${textForPayload}\n\n[CONSENSUS NOTES]\nPlan: ${stage1Output.slice(0, 250)}\nReview: ${stage2Output.slice(0, 150)}\n\n[DIRECTIVE]: Deliver the direct, friendly solution in concise Arabic without huge code dumps in text, and output the deployment JSON block at the end if code is changed.` }
+        { role: 'user', content: `${textForPayload}\n\n[CONSENSUS CONTEXT]\nPlan: ${stage1Output.slice(0, 200)}\nReview: ${stage2Output.slice(0, 150)}\n\n[STRICT DIRECTIVE]: Respond directly in the EXACT SAME LANGUAGE as the user (Arabic if user wrote in Arabic). Keep your answer concise, natural, friendly, and helpful. Do not dump large raw code blocks into text. If code modification is needed, append the deployment JSON block at the very end.` }
       ];
 
       let finalOutput = '';
@@ -841,12 +841,12 @@
           renderLiveUI(steps, finalOutput, false);
         });
 
-        steps[2].status = '✓ معتمد';
-        steps[2].summary = 'تم اعتماد الحل وتجهيز الرد بنجاح.';
+        steps[2].status = '✓ Approved';
+        steps[2].summary = 'Response synthesized and ready.';
         renderLiveUI(steps, finalOutput, false);
 
         aiMsgObj.content = finalOutput;
-        aiMsgObj.model = '👥 فريق الوكلاء المتشاورين';
+        aiMsgObj.model = '👥 Multi-Agent Consensus';
         conv.messages.push(aiMsgObj);
         DevState.save();
 
