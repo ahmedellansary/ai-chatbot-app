@@ -1443,7 +1443,8 @@
       let isAtTop = false;
       let isAtBottom = false;
       let pullDirection = null;
-      const PULL_THRESHOLD = 45;
+      const TOP_THRESHOLD = 45;
+      const BOTTOM_THRESHOLD = 75; // Less sensitive for bottom pull
 
       const onTouchStart = (e) => {
         if (e.touches.length !== 1) return;
@@ -1466,7 +1467,7 @@
         const y = e.touches[0].clientY;
         const diff = y - startY;
 
-        if (isAtTop && diff > 4 && (!pullDirection || pullDirection === 'top')) {
+        if (isAtTop && diff > 6 && (!pullDirection || pullDirection === 'top')) {
           pullDirection = 'top';
           if (e.cancelable) e.preventDefault();
           currentPull = diff;
@@ -1476,16 +1477,17 @@
           indicator.style.opacity = '1';
           indicator.style.transform = `translate3d(-50%, ${visualPull - 25}px, 0) scale(1)`;
           if (spinner) spinner.style.transform = `rotate(${diff * 2.8}deg)`;
-        } else if (isAtBottom && diff < -4 && (!pullDirection || pullDirection === 'bottom')) {
+        } else if (isAtBottom && diff < -16 && (!pullDirection || pullDirection === 'bottom')) {
           pullDirection = 'bottom';
           if (e.cancelable) e.preventDefault();
-          currentPull = Math.abs(diff);
-          const visualPull = Math.min(Math.abs(diff) * 0.45, 75);
+          const effectivePull = Math.abs(diff) - 10;
+          currentPull = Math.max(0, effectivePull);
+          const visualPull = Math.min(effectivePull * 0.35, 75);
           indicator.classList.add('pull-bottom');
           indicator.classList.add('visible');
           indicator.style.opacity = '1';
           indicator.style.transform = `translate3d(-50%, ${25 - visualPull}px, 0) scale(1)`;
-          if (spinner) spinner.style.transform = `rotate(${-diff * 2.8}deg)`;
+          if (spinner) spinner.style.transform = `rotate(${-diff * 2.2}deg)`;
         } else {
           indicator.classList.remove('visible');
           indicator.style.opacity = '0';
@@ -1496,7 +1498,9 @@
         if (!isTracking) return;
         isTracking = false;
 
-        if (currentPull >= PULL_THRESHOLD) {
+        const requiredThreshold = (pullDirection === 'bottom') ? BOTTOM_THRESHOLD : TOP_THRESHOLD;
+
+        if (currentPull >= requiredThreshold) {
           indicator.classList.add('refreshing');
           if (pullDirection === 'bottom') {
             indicator.style.transform = 'translate3d(-50%, -18px, 0) scale(1)';
