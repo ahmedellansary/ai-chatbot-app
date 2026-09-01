@@ -1004,17 +1004,8 @@
           }
         }
 
-        // Pre-response sanity check (MUST-ADD instruction enforcement)
-        const sanity = MessageRenderer.preResponseSanity(fullContent);
-        if (sanity.blocked) {
-          const note = `⚠️ Output blocked by pre-response safety check: ${sanity.reason}. Provide clarification or attach required context.`;
-          aiMsgObj.content = note;
-          const errMsg = StateController.addMessage('ai', note);
-          MessageRenderer.appendMessage(errMsg);
-        } else {
-          aiMsgObj.content = sanity.cleanedContent;
-          StateController.save();
-        }
+        aiMsgObj.content = fullContent;
+        StateController.save();
 
       } catch (err) {
         MessageRenderer.hideTyping();
