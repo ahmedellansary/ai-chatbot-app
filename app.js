@@ -1558,11 +1558,9 @@ if (typeof $$ === 'undefined') {
 
       if (canSend) {
         btn.classList.add('active');
-        btn.classList.remove('disabled');
         btn.removeAttribute('disabled');
       } else {
         btn.classList.remove('active');
-        btn.classList.add('disabled');
         btn.setAttribute('disabled', 'true');
       }
     }
@@ -1571,44 +1569,51 @@ if (typeof $$ === 'undefined') {
     updateSendBtnState();
 
     function updateInputDirection() {
-      const val = input ? input.value : '';
+      const inputEl = $('user-input');
+      const val = inputEl ? inputEl.value : '';
       const hasArabic = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(val);
-      if (input) {
+      if (inputEl) {
         if (hasArabic) {
-          input.dir = 'rtl';
-          input.style.textAlign = 'right';
+          inputEl.dir = 'rtl';
+          inputEl.style.textAlign = 'right';
         } else {
-          input.dir = 'ltr';
-          input.style.textAlign = 'left';
+          inputEl.dir = 'ltr';
+          inputEl.style.textAlign = 'left';
         }
       }
     }
 
     function adjustTextareaHeight() {
-      if (!input) return;
-      input.style.height = 'auto';
-      const scrollH = input.scrollHeight;
+      const inputEl = $('user-input');
+      if (!inputEl) return;
+      inputEl.style.height = 'auto';
+      const scrollH = inputEl.scrollHeight;
       const targetH = Math.min(Math.max(scrollH, 26), 190);
-      input.style.height = targetH + 'px';
-      input.style.overflowY = scrollH > 190 ? 'auto' : 'hidden';
+      inputEl.style.height = targetH + 'px';
+      inputEl.style.overflowY = scrollH > 190 ? 'auto' : 'hidden';
     }
 
+    const onUserTextInput = () => {
+      adjustTextareaHeight();
+      updateInputDirection();
+      updateSendBtnState();
+    };
+
     ['input', 'keyup', 'change', 'paste', 'cut'].forEach(evtName => {
-      input?.addEventListener(evtName, () => {
-        setTimeout(() => {
-          adjustTextareaHeight();
-          updateInputDirection();
-          updateSendBtnState();
-        }, 0);
+      input?.addEventListener(evtName, onUserTextInput);
+      document.addEventListener(evtName, (e) => {
+        if (e.target && e.target.id === 'user-input') {
+          onUserTextInput();
+        }
       });
     });
 
-    input.addEventListener('keydown', e => {
+    input?.addEventListener('keydown', e => {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         const hasAtt = state.attachments && state.attachments.length > 0;
-        if (!state.isStreaming && (input.value.trim() || hasAtt)) {
-          const text = input.value.trim();
+        const text = input.value.trim();
+        if (!state.isStreaming && (text || hasAtt)) {
           input.value = '';
           adjustTextareaHeight();
           updateSendBtnState();
@@ -1619,10 +1624,10 @@ if (typeof $$ === 'undefined') {
 
     sendBtn?.addEventListener('click', (e) => {
       e.preventDefault();
-      const text = input.value.trim();
+      const text = input ? input.value.trim() : '';
       const hasAtt = state.attachments && state.attachments.length > 0;
       if ((!text && !hasAtt) || state.isStreaming) return;
-      input.value = '';
+      if (input) input.value = '';
       adjustTextareaHeight();
       updateSendBtnState();
       sendMessage(text);
