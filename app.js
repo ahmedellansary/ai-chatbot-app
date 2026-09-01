@@ -87,10 +87,21 @@
   };
 
   const $ = id => document.getElementById(id);
-  const $$ = sel => document.querySelectorAll(sel);
+  // ─── Viewport Height Lock (يثبت أبعاد الشاشة والشات بوكس ويمنع القفز عند التحديث) ───
+  function lockViewportHeight() {
+    const h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+    document.documentElement.style.setProperty('--app-height', `${h}px`);
+  }
 
   // ─── Core Init ───
   async function init() {
+    lockViewportHeight();
+    window.addEventListener('resize', lockViewportHeight);
+    window.addEventListener('orientationchange', lockViewportHeight);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', lockViewportHeight);
+    }
+
     loadConversations();
     await loadSystemPrompt();
     await loadModelCatalog();
