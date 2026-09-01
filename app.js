@@ -1764,46 +1764,46 @@ if (typeof $$ === 'undefined') {
     const spinner = indicator.querySelector('.pull-refresh-spinner');
     let startY = 0;
     let currentPull = 0;
-    let isPulling = false;
+    let isTracking = false;
     const PULL_THRESHOLD = 45;
 
-    window.addEventListener('touchstart', (e) => {
+    const onTouchStart = (e) => {
       if (e.touches.length !== 1) return;
       const chatArea = $('chat-area');
       const scrollTop = chatArea ? chatArea.scrollTop : 0;
       startY = e.touches[0].clientY;
-      if (scrollTop <= 5) {
-        isPulling = true;
+      if (scrollTop <= 4) {
+        isTracking = true;
         currentPull = 0;
       } else {
-        isPulling = false;
+        isTracking = false;
       }
-    }, { passive: true });
+    };
 
-    window.addEventListener('touchmove', (e) => {
-      if (!isPulling || e.touches.length !== 1) return;
+    const onTouchMove = (e) => {
+      if (!isTracking || e.touches.length !== 1) return;
       const chatArea = $('chat-area');
       const scrollTop = chatArea ? chatArea.scrollTop : 0;
 
-      if (scrollTop > 5) {
-        isPulling = false;
+      if (scrollTop > 4) {
+        isTracking = false;
         indicator.classList.remove('visible');
         indicator.style.opacity = '0';
-        indicator.style.transform = 'translate(-50%, -80px) scale(0.85)';
+        indicator.style.transform = 'translate3d(-50%, -80px, 0) scale(0.85)';
         return;
       }
 
       const y = e.touches[0].clientY;
       const diff = y - startY;
 
-      if (diff > 5) {
+      if (diff > 4) {
         if (e.cancelable) e.preventDefault();
 
         currentPull = diff;
         const visualPull = Math.min(diff * 0.45, 75);
         indicator.classList.add('visible');
         indicator.style.opacity = '1';
-        indicator.style.transform = `translate3d(-50%, ${visualPull - 30}px, 0) scale(1)`;
+        indicator.style.transform = `translate3d(-50%, ${visualPull - 25}px, 0) scale(1)`;
 
         if (spinner) {
           spinner.style.transform = `rotate(${diff * 2.8}deg)`;
@@ -1812,11 +1812,11 @@ if (typeof $$ === 'undefined') {
         indicator.classList.remove('visible');
         indicator.style.opacity = '0';
       }
-    }, { passive: false });
+    };
 
-    window.addEventListener('touchend', () => {
-      if (!isPulling) return;
-      isPulling = false;
+    const onTouchEnd = () => {
+      if (!isTracking) return;
+      isTracking = false;
 
       if (currentPull >= PULL_THRESHOLD) {
         indicator.classList.add('refreshing');
@@ -1832,7 +1832,12 @@ if (typeof $$ === 'undefined') {
         if (spinner) spinner.style.transform = '';
       }
       currentPull = 0;
-    }, { passive: true });
+    };
+
+    document.addEventListener('touchstart', onTouchStart, { passive: true });
+    document.addEventListener('touchmove', onTouchMove, { passive: false });
+    document.addEventListener('touchend', onTouchEnd, { passive: true });
+    document.addEventListener('touchcancel', onTouchEnd, { passive: true });
   }
 
   // ─── OpenMAIC Global Helpers & Handlers ───
