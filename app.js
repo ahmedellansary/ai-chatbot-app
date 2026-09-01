@@ -502,11 +502,8 @@
   }
 
   // ─── Salted Cryptographic Password Security (تشفير وحماية كلمة السر بالـ Salt و SHA-256) ───
-  function generateSalt(length = 16) {
-    const arr = new Uint8Array(length);
-    crypto.getRandomValues(arr);
-    return Array.from(arr).map(b => b.toString(16).padStart(2, '0')).join('');
-  }
+  // Permanent Salted SHA-256 Cryptographic Record (مُشفّر بأعلى درجة أمان ولا يظهر أي نص صريح)
+  const MASTER_AUTH_RECORD = 'cf53ff6bb81c1371f0652dc895f70385:47006d30af3e6fec76cf57808b47d841a0e6e788f1da7d8a3650bb14cf3166e5';
 
   async function hashWithSalt(password, salt) {
     const encoder = new TextEncoder();
@@ -516,12 +513,6 @@
     return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
   }
 
-  async function createPasswordRecord(plainPassword) {
-    const salt = generateSalt(16);
-    const hash = await hashWithSalt(plainPassword, salt);
-    return `${salt}:${hash}`;
-  }
-
   async function verifyPassword(plainPassword, storedRecord) {
     if (!storedRecord || !storedRecord.includes(':')) return false;
     const [salt, expectedHash] = storedRecord.split(':');
@@ -529,12 +520,8 @@
     return computedHash === expectedHash;
   }
 
-  function getMasterAuthRecord() {
-    return localStorage.getItem('claude_master_auth_record') || null;
-  }
-
   function isAppUnlocked() {
-    return localStorage.getItem('claude_app_unlocked') === 'true';
+    return localStorage.getItem('nytron_app_unlocked') === 'true';
   }
 
   function isOwnerUnlocked() {
@@ -554,31 +541,16 @@
     const form = $('lock-gate-form');
     const pinInput = $('gate-pin-input');
     const submitBtn = $('gate-unlock-btn');
-    const title = gate?.querySelector('.lock-gate-title');
-    const sub = gate?.querySelector('.lock-gate-sub');
 
     if (!gate) return;
 
-    const existingRecord = getMasterAuthRecord();
-
-    // If no password set yet -> First-Time Setup Mode!
-    if (!existingRecord) {
-      if (title) title.textContent = 'إنشاء كلمة السر';
-      if (sub) sub.textContent = 'أهلاً بك! أدخل كلمة السر التي تريدها لأول مرة. ستُشفّر فوراً وتُحفظ ككلمة السر الدائمة للتطبيق.';
-      if (pinInput) pinInput.placeholder = 'أدخل كلمة السر الجديدة';
-      if (submitBtn) submitBtn.innerHTML = '<span>حفظ وتشفير</span> <span>🔒</span>';
+    if (!isAppUnlocked()) {
       gate.classList.remove('hidden');
-      if (pinInput) setTimeout(() => pinInput.focus(), 150);
-    } else if (!isAppUnlocked()) {
-      // Password exists but app is locked
-      if (title) title.textContent = 'Claude';
-      if (sub) sub.textContent = 'التطبيق محمي ومقفل بالكامل. أدخل كلمة السر لفتح التطبيق.';
-      if (pinInput) pinInput.placeholder = 'كلمة السر';
-      if (submitBtn) submitBtn.innerHTML = '<span>دخول</span> <span>🔓</span>';
-      gate.classList.remove('hidden');
-      if (pinInput) setTimeout(() => pinInput.focus(), 150);
+      if (pinInput) {
+        pinInput.value = '';
+        setTimeout(() => pinInput.focus(), 150);
+      }
     } else {
-      // App already unlocked on this device
       gate.classList.add('hidden');
     }
 
@@ -589,32 +561,20 @@
         return;
       }
 
-      const currentRecord = getMasterAuthRecord();
+      const isValid = await verifyPassword(password, MASTER_AUTH_RECORD);
 
-      if (!currentRecord) {
-        // First-Time Setup: Salt & Hash securely!
-        const record = await createPasswordRecord(password);
-        localStorage.setItem('claude_master_auth_record', record);
-        localStorage.setItem('claude_app_unlocked', 'true');
+      if (isValid) {
+        localStorage.setItem('nytron_app_unlocked', 'true');
         localStorage.setItem('owner_unlocked', 'true');
         gate.classList.add('hidden');
         updateOwnerLockUI();
-        showToast('🔐 تم تشفير وحفظ كلمة السر بنجاح! هذا هو رمزك الدائم.', 'success');
+        showToast('🔐 تم فتح التطبيق بنجاح! مرحباً بك.', 'success');
       } else {
-        const isValid = await verifyPassword(password, currentRecord);
-        if (isValid) {
-          localStorage.setItem('claude_app_unlocked', 'true');
-          localStorage.setItem('owner_unlocked', 'true');
-          gate.classList.add('hidden');
-          updateOwnerLockUI();
-          showToast('✅ تم فتح التطبيق بنجاح!', 'success');
-        } else {
-          showToast('❌ كلمة السر غير صحيحة!', 'error');
-          if (pinInput) {
-            pinInput.value = '';
-            pinInput.style.borderColor = 'var(--error)';
-            setTimeout(() => pinInput.style.borderColor = '', 1000);
-          }
+        showToast('❌ كلمة السر غير صحيحة!', 'error');
+        if (pinInput) {
+          pinInput.value = '';
+          pinInput.style.borderColor = 'var(--error)';
+          setTimeout(() => pinInput.style.borderColor = '', 1000);
         }
       }
     };
@@ -806,7 +766,7 @@
         $('attach-btn')?.addEventListener('click', () => $('file-upload-input')?.click());
       }
     } else {
-      if (titleText) titleText.textContent = `X.v1 · ${state.currentMode}`;
+      if (titleText) titleText.textContent = `نيترون · ${state.currentMode}`;
       if (dot) dot.style.background = '#10b981';
       if (indicator) {
         indicator.innerHTML = `
@@ -831,7 +791,7 @@
     container.innerHTML = `
       <div class="welcome-screen">
         <div class="brand-icon" style="width:44px;height:44px;font-size:20px;border-radius:12px;">✦</div>
-        <h1 class="welcome-title">مرحباً بك في X.v1</h1>
+        <h1 class="welcome-title">مرحباً بك في نيترون</h1>
         <p class="welcome-sub">مساعد الذكاء الاصطناعي الذاتي. اسأل أي سؤال أو ادخل وضع المطور لتعديل التطبيق.</p>
         <div class="welcome-chips">
           <button class="welcome-chip" onclick="window._suggest('اشرح لي الذكاء الاصطناعي في 3 نقاط مبسطة')">🧠 ما هو الذكاء الاصطناعي؟</button>
@@ -890,7 +850,7 @@
           ${attachmentsHtml}
         </div>
 
-        <!-- Claude Actions Toolbar (Copy, Share, Play, Like, Dislike, Retry) -->
+        <!-- Actions Toolbar (Copy, Share, Play, Like, Dislike, Retry) -->
         <div class="claude-actions-bar">
           <button class="claude-action-btn" onclick="window._copyMsgText(this)" title="نسخ">
             <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
@@ -932,17 +892,10 @@
           </button>
         </div>
 
-        <!-- Claude Starburst Emblem & Disclaimer Note -->
+        <!-- Starburst Emblem & Disclaimer Note -->
         <div class="claude-footer-note">
-          <div class="claude-terracotta-star">
-            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="color:var(--claude-terracotta);">
-              <line x1="12" y1="2" x2="12" y2="22"></line>
-              <line x1="2" y1="12" x2="22" y2="12"></line>
-              <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
-              <line x1="4.93" y1="19.07" x2="19.07" y2="4.93"></line>
-            </svg>
-          </div>
-          <div class="claude-disclaimer-text">X.v1 is AI and can make mistakes.<br>Please double-check responses.</div>
+          <div class="claude-terracotta-star">✦</div>
+          <div class="claude-disclaimer-text">نيترون نموذج ذكاء اصطناعي، يرجى مراجعة المعلومات الهامة.</div>
         </div>
       `;
     }
@@ -1461,6 +1414,11 @@
       $('overlay').classList.add('active');
     });
 
+    $('header-dots-btn')?.addEventListener('click', () => {
+      $('sidebar').classList.add('open');
+      $('overlay').classList.add('active');
+    });
+
     $('close-sidebar-btn')?.addEventListener('click', () => {
       $('sidebar').classList.remove('open');
       $('overlay').classList.remove('active');
@@ -1506,15 +1464,16 @@
     });
 
     $('btn-toggle-owner-lock')?.addEventListener('click', () => {
-      if (isOwnerUnlocked()) {
+      if (isAppUnlocked()) {
+        localStorage.removeItem('nytron_app_unlocked');
         localStorage.removeItem('owner_unlocked');
         updateOwnerLockUI();
-        showToast('🔒 تم تسجيل الخروج وقفل وضع المطور', 'info');
+        showToast('🔒 تم قفل التطبيق بنجاح', 'info');
+        setupAppLockGate();
+        $('sidebar').classList.remove('open');
+        $('overlay').classList.remove('active');
       } else {
-        promptOwnerAuth(() => {
-          $('sidebar').classList.remove('open');
-          $('overlay').classList.remove('active');
-        });
+        setupAppLockGate();
       }
     });
 
