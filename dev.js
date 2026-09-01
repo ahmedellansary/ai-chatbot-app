@@ -544,6 +544,41 @@
         textForPayload = textForPayload ? `${textForPayload}\n\n${fileContexts}` : fileContexts;
       }
 
+      // Smart Live Codebase Injector:
+      // Auto-fetch relevant repo files from GitHub so the AI has full context of existing code!
+      if (attachedTexts.length === 0 && textForPayload) {
+        const promptLower = textForPayload.toLowerCase();
+        const knownFiles = ['index.html', 'style.css', 'app.js', 'dev.html', 'dev_style.css', 'dev.js', 'models.js', 'sw.js', 'models.json', 'system_prompt.txt', 'dev_prompt.txt'];
+        const targetFilesToFetch = [];
+
+        for (const kf of knownFiles) {
+          if (promptLower.includes(kf)) {
+            targetFilesToFetch.push(kf);
+          }
+        }
+
+        if (targetFilesToFetch.length === 0) {
+          if (/تصميم|ستايل|لون|شكل|خلفية|css|style|border|color|theme|زر|input|textarea|header/i.test(promptLower)) {
+            targetFilesToFetch.push('style.css');
+          } else if (/شات بوت|شات|رسائل|مهارات|برومبت|app|chat|send|دالة|وظيفة|كود/i.test(promptLower)) {
+            targetFilesToFetch.push('app.js');
+          } else if (/مطور|ديف|dev|github|نشر|commit/i.test(promptLower)) {
+            targetFilesToFetch.push('dev.js');
+          }
+        }
+
+        for (const tf of targetFilesToFetch.slice(0, 2)) {
+          try {
+            const fetched = await DevGitHubService.getFile(tf);
+            if (fetched && fetched.content) {
+              textForPayload += `\n\n--- [CURRENT LIVE REPO FILE: ${tf}] ---\n${fetched.content}\n--- [END OF ${tf}] ---\n`;
+            }
+          } catch (e) {
+            console.log(`[SmartContext] Could not auto-fetch ${tf}:`, e.message);
+          }
+        }
+      }
+
       const attachedImages = currentAttachments.filter(a => a.type.startsWith('image/'));
       if (attachedImages.length > 0 && !textForPayload) {
         textForPayload = 'يرجى فحص هذه الصورة/الملف المرفق وتطبيق التعديل المطلوب.';
