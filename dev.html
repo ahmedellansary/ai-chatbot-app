@@ -9,8 +9,11 @@
   <meta name="apple-mobile-web-app-title" content="X.v1 Dev">
 
   <title>X.v1 — Developer Portal & Codebase Studio</title>
-  <link rel="stylesheet" href="./dev_style.css?v=46">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛠️</text></svg>">
+  <link rel="manifest" href="./dev-manifest.json?v=47">
+  <link rel="stylesheet" href="./dev_style.css?v=47">
+  <link rel="icon" href="./icons/dev-icon-192.png">
+  <link rel="apple-touch-icon" href="./icons/dev-icon-192.png">
+  <link rel="apple-touch-icon" sizes="512x512" href="./icons/dev-icon-512.png">
 </head>
 <body>
 <div id="app">
@@ -63,6 +66,10 @@
         <span>معاينة تطبيق الشات المباشر</span>
         <span style="margin-right:auto;">↗</span>
       </a>
+      <button class="sidebar-link-btn" id="dev-install-btn" style="display:none; color:#fbbf24; border-color:rgba(245,158,11,0.3);">
+        <span>📲</span>
+        <span>تثبيت استوديو المطور على الموبايل</span>
+      </button>
       <button class="sidebar-link-btn" onclick="window._lockDevWorkspace()">
         <span>🔒</span>
         <span>قفل بيئة المطور (Lock)</span>
