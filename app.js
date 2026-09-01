@@ -73,7 +73,7 @@
   // ─────────────────────────────────────────────────────────────────
   // 2. AUTHENTICATION & SECURITY (AuthManager)
   // ─────────────────────────────────────────────────────────────────
-  const MASTER_AUTH_RECORD = 'cf53ff6bb81c1371f0652dc895f70385:47006d30af3e6fec76cf57808b47d841a0e6e788f1da7d8a3650bb14cf3166e5';
+  const MASTER_AUTH_RECORD = 'd34a56498cc5f912d1f55cefd6382af6:c000fd79842150a9fdb7b3d30ed0f964652ad5ba078beb7b7f9c47a523a16595';
 
   const AuthManager = {
     async hashWithSalt(password, salt) {
