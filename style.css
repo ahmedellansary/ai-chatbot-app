@@ -69,6 +69,24 @@ html, body {
   position: relative;
 }
 
+/* ─── Backdrop Overlay ─── */
+#overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 110;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+#overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
 /* ─── Drawer Sidebar (على اليسار) ─── */
 #sidebar {
   width: var(--sidebar-w);
