@@ -107,6 +107,7 @@
     await loadSystemPrompt();
     await loadModelCatalog();
     setupEventListeners();
+    setupAppLockGate();
     registerServiceWorker();
     setupInstallPrompt();
     runStartupHealthCheck();
@@ -500,27 +501,126 @@
     localStorage.setItem('conversations', JSON.stringify(state.conversations));
   }
 
-  // ─── Owner Security Lock Subsystem (حماية المالك بالـ PIN) ───
-  const DEFAULT_PIN_HASH = '158a323a7ba44870f23d96f1516dd70aa48e9a72db4ebb026b0a89e212a208ab'; // PIN: 2026
+  // ─── Salted Cryptographic Password Security (تشفير وحماية كلمة السر بالـ Salt و SHA-256) ───
+  function generateSalt(length = 16) {
+    const arr = new Uint8Array(length);
+    crypto.getRandomValues(arr);
+    return Array.from(arr).map(b => b.toString(16).padStart(2, '0')).join('');
+  }
 
-  async function sha256Hex(str) {
+  async function hashWithSalt(password, salt) {
     const encoder = new TextEncoder();
-    const data = encoder.encode(str);
+    const data = encoder.encode(salt + ':' + password);
     const hashBuffer = await crypto.subtle.digest('SHA-256', data);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
   }
 
+  async function createPasswordRecord(plainPassword) {
+    const salt = generateSalt(16);
+    const hash = await hashWithSalt(plainPassword, salt);
+    return `${salt}:${hash}`;
+  }
+
+  async function verifyPassword(plainPassword, storedRecord) {
+    if (!storedRecord || !storedRecord.includes(':')) return false;
+    const [salt, expectedHash] = storedRecord.split(':');
+    const computedHash = await hashWithSalt(plainPassword, salt);
+    return computedHash === expectedHash;
+  }
+
+  function getMasterAuthRecord() {
+    return localStorage.getItem('claude_master_auth_record') || null;
+  }
+
+  function isAppUnlocked() {
+    return localStorage.getItem('claude_app_unlocked') === 'true';
+  }
+
   function isOwnerUnlocked() {
-    return localStorage.getItem('owner_unlocked') === 'true';
+    return isAppUnlocked();
   }
 
   function updateOwnerLockUI() {
     const icon = $('owner-lock-icon');
     const text = $('owner-lock-text');
-    const unlocked = isOwnerUnlocked();
+    const unlocked = isAppUnlocked();
     if (icon) icon.textContent = unlocked ? '🔓' : '🔒';
-    if (text) text.textContent = unlocked ? 'تسجيل خروج المالك' : 'تسجيل دخول المالك';
+    if (text) text.textContent = unlocked ? 'قفل التطبيق' : 'فتح التطبيق';
+  }
+
+  function setupAppLockGate() {
+    const gate = $('app-lock-gate');
+    const form = $('lock-gate-form');
+    const pinInput = $('gate-pin-input');
+    const submitBtn = $('gate-unlock-btn');
+    const title = gate?.querySelector('.lock-gate-title');
+    const sub = gate?.querySelector('.lock-gate-sub');
+
+    if (!gate) return;
+
+    const existingRecord = getMasterAuthRecord();
+
+    // If no password set yet -> First-Time Setup Mode!
+    if (!existingRecord) {
+      if (title) title.textContent = 'إنشاء كلمة السر';
+      if (sub) sub.textContent = 'أهلاً بك! أدخل كلمة السر التي تريدها لأول مرة. ستُشفّر فوراً وتُحفظ ككلمة السر الدائمة للتطبيق.';
+      if (pinInput) pinInput.placeholder = 'أدخل كلمة السر الجديدة';
+      if (submitBtn) submitBtn.innerHTML = '<span>حفظ وتشفير</span> <span>🔒</span>';
+      gate.classList.remove('hidden');
+      if (pinInput) setTimeout(() => pinInput.focus(), 150);
+    } else if (!isAppUnlocked()) {
+      // Password exists but app is locked
+      if (title) title.textContent = 'Claude';
+      if (sub) sub.textContent = 'التطبيق محمي ومقفل بالكامل. أدخل كلمة السر لفتح التطبيق.';
+      if (pinInput) pinInput.placeholder = 'كلمة السر';
+      if (submitBtn) submitBtn.innerHTML = '<span>دخول</span> <span>🔓</span>';
+      gate.classList.remove('hidden');
+      if (pinInput) setTimeout(() => pinInput.focus(), 150);
+    } else {
+      // App already unlocked on this device
+      gate.classList.add('hidden');
+    }
+
+    const handleGateSubmit = async () => {
+      const password = pinInput ? pinInput.value.trim() : '';
+      if (!password) {
+        showToast('يرجى كتابة كلمة السر', 'warning');
+        return;
+      }
+
+      const currentRecord = getMasterAuthRecord();
+
+      if (!currentRecord) {
+        // First-Time Setup: Salt & Hash securely!
+        const record = await createPasswordRecord(password);
+        localStorage.setItem('claude_master_auth_record', record);
+        localStorage.setItem('claude_app_unlocked', 'true');
+        localStorage.setItem('owner_unlocked', 'true');
+        gate.classList.add('hidden');
+        updateOwnerLockUI();
+        showToast('🔐 تم تشفير وحفظ كلمة السر بنجاح! هذا هو رمزك الدائم.', 'success');
+      } else {
+        const isValid = await verifyPassword(password, currentRecord);
+        if (isValid) {
+          localStorage.setItem('claude_app_unlocked', 'true');
+          localStorage.setItem('owner_unlocked', 'true');
+          gate.classList.add('hidden');
+          updateOwnerLockUI();
+          showToast('✅ تم فتح التطبيق بنجاح!', 'success');
+        } else {
+          showToast('❌ كلمة السر غير صحيحة!', 'error');
+          if (pinInput) {
+            pinInput.value = '';
+            pinInput.style.borderColor = 'var(--error)';
+            setTimeout(() => pinInput.style.borderColor = '', 1000);
+          }
+        }
+      }
+    };
+
+    if (form) form.onsubmit = (e) => { e.preventDefault(); handleGateSubmit(); };
+    if (submitBtn) submitBtn.onclick = handleGateSubmit;
   }
 
   function promptOwnerAuth(onSuccess) {
@@ -528,62 +628,7 @@
       if (typeof onSuccess === 'function') onSuccess();
       return;
     }
-
-    const modal = $('owner-auth-modal');
-    const pinInput = $('owner-pin-input');
-    const submitBtn = $('owner-auth-submit');
-    const cancelBtn = $('owner-auth-cancel');
-
-    if (!modal) {
-      if (typeof onSuccess === 'function') onSuccess();
-      return;
-    }
-
-    modal.classList.remove('hidden');
-    if (pinInput) {
-      pinInput.value = '';
-      setTimeout(() => pinInput.focus(), 150);
-    }
-
-    const handleAuth = async () => {
-      const pin = pinInput ? pinInput.value.trim() : '';
-      if (!pin) {
-        showToast('يرجى إدخال رمز الـ PIN', 'warning');
-        return;
-      }
-
-      const inputHash = await sha256Hex(pin);
-      const savedHash = localStorage.getItem('owner_custom_pin_hash') || DEFAULT_PIN_HASH;
-
-      if (inputHash === savedHash) {
-        localStorage.setItem('owner_unlocked', 'true');
-        modal.classList.add('hidden');
-        updateOwnerLockUI();
-        showToast('🔐 تم التحقق من هوية المالك بنجاح!', 'success');
-        if (typeof onSuccess === 'function') onSuccess();
-      } else {
-        showToast('❌ رمز PIN غير صحيح! عملية التعديل محظورة.', 'error');
-        if (pinInput) {
-          pinInput.value = '';
-          pinInput.style.borderColor = 'var(--error)';
-          setTimeout(() => pinInput.style.borderColor = '', 1000);
-        }
-      }
-    };
-
-    if (submitBtn) submitBtn.onclick = handleAuth;
-    if (pinInput) {
-      pinInput.onkeydown = (e) => {
-        if (e.key === 'Enter') handleAuth();
-      };
-    }
-
-    if (cancelBtn) {
-      cancelBtn.onclick = () => {
-        modal.classList.add('hidden');
-        showToast('تم إلغاء التحقق', 'info');
-      };
-    }
+    setupAppLockGate();
   }
 
   function newConversation() {
@@ -1685,9 +1730,9 @@
     let startY = 0;
     let distance = 0;
     let isTracking = false;
-    const THRESHOLD = 50; // Extra sensitive so it triggers easily on mobile
+    const THRESHOLD = 45;
 
-    document.addEventListener('touchstart', (e) => {
+    window.addEventListener('touchstart', (e) => {
       const chatArea = $('chat-area');
       const scrollTop = chatArea ? chatArea.scrollTop : 0;
       if (scrollTop <= 10 && e.touches.length === 1) {
@@ -1697,20 +1742,20 @@
       }
     }, { passive: true });
 
-    document.addEventListener('touchmove', (e) => {
+    window.addEventListener('touchmove', (e) => {
       if (!isTracking) return;
       const currentY = e.touches[0].clientY;
       distance = currentY - startY;
 
       if (distance > 10) {
         indicator.classList.add('visible');
-        const pullProgress = Math.min(distance, 80);
-        indicator.style.transform = `translate(-50%, ${pullProgress - 40}px)`;
+        const pullProgress = Math.min(distance * 0.6, 75);
+        indicator.style.transform = `translate(-50%, ${pullProgress - 35}px)`;
 
         if (distance >= THRESHOLD) {
           if (icon) icon.textContent = '🔄';
           if (text) text.textContent = 'أفلت للتحديث';
-          indicator.style.color = '#fbbf24';
+          indicator.style.color = 'var(--claude-terracotta)';
         } else {
           if (icon) icon.textContent = '↓';
           if (text) text.textContent = 'اسحب للتحديث...';
@@ -1721,16 +1766,15 @@
       }
     }, { passive: true });
 
-    document.addEventListener('touchend', () => {
+    window.addEventListener('touchend', () => {
       if (!isTracking) return;
       isTracking = false;
 
       if (distance >= THRESHOLD) {
         indicator.classList.add('refreshing');
         indicator.style.transform = 'translate(-50%, 15px)';
-        if (icon) icon.textContent = '⚙️';
+        if (icon) icon.textContent = '🔄';
         if (text) text.textContent = 'جاري التحديث...';
-        showToast('🔄 جاري التحديث...', 'info');
 
         setTimeout(() => {
           location.reload();
