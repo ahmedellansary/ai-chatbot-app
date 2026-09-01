@@ -861,7 +861,10 @@
           </div>
           <div class="claude-footer-note">
             <div class="claude-terracotta-star">✦</div>
-            <div class="claude-disclaimer-text">X.v1 is an AI model. Please verify important information.</div>
+            <div class="claude-disclaimer-text">
+              <span class="claude-model-name">${this.escapeHtml(msg.model || 'X.v1')}</span>
+              <span>· Verify info</span>
+            </div>
           </div>
         `;
       }
