@@ -83,7 +83,8 @@
     systemPrompt: '',
     isStreaming: false,
     abortController: null,
-    lastModifiedFile: 'index.html'
+    lastModifiedFile: 'index.html',
+    attachments: []
   };
 
   const $ = id => document.getElementById(id);
@@ -575,7 +576,7 @@
     return state.conversations.find(c => c.id === state.activeConvId);
   }
 
-  function addMessage(role, content, modelInfo = null) {
+  function addMessage(role, content, modelInfo = null, attachments = []) {
     const conv = getActiveConv();
     if (!conv) return;
 
@@ -585,6 +586,7 @@
       content,
       model: modelInfo?.model?.name || null,
       usedFallback: modelInfo?.usedFallback || false,
+      attachments: attachments || [],
       timestamp: new Date().toISOString()
     };
 
@@ -628,6 +630,9 @@
     }).join('');
 
     return `
+      <button class="attach-btn" id="attach-btn" title="إرفاق ملفات أو صور">
+        <span>📎</span>
+      </button>
       <span class="mode-tag dev-mode-tag" style="color:#fbbf24; background:rgba(217,119,6,0.15);">وضع المطور</span>
       <select id="dev-model-select" class="dev-model-select" aria-label="اختيار موديل المطور">
         ${options}
@@ -656,11 +661,20 @@
           }
           showToast('تم اختيار موديل المطور', 'info');
         });
+        $('attach-btn')?.addEventListener('click', () => $('file-upload-input')?.click());
       }
     } else {
       if (titleText) titleText.textContent = `نيترون · ${state.currentMode}`;
       if (dot) dot.style.background = '#10b981';
-      if (indicator) indicator.innerHTML = '<span class="mode-tag">الشات الطبيعي</span>';
+      if (indicator) {
+        indicator.innerHTML = `
+          <button class="attach-btn" id="attach-btn" title="إرفاق ملفات أو صور">
+            <span>📎</span>
+          </button>
+          <span class="mode-tag">الشات الطبيعي</span>
+        `;
+        $('attach-btn')?.addEventListener('click', () => $('file-upload-input')?.click());
+      }
     }
 
     $$('.dropdown-opt').forEach(btn => {
@@ -708,8 +722,22 @@
 
     const parsed = msg.role === 'ai' ? parseMarkdown(msg.content) : escapeHtml(msg.content);
 
+    let attachmentsHtml = '';
+    if (msg.attachments && msg.attachments.length > 0) {
+      attachmentsHtml = '<div class="msg-attachments-wrap" style="margin-top:6px;">' + msg.attachments.map(att => {
+        if (att.type.startsWith('image/')) {
+          return `<img src="${att.dataUrl}" class="msg-attachment-img" alt="${escapeHtml(att.name)}">`;
+        } else {
+          return `<div class="preview-item" style="margin-top:4px;"><span class="preview-name">📄 ${escapeHtml(att.name)}</span></div>`;
+        }
+      }).join('') + '</div>';
+    }
+
     row.innerHTML = `
-      <div class="msg-content">${parsed}</div>
+      <div class="msg-content">
+        ${parsed}
+        ${attachmentsHtml}
+      </div>
       ${msg.role === 'ai' && msg.model ? `
         <div class="message-meta">
           <span class="meta-badge">✦ ${escapeHtml(msg.model)}</span>
@@ -734,14 +762,37 @@
 
   // ─── Messaging & Streaming ───
   async function sendMessage(userText) {
-    if (state.isStreaming || !userText.trim()) return;
+    const hasAttachments = state.attachments && state.attachments.length > 0;
+    if (state.isStreaming || (!userText.trim() && !hasAttachments)) return;
 
     if (!state.activeConvId) newConversation();
 
     const conv = getActiveConv();
     const isDev = conv?.isDev;
 
-    const userMsg = addMessage('user', userText.trim());
+    let textForPayload = userText.trim();
+    const currentAttachments = [...state.attachments];
+
+    const attachedTexts = currentAttachments.filter(a => !a.type.startsWith('image/'));
+    if (attachedTexts.length > 0) {
+      const fileContexts = attachedTexts.map(f => `--- محتوى الملف المرفق: ${f.name} ---\n${f.textContent || ''}\n--- نهاية الملف ---`).join('\n\n');
+      textForPayload = textForPayload ? `${textForPayload}\n\n${fileContexts}` : fileContexts;
+    }
+
+    const attachedImages = currentAttachments.filter(a => a.type.startsWith('image/'));
+    if (attachedImages.length > 0 && !textForPayload) {
+      textForPayload = 'يرجى فحص هذه الصورة المرفقة والإجابة عنها.';
+    }
+
+    // Clear previews and pending state
+    state.attachments = [];
+    const previewContainer = $('attachment-preview-container');
+    if (previewContainer) {
+      previewContainer.classList.add('hidden');
+      previewContainer.innerHTML = '';
+    }
+
+    const userMsg = addMessage('user', userText.trim() || 'ملف مرفق', null, currentAttachments);
     appendMessage(userMsg);
 
     showTyping();
@@ -779,7 +830,7 @@
     const apiMessages = [
       { role: 'system', content: systemPromptForCall },
       ...recentMessages.map(m => ({ role: m.role === 'ai' ? 'assistant' : m.role, content: m.content })),
-      { role: 'user', content: userText.trim() }
+      { role: 'user', content: textForPayload }
     ];
 
     let fullContent = '';
@@ -1232,6 +1283,7 @@
 
     setupEmergencyControls();
     setupPullToRefresh();
+    setupAttachmentHandler();
 
     const input = $('user-input');
     const sendBtn = $('send-btn');
@@ -1239,13 +1291,15 @@
     input.addEventListener('input', () => {
       input.style.height = 'auto';
       input.style.height = Math.min(input.scrollHeight, 180) + 'px';
-      sendBtn.disabled = !input.value.trim() || state.isStreaming;
+      const hasAtt = state.attachments && state.attachments.length > 0;
+      sendBtn.disabled = (!input.value.trim() && !hasAtt) || state.isStreaming;
     });
 
     input.addEventListener('keydown', e => {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
-        if (!state.isStreaming && input.value.trim()) {
+        const hasAtt = state.attachments && state.attachments.length > 0;
+        if (!state.isStreaming && (input.value.trim() || hasAtt)) {
           const text = input.value.trim();
           input.value = '';
           input.style.height = 'auto';
@@ -1257,12 +1311,91 @@
 
     sendBtn.addEventListener('click', () => {
       const text = input.value.trim();
-      if (!text || state.isStreaming) return;
+      const hasAtt = state.attachments && state.attachments.length > 0;
+      if ((!text && !hasAtt) || state.isStreaming) return;
       input.value = '';
       input.style.height = 'auto';
       sendBtn.disabled = true;
       sendMessage(text);
     });
+  }
+
+  // ─── File Attachment Handler (إرفاق الملفات والصور) ───
+  function setupAttachmentHandler() {
+    const fileInput = $('file-upload-input');
+    const previewContainer = $('attachment-preview-container');
+    const sendBtn = $('send-btn');
+    const userInput = $('user-input');
+
+    if (!fileInput || !previewContainer) return;
+
+    // Delegate attach button clicks everywhere
+    document.addEventListener('click', (e) => {
+      if (e.target.closest('#attach-btn')) {
+        e.preventDefault();
+        fileInput.click();
+      }
+    });
+
+    fileInput.addEventListener('change', async (e) => {
+      const files = Array.from(e.target.files || []);
+      if (!files.length) return;
+
+      for (const file of files) {
+        if (file.type.startsWith('image/')) {
+          const dataUrl = await readFileAsDataURL(file);
+          state.attachments.push({ name: file.name, type: file.type, dataUrl });
+        } else {
+          const textContent = await readFileAsText(file);
+          state.attachments.push({ name: file.name, type: file.type, textContent });
+        }
+      }
+
+      renderAttachmentPreviews();
+      if (sendBtn) sendBtn.disabled = false;
+      fileInput.value = '';
+    });
+
+    function readFileAsDataURL(file) {
+      return new Promise(resolve => {
+        const reader = new FileReader();
+        reader.onload = ev => resolve(ev.target.result);
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function readFileAsText(file) {
+      return new Promise(resolve => {
+        const reader = new FileReader();
+        reader.onload = ev => resolve(ev.target.result);
+        reader.readAsText(file);
+      });
+    }
+
+    function renderAttachmentPreviews() {
+      if (!state.attachments.length) {
+        previewContainer.classList.add('hidden');
+        previewContainer.innerHTML = '';
+        return;
+      }
+
+      previewContainer.classList.remove('hidden');
+      previewContainer.innerHTML = state.attachments.map((att, idx) => `
+        <div class="preview-item">
+          ${att.type.startsWith('image/') ? `<img src="${att.dataUrl}" class="preview-thumb">` : '<span>📄</span>'}
+          <span class="preview-name">${escapeHtml(att.name)}</span>
+          <button class="preview-remove" onclick="window._removeAttachment(${idx})">✕</button>
+        </div>
+      `).join('');
+    }
+
+    window._removeAttachment = (idx) => {
+      state.attachments.splice(idx, 1);
+      renderAttachmentPreviews();
+      if (!state.attachments.length && !userInput?.value.trim() && sendBtn) {
+        sendBtn.disabled = true;
+      }
+    };
   }
 
   // ─── Pull to Refresh Touch Gesture (السحب للتحديث) ───
