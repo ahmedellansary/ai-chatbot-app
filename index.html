@@ -72,27 +72,10 @@
       </button>
     </div>
 
-    <!-- Emergency Controls (أزرار الطوارئ) -->
-    <div class="emergency-box">
-      <div class="emergency-title">🚨 تحكم الطوارئ (Safety Controls)</div>
-      <button class="emergency-btn rollback" id="btn-emergency-rollback">
-        <span>⏪</span>
-        <span>استرجاع فوري لآخر نسخة</span>
-      </button>
-      <button class="emergency-btn fix" id="btn-emergency-fix">
-        <span>🔍</span>
-        <span>مراجعة وإصلاح آخر تعديل</span>
-      </button>
-    </div>
-
     <div class="sidebar-section-title">المحادثات السابقة</div>
     <div id="conversations-list"></div>
 
     <div class="sidebar-footer">
-      <button class="footer-btn" id="btn-toggle-owner-lock">
-        <span id="owner-lock-icon">🔒</span>
-        <span id="owner-lock-text">قفل التطبيق</span>
-      </button>
       <button class="footer-btn" id="install-btn" style="display:none;">
         <span>📲</span>
         <span>تثبيت التطبيق على الموبايل</span>
@@ -299,15 +282,6 @@
         <span id="slide-indicator" class="slide-indicator">1 / 1</span>
         <button class="slide-nav-btn" onclick="window._nextSlide()">التالي ▶</button>
       </div>
-    </div>
-  </div>
-
-  <div id="startup-check" class="startup-check hidden" aria-live="polite">
-    <div class="startup-check-header">🔎 تحقق الواجهة</div>
-    <div class="startup-check-status" id="startup-check-status">جاري فحص الواجهة...</div>
-    <div class="startup-check-actions">
-      <button class="startup-check-btn success" id="startup-check-ok">موافق</button>
-      <button class="startup-check-btn danger" id="startup-check-fix">مراجعة وإصلاح</button>
     </div>
   </div>
 
