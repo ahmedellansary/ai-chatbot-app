@@ -1063,6 +1063,12 @@
       } catch (err) {
         MessageRenderer.hideTyping();
         if (err.name !== 'AbortError') {
+          if (!fullContent.trim()) {
+            const idx = conv.messages.findIndex(m => m.id === aiMsgId);
+            if (idx !== -1) conv.messages.splice(idx, 1);
+            const emptyElem = document.querySelector(`[data-id="${aiMsgId}"]`);
+            if (emptyElem) emptyElem.remove();
+          }
           MessageRenderer.showToast('❌ ' + err.message, 'error');
         }
       } finally {
