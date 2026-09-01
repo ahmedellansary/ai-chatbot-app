@@ -4,15 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#131314">
-  <meta name="description" content="X.v1 — المساعد الذكي المتقدم">
+  <meta name="description" content="نيترون — المساعد الذكي المتقدم">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="X.v1">
+  <meta name="apple-mobile-web-app-title" content="نيترون">
 
-  <title>X.v1</title>
+  <title>نيترون</title>
   <link rel="manifest" href="./manifest.json?v=20260901">
   <link rel="stylesheet" href="./style.css?v=20260901">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✳️</text></svg>">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✦</text></svg>">
 </head>
 <body>
 <div id="app">
@@ -21,8 +21,8 @@
   <aside id="sidebar">
     <div class="sidebar-header">
       <div class="brand-logo">
-        <span class="claude-star-icon">✳️</span>
-        <span>X.v1</span>
+        <span class="brand-star-icon">✦</span>
+        <span>نيترون</span>
       </div>
       <button class="icon-btn" id="close-sidebar-btn" aria-label="إغلاق">✕</button>
     </div>
@@ -39,7 +39,7 @@
       </button>
     </div>
 
-    <!-- Emergency Controls (أزرار الطوارئ داخل القائمة الجانبية فقط) -->
+    <!-- Emergency Controls (أزرار الطوارئ) -->
     <div class="emergency-box">
       <div class="emergency-title">🚨 تحكم الطوارئ (Safety Controls)</div>
       <button class="emergency-btn rollback" id="btn-emergency-rollback">
@@ -58,7 +58,7 @@
     <div class="sidebar-footer">
       <button class="footer-btn" id="btn-toggle-owner-lock">
         <span id="owner-lock-icon">🔒</span>
-        <span id="owner-lock-text">تسجيل دخول المالك</span>
+        <span id="owner-lock-text">قفل التطبيق</span>
       </button>
       <button class="footer-btn" id="install-btn" style="display:none;">
         <span>📲</span>
@@ -71,10 +71,10 @@
     </div>
   </aside>
 
-  <!-- ═══ Main View (واجهة Claude الأصلية) ═══ -->
+  <!-- ═══ Main View (الواجهة الرئيسية) ═══ -->
   <main id="main">
 
-    <!-- Top Header (Claude Style) -->
+    <!-- Top Header -->
     <header id="header">
       <button class="icon-btn" id="sidebar-toggle" aria-label="القائمة">
         <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round">
@@ -115,7 +115,7 @@
       <div class="chat-container" id="chat-container"></div>
     </div>
 
-    <!-- Floating Input Bar (Claude Mobile Pixel-Perfect Style) -->
+    <!-- Floating Input Bar -->
     <div id="input-section">
       <div class="input-container">
 
@@ -126,7 +126,7 @@
         <textarea
           id="user-input"
           class="chat-textarea"
-          placeholder="Reply to X.v1..."
+          placeholder="اكتب رسالتك أو اطلب تعديلاً..."
           rows="1"
           autocomplete="off"
         ></textarea>
@@ -136,7 +136,7 @@
           
           <!-- Left Controls (Plus & Model Pill) -->
           <div class="input-bottom-left">
-            <!-- Plus Button -->
+            <!-- Plus / Attach Button -->
             <button class="claude-plus-btn" id="attach-btn" title="إرفاق ملفات أو صور" aria-label="إرفاق">
               <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round">
                 <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -144,23 +144,23 @@
               </svg>
             </button>
 
-            <!-- Model Selector Pill (e.g. Sonnet 5 Thinking) -->
+            <!-- Model Selector Pill -->
             <div style="position: relative;">
               <button class="claude-model-pill" id="model-pill-trigger">
-                <span id="header-title-text">Sonnet 5 · Thinking</span>
+                <span id="header-title-text">نيترون · MID</span>
               </button>
 
               <div class="model-dropdown" id="model-dropdown-menu">
                 <button class="dropdown-opt" data-mode="HIGH">
-                  <div class="opt-title">⚡ Sonnet 5 / Ultra (أقوى الموديلز)</div>
+                  <div class="opt-title">⚡ وضع HIGH (أقوى الموديلز)</div>
                   <div class="opt-desc">Nemotron Ultra 550B + MiniMax M3</div>
                 </button>
                 <button class="dropdown-opt active" data-mode="MID">
-                  <div class="opt-title">⚖️ Sonnet 3.7 (متوازن وذكي)</div>
+                  <div class="opt-title">⚖️ وضع MID (متوازن وذكي)</div>
                   <div class="opt-desc">Nemotron 120B + GPT OSS 120B</div>
                 </button>
                 <button class="dropdown-opt" data-mode="FAST">
-                  <div class="opt-title">🚀 Haiku 3.5 (الأسرع استجابة)</div>
+                  <div class="opt-title">🚀 وضع FAST (الأسرع استجابة)</div>
                   <div class="opt-desc">Groq Compound + Qwen 3.6 27B</div>
                 </button>
               </div>
@@ -216,9 +216,9 @@
   <!-- ═══ Full Screen App Lock Gate (شاشة القفل العامة للتطبيق) ═══ -->
   <div id="app-lock-gate" class="app-lock-gate hidden" aria-live="polite">
     <div class="lock-gate-card">
-      <div class="lock-gate-star">✳️</div>
-      <h2 class="lock-gate-title">Claude</h2>
-      <p class="lock-gate-sub">التطبيق محمي ومقفل بالكامل. يرجى إدخال رمز المرور السري للدخول.</p>
+      <div class="lock-gate-star">✦</div>
+      <h2 class="lock-gate-title">نيترون AI</h2>
+      <p class="lock-gate-sub">التطبيق محمي ومقفل بالكامل. يرجى إدخال كلمة السر للدخول.</p>
 
       <form id="lock-gate-form" class="lock-gate-form" onsubmit="event.preventDefault()">
         <div class="lock-input-group">
@@ -226,19 +226,18 @@
             type="password"
             id="gate-pin-input"
             class="lock-gate-input"
-            placeholder="رمز PIN للدخول"
-            maxlength="12"
+            placeholder="أدخل كلمة السر"
+            maxlength="24"
             autocomplete="off"
-            inputmode="numeric"
           >
           <button type="submit" id="gate-unlock-btn" class="lock-gate-btn" aria-label="دخول">
-            <span>فتح</span>
+            <span>دخول</span>
             <span>🔓</span>
           </button>
         </div>
       </form>
 
-      <div class="lock-gate-footer">🔐 مشفر ومحمي بالكامل برمز المالك</div>
+      <div class="lock-gate-footer">🔐 مشفر ومحمي بالكامل</div>
     </div>
   </div>
 
@@ -250,7 +249,7 @@
 
 </div>
 
-<!-- Single Unified Application Bundle (No external imports that could fail) -->
+<!-- Unified Application Script Bundle -->
 <script src="./app.js?v=20260901"></script>
 </body>
 </html>
