@@ -71,6 +71,26 @@
       priority: 1
     },
     {
+      id: 'meta-llama/llama-3.3-70b-instruct:free',
+      provider: 'openrouter',
+      name: 'Llama 3.3 70B Coder (128k)',
+      icon: '🦙',
+      category: 'code',
+      params: '70B 128k',
+      desc: 'عملاق البرمجة المفتوح بسياق 128,000 توكن للمشاريع الكبيرة والملفات الضخمة دون أي اقتطاع.',
+      priority: 1
+    },
+    {
+      id: 'qwen/qwen-2.5-coder-32b-instruct:free',
+      provider: 'openrouter',
+      name: 'Qwen 2.5 Coder 32B (128k)',
+      icon: '👨‍💻',
+      category: 'code',
+      params: '32B Coder',
+      desc: 'متخصص رائد في كتابة ومراجعة شفرات المصدر والمشاريع البرمجية المعقدة.',
+      priority: 1
+    },
+    {
       id: 'qwen/qwen3.8-27b',
       provider: 'groq',
       name: 'Qwen 3.8 27B Fast Coder',
@@ -101,7 +121,7 @@
       priority: 1
     },
 
-    // ═══ 2. الأعلى معالم والقدرات المعمارية (High-Parameter Architecture) ═══
+    // ═══ 2. الأعلى معالم والقدرات المعمارية والسياق العملاق (128k - 200k Context) ═══
     {
       id: 'minimax/minimax-m3:free',
       provider: 'openrouter',
@@ -449,13 +469,20 @@
   // 6. DEV CHAT & SMART FALLBACK CASCADE ENGINE (DevChatEngine)
   // ─────────────────────────────────────────────────────────────────
   const DevChatEngine = {
-    // Build ordered list of fallback agents starting with the chosen one
-    buildFallbackCascade(primaryAgent) {
-      const cascade = [primaryAgent];
-      // Add all remaining agents sorted by priority
-      const remaining = DEV_AGENTS.filter(a => a.id !== primaryAgent.id);
-      cascade.push(...remaining);
-      return cascade;
+    // Dynamic Context-Aware Cascade:
+    // If payload is large (> 5000 tokens), prioritizes 128k-200k OpenRouter models so no code is ever truncated.
+    // If payload is normal (<= 5000 tokens), uses lightning-fast Groq models (120B / 27B) first.
+    buildFallbackCascade(primaryAgent, estimatedTokens = 0) {
+      if (estimatedTokens > 5000) {
+        const largeContextAgents = DEV_AGENTS.filter(a => a.provider === 'openrouter');
+        const groqAgents = DEV_AGENTS.filter(a => a.provider === 'groq');
+        if (primaryAgent.provider === 'openrouter') {
+          return [primaryAgent, ...largeContextAgents.filter(a => a.id !== primaryAgent.id), ...groqAgents];
+        } else {
+          return [primaryAgent, ...largeContextAgents, ...groqAgents.filter(a => a.id !== primaryAgent.id)];
+        }
+      }
+      return [primaryAgent, ...DEV_AGENTS.filter(a => a.id !== primaryAgent.id)];
     },
 
     async callSingleAgentStream(agent, messages, signal, onChunk) {
@@ -482,7 +509,7 @@
           model: agent.id,
           messages,
           stream: true,
-          temperature: 0.4,
+          temperature: 0.3,
           max_tokens: 8192
         }),
         signal
@@ -495,7 +522,12 @@
 
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}));
-        throw new Error(errData.error?.message || `HTTP ${response.status}`);
+        const errMsg = errData.error?.message || `HTTP ${response.status}`;
+        if (isGroq && /TPM|rate limit|too large|token/i.test(errMsg)) {
+          DevConfigVault.rotateGroqKey();
+          throw new Error('GROQ_RATE_LIMIT');
+        }
+        throw new Error(errMsg);
       }
 
       const reader = response.body.getReader();
@@ -549,48 +581,7 @@
         textForPayload = textForPayload ? `${textForPayload}\n\n${fileContexts}` : fileContexts;
       }
 
-      // Smart Live Codebase Injector (محمي وموفر للتوكنز):
-      // لا يتم جلب الملفات إلا عند وجود طلب تعديل كود صريح وبحد أقصى ملف واحد مختصر
-      if (attachedTexts.length === 0 && textForPayload) {
-        const promptLower = textForPayload.toLowerCase();
-        const isCasual = /^(هاي|مرحبا|سلام|أهلاً|اهلا|شكرا|تمام|مين انت|من انت|hi|hello|hey|test)\b/i.test(promptLower) || promptLower.length < 15;
-        const isCodeRequest = /عدل|صلح|غير|ضيف|احذف|كود|زر|شاشة|تعديل|مشكلة|خطأ|bug|fix|css|style|html|js|dropdown|مطور|استوديو|محرر/i.test(promptLower);
-
-        if (!isCasual && isCodeRequest) {
-          const knownFiles = ['dev_style.css', 'dev.html', 'dev.js', 'style.css', 'index.html', 'app.js', 'instructions.json', 'sw.js'];
-          let targetFile = null;
-
-          for (const kf of knownFiles) {
-            if (promptLower.includes(kf)) {
-              targetFile = kf;
-              break;
-            }
-          }
-
-          if (!targetFile) {
-            if (/تصميم|ستايل|لون|شكل|خلفية|css|style|border|دروب|قائمة|موبايل/i.test(promptLower)) {
-              targetFile = /استوديو|مطور|dev/i.test(promptLower) ? 'dev_style.css' : 'style.css';
-            } else if (/html|زر|modal|عنصر|dom|واجهة/i.test(promptLower)) {
-              targetFile = /استوديو|مطور|dev/i.test(promptLower) ? 'dev.html' : 'index.html';
-            } else if (/كود|دالة|js|جافاسكريبت|api|نشر|git/i.test(promptLower)) {
-              targetFile = /استوديو|مطور|dev/i.test(promptLower) ? 'dev.js' : 'app.js';
-            }
-          }
-
-          if (targetFile) {
-            try {
-              const fetched = await DevGitHubService.getFile(targetFile);
-              if (fetched && fetched.content) {
-                // اقتطاع الملف لمنع تجاوز حد TPM
-                const safeContent = fetched.content.length > 3500 ? (fetched.content.slice(0, 3500) + '\n\n/* ... [تم اقتطاع باقي الملف لتوفير التوكنز والسرعة] ... */') : fetched.content;
-                textForPayload += `\n\n--- [LIVE GITHUB REPO FILE: ${targetFile}] ---\n${safeContent}\n--- [END OF ${targetFile}] ---\n`;
-              }
-            } catch (e) {
-              console.log(`[SmartContext] Fetch skipped for ${targetFile}:`, e.message);
-            }
-          }
-        }
-      }
+      // لا يتم إرسال أي ملفات في الخلفية تلقائياً - يتم إرسال ما يكتبه المستخدم أو يرفقه فقط عبر زر (+)
 
       const attachedImages = currentAttachments.filter(a => a.type.startsWith('image/'));
       if (attachedImages.length > 0 && !textForPayload) {
@@ -622,12 +613,11 @@
       let fullContent = '';
       const aiMsgId = generateId();
       const chosenAgent = DevState.getSelectedAgent();
-      const aiMsgObj = { id: aiMsgId, role: 'ai', content: '', model: state.isMultiAgentMode ? '👥 فريق الوكلاء المتشاورين' : chosenAgent.name };
-      DevUIEngine.appendEmptyAiMessage(aiMsgObj);
+      const estimatedTokens = Math.ceil((textForPayload.length + (systemPrompt?.length || 0)) / 3.5);
 
       if (state.isMultiAgentMode) {
         try {
-          await this.runDevMultiAgentConsensus(textForPayload, apiMessages, aiMsgId, aiMsgObj, conv);
+          await this.runDevMultiAgentConsensus(textForPayload, apiMessages, aiMsgId, aiMsgObj, conv, estimatedTokens);
         } catch (err) {
           if (err.name !== 'AbortError') {
             DevUIEngine.showToast('❌ ' + err.message, 'error');
@@ -640,7 +630,7 @@
         return;
       }
 
-      const fallbackList = this.buildFallbackCascade(chosenAgent);
+      const fallbackList = this.buildFallbackCascade(chosenAgent, estimatedTokens);
 
       let succeeded = false;
       let usedAgent = chosenAgent;
@@ -727,7 +717,7 @@
       DevUIEngine.updateSendBtn();
     },
 
-    async runDevMultiAgentConsensus(textForPayload, apiMessages, aiMsgId, aiMsgObj, conv) {
+    async runDevMultiAgentConsensus(textForPayload, apiMessages, aiMsgId, aiMsgObj, conv, estimatedTokens = 0) {
       const msgRow = document.querySelector(`[data-id="${aiMsgId}"]`);
       const msgContent = msgRow ? msgRow.querySelector('.msg-content') : null;
 
@@ -778,7 +768,7 @@
 
       // Helper to stream with automatic fallback cascade
       const streamWithCascade = async (preferredAgent, customMessages, onDelta) => {
-        const cascade = this.buildFallbackCascade(preferredAgent);
+        const cascade = this.buildFallbackCascade(preferredAgent, estimatedTokens);
         for (const agent of cascade) {
           try {
             await this.callSingleAgentStream(agent, customMessages, state.abortController.signal, onDelta);
