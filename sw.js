@@ -1,23 +1,11 @@
-const CACHE_NAME = 'ai-chat-v1';
-const STATIC_ASSETS = [
-  '/',
-  '/index.html',
-  '/style.css',
-  '/app.js',
-  '/models.js',
-  '/github.js',
-  '/manifest.json'
-];
+const CACHE_NAME = 'ai-chat-v2';
 
-// Install: cache all static assets
+// Install immediately
 self.addEventListener('install', event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(STATIC_ASSETS))
-  );
   self.skipWaiting();
 });
 
-// Activate: clean old caches
+// Activate immediately & clear old caches
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(keys =>
@@ -27,11 +15,11 @@ self.addEventListener('activate', event => {
   self.clients.claim();
 });
 
-// Fetch: network-first for API, cache-first for assets
+// Fetch: NETWORK-FIRST for all assets to ensure INSTANT updates
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
 
-  // Always go network for API calls
+  // Bypass cache completely for AI & GitHub APIs
   if (url.hostname.includes('openrouter') ||
       url.hostname.includes('groq') ||
       url.hostname.includes('api.github') ||
@@ -39,16 +27,19 @@ self.addEventListener('fetch', event => {
     return;
   }
 
+  // Network-First Strategy: always get fresh files from network first
   event.respondWith(
-    caches.match(event.request).then(cached => {
-      if (cached) return cached;
-      return fetch(event.request).then(response => {
+    fetch(event.request)
+      .then(response => {
         if (response.ok) {
           const clone = response.clone();
           caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
         }
         return response;
-      }).catch(() => cached || new Response('Offline', { status: 503 }));
-    })
+      })
+      .catch(() => {
+        // Fallback to cache ONLY if offline / network failed
+        return caches.match(event.request);
+      })
   );
 });
