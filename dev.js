@@ -1101,20 +1101,24 @@
       const renderMenu = () => {
         const activeAgent = DevState.getSelectedAgent();
         menu.innerHTML = `
-          <div style="padding:6px 10px; font-size:11px; font-weight:700; color:var(--text-dim); display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.06); margin-bottom:4px;">
-            <span>🤖 اختر مهندس / نموذج الذكاء الاصطناعي</span>
-            <button type="button" onclick="event.stopPropagation(); window._openAgentModal();" style="background:transparent; border:none; color:#fbbf24; cursor:pointer; font-size:11px; font-weight:600;">🔍 عرض الكل</button>
+          <div style="padding:6px 8px; font-size:11px; font-weight:700; color:var(--text-dim); display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.08); margin-bottom:4px;">
+            <span>🤖 اختر النموذج / الوكيل</span>
+            <button type="button" onclick="event.stopPropagation(); window._openAgentModal();" style="background:transparent; border:none; color:#fbbf24; cursor:pointer; font-size:11px; font-weight:600;">🔍 التفاصيل</button>
           </div>
         ` + DEV_AGENTS.map(agent => {
           const isActive = agent.id === activeAgent.id;
-          const providerText = agent.provider === 'groq' ? '⚡ Groq Fast' : '🌐 OpenRouter';
+          const providerText = agent.provider === 'groq' ? '⚡ Groq' : '🌐 OpenRouter';
+          const shortName = agent.name.replace(' Lead Architect', '').replace(' Fast Coder', '').replace(' Rapid Coder', '');
           return `
             <button type="button" class="dropdown-opt ${isActive ? 'active' : ''}" onclick="window._selectAgentFromDropdown('${agent.id}')">
-              <div class="opt-title" style="display:flex; align-items:center; justify-content:space-between; width:100%;">
-                <span>${agent.icon || '🧠'} ${this.escapeHtml(agent.name)}</span>
+              <div class="opt-title">
+                <span>${agent.icon || '🧠'} ${this.escapeHtml(shortName)}</span>
                 ${isActive ? '<span style="color:#fbbf24; font-size:12px; font-weight:bold;">✓</span>' : ''}
               </div>
-              <div class="opt-desc">${this.escapeHtml(agent.desc || '')} · <span style="color:#fbbf24;">${agent.params || ''}</span> (${providerText})</div>
+              <div class="opt-meta">
+                <span class="opt-tag">${agent.params || ''}</span>
+                <span class="opt-tag ${agent.provider}">${providerText}</span>
+              </div>
             </button>
           `;
         }).join('');
