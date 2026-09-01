@@ -100,10 +100,6 @@
           <span>📁</span>
           <span class="header-btn-label">محرر الملفات</span>
         </button>
-        <button class="icon-btn" onclick="window._openAgentModal()" title="اختيار المهندس أو النموذج الذكي">
-          <span id="header-agent-icon">👨‍💻</span>
-          <span id="header-agent-name" class="header-btn-label" style="font-weight:600; color:#fbbf24;">GPT OSS 120B Lead Architect</span>
-        </button>
         <button class="icon-btn" onclick="window._openRollbackModal()" title="سجل النسخ والاسترجاع الطارئ">
           <span>⏪</span>
           <span class="header-btn-label">Rollback</span>
@@ -145,7 +141,7 @@
 
         <!-- Bottom Controls Row inside Container -->
         <div class="input-bottom-bar">
-          <!-- Left Controls (Plus & Model Pill) -->
+          <!-- Left Controls (Plus, Model Pill & Multi-Agent Toggle) -->
           <div class="input-bottom-left">
             <!-- Plus / Attach Button -->
             <button class="claude-plus-btn" id="attach-btn" title="Attach files or photos" aria-label="Attach">
@@ -155,11 +151,11 @@
               </svg>
             </button>
 
-            <!-- Model Selector Pill & Popup Dropdown (مطابق للشات بوت) -->
+            <!-- Model Selector Pill & Popup Dropdown (في الشات بوكس فقط) -->
             <div style="position: relative;">
               <button class="claude-model-pill" id="model-pill-trigger" title="Select Model">
                 <span id="selected-agent-icon" style="font-size: 13px;">👨‍💻</span>
-                <span id="selected-agent-label">GPT OSS 120B Lead Architect</span>
+                <span id="selected-agent-label">GPT OSS 120B</span>
                 <svg viewBox="0 0 12 12" width="10" height="10" fill="currentColor"><path d="M2 4l4 4 4-4z"/></svg>
               </button>
 
@@ -167,6 +163,12 @@
                 <!-- Rendered dynamically by DevUIEngine -->
               </div>
             </div>
+
+            <!-- Multi-Agent Consensus Independent Toggle Pill -->
+            <button class="claude-model-pill multi-agent-toggle-pill" id="dev-multi-agent-toggle-btn" onclick="window._toggleDevMultiAgentMode()" title="تفعيل / تعطيل تشاور الوكلاء المتعددين">
+              <span>👥</span>
+              <span id="dev-multi-agent-label-text">تشاور الوكلاء</span>
+            </button>
           </div>
 
           <!-- Right Controls (Send Button with ⚡) -->
