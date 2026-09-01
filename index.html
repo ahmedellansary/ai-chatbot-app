@@ -11,8 +11,16 @@
 
   <title>نيترون</title>
   <link rel="manifest" href="./manifest.json">
-  <link rel="stylesheet" href="./style.css">
+  <link rel="stylesheet" href="./style.css?v=2026">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✦</text></svg>">
+  <script>
+    // Auto-clear old PWA caches
+    if ('caches' in window) {
+      caches.keys().then(keys => {
+        keys.forEach(k => { if (k === 'ai-chat-v1') caches.delete(k); });
+      });
+    }
+  </script>
 </head>
 <body>
 <div id="app">
@@ -115,7 +123,7 @@
 
 </div>
 
-<script src="./keys.js"></script>
-<script type="module" src="./app.js"></script>
+<script src="./keys.js?v=2026"></script>
+<script type="module" src="./app.js?v=2026"></script>
 </body>
 </html>
