@@ -1,14 +1,10 @@
-// ═══════════════════════════════════════════════════
-//  AI CHAT — Main Application Logic with Dev Chat
-// ═══════════════════════════════════════════════════
+// ═════════════════════════════════════════════════════════════════
+//  AI CHAT — Clean Claude & ChatGPT Logic Engine
+// ═════════════════════════════════════════════════════════════════
 
-import { chatWithFallback, generateCode, readStream, MODELS, DEV_MODELS } from './models.js';
-import {
-  ensureRepo, uploadFile, getFile, getCommitHistory,
-  rollbackFile, pushAllFiles, enableGitHubPages, GITHUB_USER, GITHUB_REPO
-} from './github.js';
+import { chatWithFallback, readStream, MODELS } from './models.js';
+import { ensureRepo, uploadFile, getCommitHistory, rollbackFile } from './github.js';
 
-// ─── State ───
 const state = {
   currentMode: 'MID',
   currentModel: null,
@@ -20,11 +16,10 @@ const state = {
   githubReady: false
 };
 
-// ─── DOM Refs ───
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
 
-// ─── Init ───
+// ─── Initialization ───
 async function init() {
   loadConversations();
   await loadSystemPrompt();
@@ -32,30 +27,26 @@ async function init() {
   registerServiceWorker();
   setupInstallPrompt();
 
-  // Initialize GitHub in background
   ensureRepo().then(() => {
     state.githubReady = true;
-    console.log('[GitHub] Repository ready');
-  }).catch(e => console.warn('[GitHub] Init failed:', e.message));
+  }).catch(console.warn);
 
-  // Show welcome or active conversation
   if (state.conversations.length === 0) {
     showWelcomeScreen();
   } else {
     loadConversation(state.conversations[0].id);
   }
 
-  updateModeUI();
+  updateHeaderUI();
 }
 
-// ─── Service Worker ───
+// ─── PWA & Service Worker ───
 function registerServiceWorker() {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').catch(console.warn);
   }
 }
 
-// ─── Install Prompt ───
 let deferredInstall = null;
 function setupInstallPrompt() {
   window.addEventListener('beforeinstallprompt', e => {
@@ -79,34 +70,18 @@ async function loadSystemPrompt() {
   const local = localStorage.getItem('system_prompt');
   if (local) {
     state.systemPrompt = local;
-    const area = $('sys-prompt-area');
-    if (area) area.value = local;
     return;
   }
-
   try {
     const res = await fetch('./system_prompt.txt');
     if (res.ok) {
       state.systemPrompt = await res.text();
       localStorage.setItem('system_prompt', state.systemPrompt);
-      const area = $('sys-prompt-area');
-      if (area) area.value = state.systemPrompt;
     }
   } catch {}
 }
 
-function saveSystemPrompt(text) {
-  state.systemPrompt = text;
-  localStorage.setItem('system_prompt', text);
-
-  if (state.githubReady) {
-    uploadFile('system_prompt.txt', text, '🧠 Update system prompt')
-      .then(() => showToast('✅ تم حفظ التعليمات على GitHub', 'success'))
-      .catch(() => showToast('⚠️ حُفظ محلياً — فشل GitHub', 'warning'));
-  }
-}
-
-// ─── Conversations ───
+// ─── Conversations Management ───
 function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2);
 }
@@ -137,7 +112,6 @@ function newConversation() {
   saveConversations();
   loadConversation(id);
   renderConversationsList();
-  hideWelcomeScreen();
 }
 
 function startDevChat() {
@@ -155,8 +129,8 @@ function startDevChat() {
       {
         id: generateId(),
         role: 'ai',
-        content: `مرحباً بك في **شات المطور**! 🛠️\n\nأنا مهندس البرمجيات المسؤول عن تطوير هذا التطبيق نفسه.\nتستطيع التحدث معي لطلب أي تعديل مثل:\n- 🔤 **"غيّر لغة الواجهة إلى الإنجليزية واجعل اتجاه الكتابة LTR"**\n- 🎨 **"غيّر ثيم التطبيق أو عدّل الألوان"**\n- ⚡ **"أضف زراً جديداً أو ميزة محددة"**\n\nسأقوم بتنفيذ التعديل البرمجي ورفعه مباشرة على GitHub ليتطبق فوراً على هاتفك! ماذا تود أن نعدل؟`,
-        model: 'Nemotron Lead Developer',
+        content: `مرحباً بك في **شات المطور** 🛠️\n\nأنا مهندس البرمجيات المسؤول عن تعديل هذا التطبيق نفسه.\n\nتستطيع أن تطلب مني أي تعديل مثل:\n- *"غيّر لغة الواجهة إلى الإنجليزية"* \n- *"غيّر شكل الأزرار والألوان"*\n- *"أضف ميزة جديدة"*\n\nسأقوم بتجهيز التعديل وسؤالك عبر بطاقة تأكيد قبل النشر على GitHub!`,
+        model: 'Nemotron Developer',
         usedFallback: false,
         timestamp: new Date().toISOString()
       }
@@ -180,26 +154,13 @@ function loadConversation(id) {
   state.currentMode = conv.mode || state.currentMode;
 
   renderAllMessages(conv.messages);
-  updateModeUI();
+  updateHeaderUI();
   highlightActiveConv(id);
-  updateHeaderForConv(conv);
   scrollToBottom();
 }
 
 function getActiveConv() {
   return state.conversations.find(c => c.id === state.activeConvId);
-}
-
-function updateHeaderForConv(conv) {
-  const badge = document.querySelector('.current-model-badge .model-name-short');
-  const dot = document.querySelector('.model-dot');
-  if (conv?.isDev) {
-    if (badge) badge.innerHTML = '<span class="dev-active-badge">🛠️ شات المطور الذكي</span>';
-    if (dot) dot.style.background = '#fbbf24';
-  } else {
-    if (badge) badge.textContent = state.currentModel ? state.currentModel.name : 'نيترون AI';
-    if (dot) dot.style.background = '#34d399';
-  }
 }
 
 function addMessage(role, content, modelInfo = null) {
@@ -218,7 +179,7 @@ function addMessage(role, content, modelInfo = null) {
   conv.messages.push(msg);
 
   if (role === 'user' && !conv.isDev && conv.messages.filter(m => m.role === 'user').length === 1) {
-    conv.title = content.slice(0, 50) + (content.length > 50 ? '...' : '');
+    conv.title = content.slice(0, 40) + (content.length > 40 ? '...' : '');
     renderConversationsList();
   }
 
@@ -233,117 +194,101 @@ function renderConversationsList() {
 
   list.innerHTML = state.conversations.map(conv => `
     <div class="conversation-item ${conv.id === state.activeConvId ? 'active' : ''}"
-         data-id="${conv.id}" onclick="window._loadConv('${conv.id}')">
-      <div class="conv-title">${conv.isDev ? '🛠️ ' : ''}${escapeHtml(conv.title)}</div>
-      <div class="conv-time">${formatTime(conv.createdAt)}</div>
+         onclick="window._loadConv('${conv.id}')">
+      <span class="conv-title">${conv.isDev ? '🛠️ ' : ''}${escapeHtml(conv.title)}</span>
     </div>
   `).join('');
 }
 
 function highlightActiveConv(id) {
   $$('.conversation-item').forEach(el => {
-    el.classList.toggle('active', el.dataset.id === id);
+    el.classList.toggle('active', el.getAttribute('onclick')?.includes(id));
+  });
+}
+
+function updateHeaderUI() {
+  const conv = getActiveConv();
+  const label = $('header-model-label');
+  const dot = document.querySelector('.model-dot-indicator');
+
+  if (conv?.isDev) {
+    if (label) label.textContent = '🛠️ شات المطور';
+    if (dot) dot.style.background = '#fbbf24';
+  } else {
+    if (label) label.textContent = `نيترون · ${state.currentMode}`;
+    if (dot) dot.style.background = '#10b981';
+  }
+
+  $$('.dropdown-item').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.mode === state.currentMode);
   });
 }
 
 function showWelcomeScreen() {
-  const chatArea = $('chat-area');
-  chatArea.innerHTML = `
+  const container = $('chat-container');
+  if (!container) return;
+
+  container.innerHTML = `
     <div class="welcome-screen">
-      <div class="welcome-icon">✦</div>
-      <h1 class="welcome-title">مرحباً بك في نيترون</h1>
-      <p class="welcome-subtitle">مساعدك الذكي المتقدم. اختر المود المناسب وابدأ محادثتك.</p>
-      <div class="suggestions-grid">
-        <div class="suggestion-card" onclick="window._suggest('اشرح لي كيف يعمل الذكاء الاصطناعي')">
-          <span class="s-icon">🧠</span>
-          <div class="s-title">اشرح لي</div>
-          <div class="s-desc">كيف يعمل الذكاء الاصطناعي</div>
-        </div>
-        <div class="suggestion-card" onclick="window._startDevPrompt('غيّر لغة الواجهة إلى إنجليزية واجعل اتجاه النصوص LTR')">
-          <span class="s-icon">🛠️</span>
-          <div class="s-title">تعديل باللغة الإنجليزية</div>
-          <div class="s-desc">اطلب من شات المطور تحويل الواجهة لـ English</div>
-        </div>
-        <div class="suggestion-card" onclick="window._suggest('اكتب لي كود بايثون لقراءة CSV')">
-          <span class="s-icon">💻</span>
-          <div class="s-title">اكتب كود</div>
-          <div class="s-desc">بايثون لقراءة ملف CSV</div>
-        </div>
-        <div class="suggestion-card" onclick="window._suggest('لخص لي أهم مزايا React.js')">
-          <span class="s-icon">📚</span>
-          <div class="s-title">لخص لي</div>
-          <div class="s-desc">أهم مزايا React.js</div>
-        </div>
+      <div class="brand-icon" style="width:48px;height:48px;font-size:22px;border-radius:12px;">✦</div>
+      <h1 class="welcome-title">كيف يمكنني مساعدتك؟</h1>
+      <p class="welcome-sub">اختر موضوعاً للبدء أو اكتب رسالتك مباشرة في الأسفل.</p>
+      <div class="welcome-chips">
+        <button class="welcome-chip" onclick="window._suggest('اشرح لي مفهوم الذكاء الاصطناعي ببساطة')">🧠 ما هو الذكاء الاصطناعي؟</button>
+        <button class="welcome-chip" onclick="window._startDevPrompt('غيّر لغة الواجهة إلى الإنجليزية وخلي اتجاه الصفحة LTR')">🛠️ تغيير الواجهة لـ English</button>
+        <button class="welcome-chip" onclick="window._suggest('اكتب لي كود بايثون سريع لقراءة ملف JSON')">💻 كود بايثون لقراءة JSON</button>
       </div>
     </div>
   `;
 }
 
-function hideWelcomeScreen() {
-  const welcome = document.querySelector('.welcome-screen');
-  if (welcome) {
-    const wrapper = document.createElement('div');
-    wrapper.className = 'messages-wrapper';
-    $('chat-area').innerHTML = '';
-    $('chat-area').appendChild(wrapper);
-  }
-}
-
 function renderAllMessages(messages) {
-  const chatArea = $('chat-area');
+  const container = $('chat-container');
+  if (!container) return;
+
   if (messages.length === 0) {
     showWelcomeScreen();
     return;
   }
 
-  chatArea.innerHTML = '<div class="messages-wrapper"></div>';
-  const wrapper = chatArea.querySelector('.messages-wrapper');
+  container.innerHTML = '';
   messages.forEach(msg => {
-    wrapper.appendChild(createMessageElement(msg));
+    container.appendChild(createMessageRow(msg));
   });
 }
 
-function createMessageElement(msg) {
-  const group = document.createElement('div');
-  group.className = `message-group ${msg.role}`;
-  group.dataset.id = msg.id;
+function createMessageRow(msg) {
+  const row = document.createElement('div');
+  row.className = `message-row ${msg.role}`;
+  row.dataset.id = msg.id;
 
-  const isDev = getActiveConv()?.isDev;
-  const avatarEmoji = msg.role === 'ai' ? (isDev ? '🛠️' : '✦') : '👤';
-  const parsedContent = msg.role === 'ai' ? parseMarkdown(msg.content) : escapeHtml(msg.content);
+  const parsed = msg.role === 'ai' ? parseMarkdown(msg.content) : escapeHtml(msg.content);
 
-  group.innerHTML = `
-    <div class="avatar ${msg.role}">${avatarEmoji}</div>
-    <div class="message-content-wrap">
-      <div class="message-bubble">${parsedContent}</div>
-      ${msg.role === 'ai' ? `
-        <div class="message-meta">
-          ${msg.model ? `<span class="model-tag">✦ ${msg.model}</span>` : ''}
-          ${msg.usedFallback ? '<span class="fallback-badge">⚡ Fallback</span>' : ''}
-          <span class="msg-time">${formatTime(msg.timestamp)}</span>
-        </div>
-        <div class="message-actions">
-          <button class="msg-action-btn" onclick="window._copyMsg('${msg.id}')">📋 نسخ</button>
-          <button class="msg-action-btn" onclick="window._regenMsg('${msg.id}')">🔄 إعادة</button>
-        </div>
-      ` : ''}
-    </div>
+  row.innerHTML = `
+    <div class="msg-content">${parsed}</div>
+    ${msg.role === 'ai' && msg.model ? `
+      <div class="message-meta">
+        <span class="meta-badge">✦ ${escapeHtml(msg.model)}</span>
+        ${msg.usedFallback ? '<span class="meta-badge" style="color:var(--warning);">⚡ Fallback</span>' : ''}
+      </div>
+    ` : ''}
   `;
 
-  return group;
+  return row;
 }
 
 function appendMessage(msg) {
-  let wrapper = document.querySelector('.messages-wrapper');
-  if (!wrapper) {
-    $('chat-area').innerHTML = '<div class="messages-wrapper"></div>';
-    wrapper = document.querySelector('.messages-wrapper');
-  }
-  wrapper.appendChild(createMessageElement(msg));
+  const container = $('chat-container');
+  if (!container) return;
+
+  const welcome = container.querySelector('.welcome-screen');
+  if (welcome) container.innerHTML = '';
+
+  container.appendChild(createMessageRow(msg));
   scrollToBottom();
 }
 
-// ─── Streaming AI Reply ───
+// ─── Messaging & AI Streaming ───
 async function sendMessage(userText) {
   if (state.isStreaming || !userText.trim()) return;
 
@@ -364,23 +309,22 @@ async function sendMessage(userText) {
   if (isDev) {
     systemPromptForCall = `أنت مهندس البرمجيات ومطور التطبيق الذكي (AI Lead Developer).
 أنت تتحدث مع المستخدم لتطوير وتعديل هذا التطبيق نفسه (ChatBot PWA).
-التطبيق يتكون من الملفات التالية:
-- index.html (الهيكل الرئيسي، عناصر الواجهة، والنصوص، ولغة التطبيق dir='rtl' أو dir='ltr' و lang='ar'/'en')
-- style.css (التصميم والألوان والـ Glassmorphism)
-- app.js (منطق الشات والتفاعل والموديلز)
-- system_prompt.txt (التعليمات والشخصية)
+الملفات المتاحة:
+- index.html (الهيكل واللغة LTR/RTL)
+- style.css (التصميم والألوان)
+- app.js (منطق الشات)
+- system_prompt.txt (التعليمات)
 
-عندما يطلب منك المستخدم أي تعديل (مثلاً تغيير لغة الواجهة إلى إنجليزية، أو تعديل شكل الأزرار، أو إضافة ميزة):
-1. تحدث معه بودية واشرح له التعديل الذي قمت به باختصار.
-2. إذا قمت بتعديل أي ملف، ضع كتلة كود JSON كاملة ومغلقة في نهاية ردك بهذا الشكل الدقيق:
+عندما يطلب منك المستخدم تعديل:
+1. اشرح له التعديل بودية.
+2. ضع كتلة كود JSON كاملة في نهاية ردك بالشكل:
 \`\`\`json
 {
   "file": "index.html",
-  "content": "الكود الكامل للملف بعد التعديل دون نقصان",
-  "message": "وصف مختصر لما تم تعديله"
+  "content": "الكود الكامل للملف بعد التعديل",
+  "message": "وصف التعديل"
 }
-\`\`\`
-اكتب الكود بالكامل صالحاً وجاهزاً للعمل مباشرة.`;
+\`\`\``;
   }
 
   const apiMessages = [
@@ -392,14 +336,16 @@ async function sendMessage(userText) {
     { role: 'user', content: userText.trim() }
   ];
 
-  let finalModelInfo = null;
   let fullContent = '';
+  let finalModelInfo = null;
 
   try {
     const aiMsgId = generateId();
     const conv2 = getActiveConv();
     const aiMsgObj = {
-      id: aiMsgId, role: 'ai', content: '',
+      id: aiMsgId,
+      role: 'ai',
+      content: '',
       model: isDev ? 'Nemotron Developer' : null,
       usedFallback: false,
       timestamp: new Date().toISOString()
@@ -408,14 +354,14 @@ async function sendMessage(userText) {
 
     hideTyping();
     appendMessage(aiMsgObj);
-    const bubbleEl = document.querySelector(`[data-id="${aiMsgId}"] .message-bubble`);
+
+    const msgRow = document.querySelector(`[data-id="${aiMsgId}"] .msg-content`);
 
     const stream = chatWithFallback(
       isDev ? 'FAST' : state.currentMode,
       apiMessages,
       state.abortController.signal,
       (model, isFallback) => {
-        updateModelBadge(model, isFallback);
         aiMsgObj.model = isDev ? `Developer (${model.name})` : model.name;
         aiMsgObj.usedFallback = isFallback;
       }
@@ -424,18 +370,16 @@ async function sendMessage(userText) {
     for await (const { chunk, model, usedFallback } of stream) {
       fullContent += chunk;
       finalModelInfo = { model, usedFallback };
-      if (bubbleEl) {
-        bubbleEl.innerHTML = parseMarkdown(fullContent) + '<span class="cursor-blink">▋</span>';
+      if (msgRow) {
+        msgRow.innerHTML = parseMarkdown(fullContent);
         scrollToBottom();
       }
     }
 
-    if (bubbleEl) bubbleEl.innerHTML = parseMarkdown(fullContent);
     aiMsgObj.content = fullContent;
 
-    // Check for executable JSON file modification in Dev Mode
     if (isDev) {
-      await handleDevFileAutoExecution(fullContent, bubbleEl);
+      await handleDevProposal(fullContent, msgRow);
     }
 
     saveConversations();
@@ -455,10 +399,10 @@ async function sendMessage(userText) {
   }
 }
 
-// ─── Dev Mode Interactive Confirmation ───
+// ─── Dev Mode Proposal Card Logic ───
 window._pendingDevModifications = {};
 
-async function handleDevFileAutoExecution(content, bubbleEl) {
+async function handleDevProposal(content, msgContainer) {
   const jsonMatch = content.match(/```json\s*(\{[\s\S]*?\})\s*```/) || content.match(/(\{[\s\S]*"file"[\s\S]*"content"[\s\S]*\})/);
   if (!jsonMatch) return;
 
@@ -468,74 +412,106 @@ async function handleDevFileAutoExecution(content, bubbleEl) {
       const propId = generateId();
       window._pendingDevModifications[propId] = data;
 
-      // Append interactive confirmation proposal card
       const card = document.createElement('div');
       card.id = `proposal-${propId}`;
-      card.className = 'dev-proposal-card';
+      card.className = 'dev-proposal-box';
       card.innerHTML = `
-        <div class="dev-card-header">
-          <span>🛠️ تعديل جاهز لملف: <code>${escapeHtml(data.file)}</code></span>
-        </div>
-        <p class="dev-card-desc">📝 <strong>التفاصيل:</strong> ${escapeHtml(data.message || 'تم إعداد التعديل البرمجي بنجاح.')}</p>
-        <div class="dev-card-actions">
-          <button class="dev-card-btn deploy" onclick="window._deployProposal('${propId}')">
-            🚀 نشر التعديل على GitHub وتطبيق التحديث
+        <div class="dev-proposal-title">🛠️ تم إعداد التعديل لملف: <code>${escapeHtml(data.file)}</code></div>
+        <p class="dev-proposal-desc">📝 <strong>التغيير:</strong> ${escapeHtml(data.message || 'جاهز للنشر على GitHub')}</p>
+        <div class="dev-proposal-btns">
+          <button class="dev-btn-action deploy" onclick="window._deployProposal('${propId}')">
+            🚀 نشر التعديل على GitHub
           </button>
-          <button class="dev-card-btn cancel" onclick="window._cancelProposal('${propId}')">
+          <button class="dev-btn-action cancel" onclick="window._cancelProposal('${propId}')">
             ✕ إلغاء
           </button>
         </div>
       `;
-      bubbleEl.appendChild(card);
+      msgContainer.appendChild(card);
       scrollToBottom();
     }
   } catch (e) {
-    console.warn('[Dev AutoExec Error]', e.message);
+    console.warn('[Dev Proposal Parse Error]', e.message);
   }
 }
 
+window._deployProposal = async (propId) => {
+  const data = window._pendingDevModifications[propId];
+  if (!data) return;
+
+  const card = document.getElementById(`proposal-${propId}`);
+  if (card) {
+    card.innerHTML = `<div class="dev-proposal-title">🔄 جاري النشر على GitHub...</div>`;
+  }
+
+  try {
+    showToast(`🔄 جاري رفع ${data.file} على GitHub...`, 'info');
+    await uploadFile(data.file, data.content, `🛠️ Dev: ${data.message || 'Update'}`);
+    showToast(`✅ تم النشر على GitHub بنجاح!`, 'success');
+
+    if (card) {
+      card.innerHTML = `
+        <div class="dev-proposal-title" style="color:var(--success);">✅ تم النشر على GitHub وتحديث الملف بنجاح!</div>
+        <p class="dev-proposal-desc">الملف <code>${escapeHtml(data.file)}</code> محدث الآن على المستودع.</p>
+        <div class="dev-proposal-btns">
+          <button class="dev-btn-action reload" onclick="location.reload()">
+            🔄 إعادة تحميل التطبيق وتطبيق التعديل
+          </button>
+          <button class="dev-btn-action cancel" onclick="window._rollbackDev('${data.file}')">
+            ⏪ تراجع
+          </button>
+        </div>
+      `;
+    }
+  } catch (e) {
+    showToast('❌ فشل النشر: ' + e.message, 'error');
+    if (card) {
+      card.innerHTML = `
+        <div class="dev-proposal-title" style="color:var(--error);">❌ فشل النشر على GitHub</div>
+        <p class="dev-proposal-desc">${escapeHtml(e.message)}</p>
+        <div class="dev-proposal-btns">
+          <button class="dev-btn-action deploy" onclick="window._deployProposal('${propId}')">🔄 إعادة المحاولة</button>
+        </div>
+      `;
+    }
+  }
+};
+
+window._cancelProposal = (propId) => {
+  const card = document.getElementById(`proposal-${propId}`);
+  if (card) card.remove();
+  delete window._pendingDevModifications[propId];
+  showToast('تم إلغاء التعديل', 'info');
+};
+
+window._rollbackDev = async (file) => {
+  showToast('🔄 جاري التراجع...', 'info');
+  try {
+    const commits = await getCommitHistory(file, 4);
+    if (commits.length < 2) throw new Error('لا توجد نسخة سابقة');
+    await rollbackFile(file, commits[1].sha);
+    showToast(`✅ تم التراجع عن تعديل ${file}`, 'success');
+    setTimeout(() => location.reload(), 1000);
+  } catch (e) {
+    showToast('❌ ' + e.message, 'error');
+  }
+};
+
 // ─── Typing Indicator ───
 function showTyping() {
-  const wrapper = document.querySelector('.messages-wrapper') ||
-    (() => {
-      const w = document.createElement('div');
-      w.className = 'messages-wrapper';
-      $('chat-area').appendChild(w);
-      return w;
-    })();
+  const container = $('chat-container');
+  if (!container) return;
 
   const typing = document.createElement('div');
   typing.id = 'typing-indicator';
-  typing.className = 'typing-indicator';
-  typing.innerHTML = `
-    <div class="avatar ai">✦</div>
-    <div class="typing-bubble">
-      <div class="typing-dot"></div>
-      <div class="typing-dot"></div>
-      <div class="typing-dot"></div>
-    </div>
-  `;
-  wrapper.appendChild(typing);
+  typing.className = 'message-row ai';
+  typing.innerHTML = `<div class="msg-content" style="color:var(--text-muted);">جاري التفكير...</div>`;
+  container.appendChild(typing);
   scrollToBottom();
 }
 
 function hideTyping() {
   $('typing-indicator')?.remove();
-}
-
-// ─── Mode Selector ───
-function updateModeUI() {
-  $$('.mode-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.mode === state.currentMode);
-  });
-}
-
-function updateModelBadge(model, isFallback) {
-  const badge = document.querySelector('.current-model-badge .model-name-short');
-  const dot = document.querySelector('.model-dot');
-  if (badge) badge.textContent = model.name;
-  if (dot) dot.style.background = isFallback ? '#fbbf24' : '#34d399';
-  state.currentModel = model;
 }
 
 // ─── Markdown Parser ───
@@ -545,41 +521,24 @@ function parseMarkdown(text) {
 
   html = html.replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) => {
     const label = lang || 'code';
-    return `<div class="code-header">
+    return `<div class="code-header-bar">
       <span>${label}</span>
-      <button class="copy-code-btn" onclick="window._copyCode(this)">📋 نسخ</button>
-    </div><pre><code class="lang-${label}">${code.trim()}</code></pre>`;
+      <button class="copy-btn" onclick="window._copyCode(this)">نسخ</button>
+    </div><pre><code>${code.trim()}</code></pre>`;
   });
 
   html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
   html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
   html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
   html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
-  html = html.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
   html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
   html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
-  html = html.replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>');
-  html = html.replace(/^---$/gm, '<hr>');
-
-  html = html.replace(/^\|(.+)\|$/gm, (_, row) => {
-    const cells = row.split('|').map(c => c.trim());
-    return '<tr>' + cells.map(c => `<td>${c}</td>`).join('') + '</tr>';
-  });
-  html = html.replace(/(<tr>.*<\/tr>\n?)+/g, m => `<table>${m}</table>`);
-
   html = html.replace(/^[\*\-] (.+)$/gm, '<li>$1</li>');
   html = html.replace(/(<li>.*<\/li>\n?)+/g, m => `<ul>${m}</ul>`);
-  html = html.replace(/^\d+\. (.+)$/gm, '<li>$1</li>');
-
   html = html.replace(/\n\n/g, '</p><p>');
   html = html.replace(/\n/g, '<br>');
   html = `<p>${html}</p>`;
-
   html = html.replace(/<p><\/p>/g, '');
-  html = html.replace(/<p>(<h[1-3]>)/g, '$1');
-  html = html.replace(/(<\/h[1-3]>)<\/p>/g, '$1');
-  html = html.replace(/<p>(<ul>|<ol>|<table>|<pre>|<blockquote>|<hr>)/g, '$1');
-  html = html.replace(/(<\/ul>|<\/ol>|<\/table>|<\/pre>|<\/blockquote>|<hr>)<\/p>/g, '$1');
 
   return html;
 }
@@ -592,25 +551,13 @@ function escapeHtml(text) {
     .replace(/"/g, '&quot;');
 }
 
-function formatTime(isoString) {
-  if (!isoString) return '';
-  const d = new Date(isoString);
-  const now = new Date();
-  const diff = now - d;
-
-  if (diff < 60000) return 'الآن';
-  if (diff < 3600000) return `${Math.floor(diff / 60000)}د`;
-  if (diff < 86400000) return `${Math.floor(diff / 3600000)}س`;
-  return d.toLocaleDateString('ar-EG', { month: 'short', day: 'numeric' });
-}
-
 function showToast(message, type = 'info') {
   const container = $('toast-container');
   const toast = document.createElement('div');
   toast.className = `toast ${type}`;
   toast.textContent = message;
   container.appendChild(toast);
-  setTimeout(() => toast.remove(), 3500);
+  setTimeout(() => toast.remove(), 3000);
 }
 
 function scrollToBottom() {
@@ -618,17 +565,68 @@ function scrollToBottom() {
   if (chatArea) chatArea.scrollTop = chatArea.scrollHeight;
 }
 
-// ─── Input Handling ───
-function setupInputHandlers() {
+// ─── Event Handlers ───
+function setupEventListeners() {
+  // Sidebar toggles
+  $('sidebar-toggle')?.addEventListener('click', () => {
+    $('sidebar').classList.add('open');
+    $('overlay').classList.add('active');
+  });
+
+  $('close-sidebar-btn')?.addEventListener('click', () => {
+    $('sidebar').classList.remove('open');
+    $('overlay').classList.remove('active');
+  });
+
+  $('overlay')?.addEventListener('click', () => {
+    $('sidebar').classList.remove('open');
+    $('mode-dropdown-menu')?.classList.remove('show');
+    $('overlay').classList.remove('active');
+  });
+
+  // Model Dropdown
+  $('model-pill-trigger')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    $('mode-dropdown-menu').classList.toggle('show');
+  });
+
+  $$('.dropdown-item').forEach(btn => {
+    btn.addEventListener('click', () => {
+      state.currentMode = btn.dataset.mode;
+      $('mode-dropdown-menu').classList.remove('show');
+      updateHeaderUI();
+      const conv = getActiveConv();
+      if (conv) {
+        conv.mode = state.currentMode;
+        saveConversations();
+      }
+      showToast(`تم التبديل لـ ${state.currentMode}`, 'info');
+    });
+  });
+
+  // New Chat
+  $('btn-new-chat')?.addEventListener('click', () => {
+    newConversation();
+    $('sidebar').classList.remove('open');
+    $('overlay').classList.remove('active');
+  });
+
+  $('header-new-chat-btn')?.addEventListener('click', newConversation);
+
+  // Dev Chat
+  $('btn-dev-chat')?.addEventListener('click', () => {
+    startDevChat();
+    $('sidebar').classList.remove('open');
+    $('overlay').classList.remove('active');
+  });
+
+  // Input Box Auto-resize & Send
   const input = $('user-input');
   const sendBtn = $('send-btn');
 
   input.addEventListener('input', () => {
     input.style.height = 'auto';
-    input.style.height = Math.min(input.scrollHeight, 200) + 'px';
-
-    const count = $('char-count');
-    if (count) count.textContent = input.value.length > 0 ? `${input.value.length}` : '';
+    input.style.height = Math.min(input.scrollHeight, 180) + 'px';
     sendBtn.disabled = !input.value.trim() || state.isStreaming;
   });
 
@@ -636,73 +634,26 @@ function setupInputHandlers() {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       if (!state.isStreaming && input.value.trim()) {
-        handleSend();
+        const text = input.value.trim();
+        input.value = '';
+        input.style.height = 'auto';
+        sendBtn.disabled = true;
+        sendMessage(text);
       }
     }
   });
 
-  sendBtn.addEventListener('click', handleSend);
+  sendBtn.addEventListener('click', () => {
+    const text = input.value.trim();
+    if (!text || state.isStreaming) return;
+    input.value = '';
+    input.style.height = 'auto';
+    sendBtn.disabled = true;
+    sendMessage(text);
+  });
 }
 
-function handleSend() {
-  if (state.isStreaming) {
-    state.abortController?.abort();
-    return;
-  }
-
-  const input = $('user-input');
-  const text = input.value.trim();
-  if (!text) return;
-
-  input.value = '';
-  input.style.height = 'auto';
-  $('send-btn').disabled = true;
-  $('char-count').textContent = '';
-
-  sendMessage(text);
-}
-
-// ─── Event Listeners ───
-function setupEventListeners() {
-  $('sidebar-toggle')?.addEventListener('click', () => {
-    $('sidebar').classList.toggle('open');
-    $('overlay').classList.toggle('active');
-  });
-
-  $('overlay')?.addEventListener('click', () => {
-    $('sidebar').classList.remove('open');
-    $('overlay').classList.remove('active');
-  });
-
-  $('btn-new-chat')?.addEventListener('click', () => {
-    newConversation();
-    $('sidebar').classList.remove('open');
-    $('overlay').classList.remove('active');
-  });
-
-  $('btn-dev-chat')?.addEventListener('click', () => {
-    startDevChat();
-    $('sidebar').classList.remove('open');
-    $('overlay').classList.remove('active');
-  });
-
-  $$('.mode-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      state.currentMode = btn.dataset.mode;
-      updateModeUI();
-      const conv = getActiveConv();
-      if (conv) {
-        conv.mode = state.currentMode;
-        saveConversations();
-      }
-      showToast(`تم التبديل لـ ${state.currentMode} Mode`, 'info');
-    });
-  });
-
-  setupInputHandlers();
-}
-
-// ─── Global Handlers ───
+// ─── Global Helpers ───
 window._loadConv = (id) => {
   loadConversation(id);
   $('sidebar').classList.remove('open');
@@ -713,113 +664,22 @@ window._suggest = (text) => {
   newConversation();
   $('user-input').value = text;
   $('send-btn').disabled = false;
-  handleSend();
+  $('send-btn').click();
 };
 
 window._startDevPrompt = (text) => {
   startDevChat();
   $('user-input').value = text;
   $('send-btn').disabled = false;
-  handleSend();
-};
-
-window._copyMsg = (msgId) => {
-  const conv = getActiveConv();
-  const msg = conv?.messages.find(m => m.id === msgId);
-  if (msg) {
-    navigator.clipboard.writeText(msg.content)
-      .then(() => showToast('📋 تم النسخ', 'success'));
-  }
-};
-
-window._regenMsg = async (msgId) => {
-  const conv = getActiveConv();
-  if (!conv) return;
-  const idx = conv.messages.findIndex(m => m.id === msgId);
-  if (idx < 1) return;
-
-  const userMsg = conv.messages.slice(0, idx).reverse().find(m => m.role === 'user');
-  if (!userMsg) return;
-
-  conv.messages.splice(idx, 1);
-  saveConversations();
-  await sendMessage(userMsg.content);
+  $('send-btn').click();
 };
 
 window._copyCode = (btn) => {
-  const pre = btn.closest('.code-header').nextElementSibling;
-  const code = pre?.querySelector('code')?.textContent || '';
+  const code = btn.closest('.code-header-bar').nextElementSibling?.querySelector('code')?.textContent || '';
   navigator.clipboard.writeText(code).then(() => {
-    btn.textContent = '✅ تم';
-    setTimeout(() => btn.textContent = '📋 نسخ', 2000);
+    btn.textContent = 'تم النسخ!';
+    setTimeout(() => btn.textContent = 'نسخ', 2000);
   });
-};
-
-window._deployProposal = async (propId) => {
-  const data = window._pendingDevModifications[propId];
-  if (!data) return;
-
-  const card = document.getElementById(`proposal-${propId}`);
-  if (card) {
-    card.innerHTML = `
-      <div class="dev-card-header">
-        <span>🔄 جاري النشر على GitHub...</span>
-      </div>
-      <p class="dev-card-desc">جاري رفع وتحديث ملف <code>${escapeHtml(data.file)}</code> في المستودع.</p>
-    `;
-  }
-
-  try {
-    showToast(`🔄 جاري رفع ${data.file} على GitHub...`, 'info');
-    await uploadFile(data.file, data.content, `🛠️ Dev Chat: ${data.message || 'Update'}`);
-    showToast(`✅ تم النشر على GitHub بنجاح!`, 'success');
-
-    if (card) {
-      card.innerHTML = `
-        <div class="dev-card-header" style="color:var(--success);">
-          <span>✅ تم النشر على GitHub وتحديث الملف بنجاح!</span>
-        </div>
-        <p class="dev-card-desc">📁 الملف: <code>${escapeHtml(data.file)}</code> — ${escapeHtml(data.message || 'جاهز للاستخدام')}</p>
-        <div class="dev-card-actions">
-          <button class="dev-card-btn reload" onclick="location.reload()">
-            🔄 إعادة تحميل التطبيق وتطبيق التعديل الآن
-          </button>
-          <button class="dev-card-btn secondary" onclick="window._rollbackDev('${data.file}')">
-            ⏪ تراجع عن التعديل
-          </button>
-        </div>
-      `;
-    }
-  } catch (e) {
-    showToast('❌ فشل النشر: ' + e.message, 'error');
-    if (card) {
-      card.innerHTML = `
-        <div class="dev-card-header" style="color:var(--error);">
-          <span>❌ فشل النشر على GitHub</span>
-        </div>
-        <p class="dev-card-desc">${escapeHtml(e.message)}</p>
-        <div class="dev-card-actions">
-          <button class="dev-card-btn deploy" onclick="window._deployProposal('${propId}')">
-            🔄 إعادة المحاولة
-          </button>
-        </div>
-      `;
-    }
-  }
-};
-
-window._cancelProposal = (propId) => {
-  const card = document.getElementById(`proposal-${propId}`);
-  if (card) {
-    card.innerHTML = `
-      <div class="dev-card-header" style="color:var(--text-muted);">
-        <span>✕ تم إلغاء التعديل</span>
-      </div>
-    `;
-    setTimeout(() => card.remove(), 2000);
-  }
-  delete window._pendingDevModifications[propId];
-  showToast('تم إلغاء التعديل', 'info');
 };
 
 document.addEventListener('DOMContentLoaded', init);
