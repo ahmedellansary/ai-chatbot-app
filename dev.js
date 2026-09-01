@@ -630,7 +630,6 @@
           }
 
           if (i > 0) {
-            DevUIEngine.showToast(`🛡️ تم التحويل التلقائي إلى: ${currentAgent.name} (Smart Fallback)`, 'warning');
             const msgElem = document.querySelector(`[data-id="${aiMsgId}"] .msg-content`);
             if (msgElem && !fullContent) {
               msgElem.innerHTML = `<span style="color:#fbbf24; font-size:12.5px;">🔄 جاري التبديل التلقائي إلى <strong>${DevUIEngine.escapeHtml(currentAgent.name)}</strong>...</span>`;
