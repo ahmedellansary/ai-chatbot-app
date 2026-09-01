@@ -644,6 +644,26 @@ html, body {
   }
 }
 
+.message-row.ai {
+  gap: 8px;
+  width: 100%;
+}
+
+.message-row.ai.is-rtl,
+.message-row.ai:not(.is-ltr) {
+  align-self: flex-end;
+  align-items: flex-end;
+  text-align: right;
+  direction: rtl;
+}
+
+.message-row.ai.is-ltr {
+  align-self: flex-start;
+  align-items: flex-start;
+  text-align: left;
+  direction: ltr;
+}
+
 .message-row.ai .msg-content {
   color: var(--text-main);
   font-family: var(--font-serif);
@@ -654,6 +674,17 @@ html, body {
   unicode-bidi: plaintext;
 }
 
+.message-row.ai.is-rtl .msg-content,
+.message-row.ai:not(.is-ltr) .msg-content {
+  text-align: right;
+  direction: rtl;
+}
+
+.message-row.ai.is-ltr .msg-content {
+  text-align: left;
+  direction: ltr;
+}
+
 /* ─── Action Buttons Toolbar ─── */
 .claude-actions-bar {
   display: flex;
@@ -662,6 +693,16 @@ html, body {
   gap: 12px;
   margin-top: 8px;
   padding-top: 4px;
+  width: 100%;
+}
+
+.message-row.ai.is-rtl .claude-actions-bar,
+.message-row.ai:not(.is-ltr) .claude-actions-bar {
+  direction: rtl;
+}
+
+.message-row.ai.is-ltr .claude-actions-bar {
+  direction: ltr;
 }
 
 .claude-action-btn {
@@ -691,6 +732,16 @@ html, body {
   margin-top: 10px;
   padding-top: 6px;
   border-top: 1px solid rgba(255, 255, 255, 0.04);
+  width: 100%;
+}
+
+.message-row.ai.is-rtl .claude-footer-note,
+.message-row.ai:not(.is-ltr) .claude-footer-note {
+  direction: rtl;
+}
+
+.message-row.ai.is-ltr .claude-footer-note {
+  direction: ltr;
 }
 
 .claude-terracotta-star {
