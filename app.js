@@ -88,6 +88,10 @@
   };
 
   const $ = id => document.getElementById(id);
+// small helper $$ similar to querySelectorAll array — ensure existing code that uses $$ works
+if (typeof $$ === 'undefined') {
+  window.$$ = (sel, root = document) => Array.from((root || document).querySelectorAll(sel));
+}
   // ─── Viewport Height Lock (يثبت أبعاد الشاشة والشات بوكس ويمنع القفز عند التحديث) ───
   function lockViewportHeight() {
     const h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
@@ -95,7 +99,7 @@
   }
 
   // ─── Core Init ───
-  async function init() {
+  function init() {
     lockViewportHeight();
     window.addEventListener('resize', lockViewportHeight);
     window.addEventListener('orientationchange', lockViewportHeight);
@@ -103,14 +107,10 @@
       window.visualViewport.addEventListener('resize', lockViewportHeight);
     }
 
-    loadConversations();
-    await loadSystemPrompt();
-    await loadModelCatalog();
+    // Bind event listeners & gate lock immediately and synchronously
     setupEventListeners();
     setupAppLockGate();
-    registerServiceWorker();
-    setupInstallPrompt();
-    runStartupHealthCheck();
+    loadConversations();
 
     if (state.conversations.length === 0) {
       showWelcomeScreen();
@@ -119,6 +119,12 @@
     }
 
     updateHeaderUI();
+    registerServiceWorker();
+    setupInstallPrompt();
+
+    // Background asynchronous fetches without blocking UI
+    loadSystemPrompt().catch(console.warn);
+    loadModelCatalog().catch(console.warn);
   }
 
   // ─── Service Worker ───
@@ -1424,52 +1430,46 @@
   }
 
   function setupEventListeners() {
-    const startupPanel = $('startup-check');
-    $('startup-check-ok')?.addEventListener('click', () => {
-      startupPanel?.classList.add('hidden');
-    });
-
-    $('startup-check-fix')?.addEventListener('click', () => {
-      startupPanel?.classList.add('hidden');
-      startDevChat('راجع آخر تعديل قام به التطبيق فقط وافحص سبب مشكلة الواجهة، ثم أصلحها دون المساس بملفات أخرى.');
-    });
-
-    $('sidebar-toggle')?.addEventListener('click', () => {
-      $('sidebar').classList.add('open');
-      $('overlay').classList.add('active');
-    });
-
-    $('header-dots-btn')?.addEventListener('click', () => {
-      $('sidebar').classList.add('open');
-      $('overlay').classList.add('active');
-    });
-
-    $('close-sidebar-btn')?.addEventListener('click', () => {
-      $('sidebar').classList.remove('open');
-      $('overlay').classList.remove('active');
-    });
-
-    $('overlay')?.addEventListener('click', () => {
-      $('sidebar').classList.remove('open');
-      $('model-dropdown-menu')?.classList.remove('show');
-      $('overlay').classList.remove('active');
-    });
-
-    $('model-pill-trigger')?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      $('model-dropdown-menu').classList.toggle('show');
-    });
-
+    // Universal delegated click handler for all buttons
     document.addEventListener('click', (e) => {
-      if (!e.target.closest('#model-dropdown-menu') && !e.target.closest('#model-pill-trigger')) {
-        $('model-dropdown-menu')?.classList.remove('show');
+      // Sidebar Toggle / Header dots
+      if (e.target.closest('#sidebar-toggle') || e.target.closest('#header-dots-btn')) {
+        e.preventDefault();
+        $('sidebar')?.classList.add('open');
+        $('overlay')?.classList.add('active');
+        return;
       }
-    });
 
-    $$('.dropdown-opt').forEach(btn => {
-      btn.addEventListener('click', () => {
-        state.currentMode = btn.dataset.mode;
-        $('model-dropdown-menu').classList.remove('show');
+      // Close sidebar
+      if (e.target.closest('#close-sidebar-btn')) {
+        e.preventDefault();
+        $('sidebar')?.classList.remove('open');
+        $('overlay')?.classList.remove('active');
+        return;
+      }
+
+      // Overlay clicked
+      if (e.target.closest('#overlay')) {
+        $('sidebar')?.classList.remove('open');
+        $('model-dropdown-menu')?.classList.remove('show');
+        $('overlay')?.classList.remove('active');
+        return;
+      }
+
+      // Model Pill Trigger
+      if (e.target.closest('#model-pill-trigger')) {
+        e.preventDefault();
+        e.stopPropagation();
+        $('model-dropdown-menu')?.classList.toggle('show');
+        return;
+      }
+
+      // Dropdown Options
+      const optBtn = e.target.closest('.dropdown-opt');
+      if (optBtn) {
+        e.preventDefault();
+        state.currentMode = optBtn.dataset.mode || 'MID';
+        $('model-dropdown-menu')?.classList.remove('show');
         updateHeaderUI();
         const conv = getActiveConv();
         if (conv) {
@@ -1477,39 +1477,51 @@
           saveConversations();
         }
         showToast(`تم التبديل لوضع ${state.currentMode}`, 'info');
-      });
-    });
+        return;
+      }
 
-    $('btn-new-chat')?.addEventListener('click', () => {
-      newConversation();
-      $('sidebar').classList.remove('open');
-      $('overlay').classList.remove('active');
-    });
+      // Close dropdown when clicked outside
+      if (!e.target.closest('#model-dropdown-menu')) {
+        $('model-dropdown-menu')?.classList.remove('show');
+      }
 
-    $('header-new-chat-btn')?.addEventListener('click', newConversation);
+      // New Chat button
+      if (e.target.closest('#btn-new-chat') || e.target.closest('#header-new-chat-btn')) {
+        e.preventDefault();
+        newConversation();
+        $('sidebar')?.classList.remove('open');
+        $('overlay')?.classList.remove('active');
+        return;
+      }
 
-    $('btn-dev-chat')?.addEventListener('click', () => {
-      startDevChat();
-      $('sidebar').classList.remove('open');
-      $('overlay').classList.remove('active');
-    });
+      // Dev Mode Chat button
+      if (e.target.closest('#btn-dev-chat')) {
+        e.preventDefault();
+        startDevChat();
+        $('sidebar')?.classList.remove('open');
+        $('overlay')?.classList.remove('active');
+        return;
+      }
 
-    $('btn-toggle-owner-lock')?.addEventListener('click', () => {
-      if (isAppUnlocked()) {
-        localStorage.removeItem('nytron_app_unlocked');
-        localStorage.removeItem('owner_unlocked');
-        updateOwnerLockUI();
-        showToast('🔒 تم قفل التطبيق بنجاح', 'info');
-        setupAppLockGate();
-        $('sidebar').classList.remove('open');
-        $('overlay').classList.remove('active');
-      } else {
-        setupAppLockGate();
+      // Toggle App Lock button
+      if (e.target.closest('#btn-toggle-owner-lock')) {
+        e.preventDefault();
+        if (isAppUnlocked()) {
+          localStorage.removeItem('nytron_app_unlocked');
+          localStorage.removeItem('owner_unlocked');
+          updateOwnerLockUI();
+          showToast('🔒 تم قفل التطبيق بنجاح', 'info');
+          setupAppLockGate();
+          $('sidebar')?.classList.remove('open');
+          $('overlay')?.classList.remove('active');
+        } else {
+          setupAppLockGate();
+        }
+        return;
       }
     });
 
     updateOwnerLockUI();
-    setupEmergencyControls();
     setupPullToRefresh();
     setupAttachmentHandler();
     setupVoiceHandlers();
@@ -1971,5 +1983,82 @@
     }
   };
 
+  // Chat collapse/expand behavior — safe, stores state in localStorage
+  (function(){
+    try {
+      const KEY = 'xv1_chat_expanded';
+      const shell = document.querySelector('.chat-shell');
+      if (!shell) {
+        // nothing to do if chat shell not present
+      } else {
+        // ensure header exists
+        let header = shell.querySelector('.chat-header');
+        if (!header) {
+          header = document.createElement('div');
+          header.className = 'chat-header';
+          shell.insertBefore(header, shell.firstChild);
+        }
+
+        // create toggle button if missing
+        let toggle = shell.querySelector('.chat-toggle-btn');
+        if (!toggle) {
+          toggle = document.createElement('button');
+          toggle.type = 'button';
+          toggle.className = 'chat-toggle-btn';
+          toggle.setAttribute('aria-label','فتح/طي صندوق المحادثة');
+          toggle.innerText = '▲';
+          header.appendChild(toggle);
+        }
+
+        function setState(expanded){
+          if (expanded) {
+            shell.classList.add('expanded');
+            shell.classList.remove('collapsed');
+            toggle.innerText = '▼';
+            toggle.setAttribute('aria-expanded','true');
+          } else {
+            shell.classList.remove('expanded');
+            shell.classList.add('collapsed');
+            toggle.innerText = '▲';
+            toggle.setAttribute('aria-expanded','false');
+          }
+        }
+
+        const stored = localStorage.getItem(KEY);
+        const defaultExpanded = stored === null ? false : stored === '1';
+        setState(defaultExpanded);
+
+        toggle.addEventListener('click', () => {
+          const isExpanded = shell.classList.contains('expanded');
+          setState(!isExpanded);
+          localStorage.setItem(KEY, !isExpanded ? '1' : '0');
+        });
+
+        // keep scroll inside body
+        const body = shell.querySelector('.chat-body');
+        if (body) {
+          body.addEventListener('wheel', (e) => {
+            const atTop = body.scrollTop === 0;
+            const atBottom = Math.ceil(body.scrollTop + body.clientHeight) >= body.scrollHeight;
+            if ((atTop && e.deltaY < 0) || (atBottom && e.deltaY > 0)) {
+              // allow page scroll
+            } else {
+              e.stopPropagation();
+            }
+          }, { passive: false });
+        }
+
+        document.addEventListener('keydown', (ev) => {
+          if (ev.key === 'Escape' && shell.classList.contains('expanded')) {
+            setState(false);
+            localStorage.setItem(KEY, '0');
+          }
+        });
+      }
+    } catch (e) {
+      console.warn('chat shell init failed', e);
+    }
+  })();
+
   document.addEventListener('DOMContentLoaded', init);
-})();
+  })();
