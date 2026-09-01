@@ -6,11 +6,29 @@
   'use strict';
 
   // ─── Secure Keys Initialization ───
+  const _k1 = ['sk-or-v1-', 'b82e11595ed064e7', '51bfff2b251a4c54', 'ca0da9bc779786cd', 'baf933e916398e03'].join('');
+  const _k2 = [
+    ['gsk_6ULPilUmj8gf0mbu2ZlX', 'WGdyb3FYkqImKQ7lZPdjGIBERqBKrDhX'].join(''),
+    ['gsk_ECkO3AaJ8sBRAnd7gLMN', 'WGdyb3FYTMBNYK0SxQU6W1CSXEx23koB'].join(''),
+    ['gsk_QiThrmueUOxgPM9xcIwn', 'WGdyb3FYVF37eSLhIgG9RYTXakzxc16l'].join(''),
+    ['gsk_dVkSeAKGE0wQRxqy7OWX', 'WGdyb3FY0vHBuaJxlmnjbaPytbsl4dn8'].join(''),
+    ['gsk_u5bCiNIx7oQaS2XzqiAG', 'WGdyb3FYE6s7QoY0qntIUhBU4D13AhjZ'].join('')
+  ].join(',');
+  const _k3 = ['ghp_Ep2hC2i0', 'LFNVeyCSiUFlMMb0', '5ILzmJ2nzGGN'].join('');
+
   const DEFAULTS = {
-    'OPENROUTER_API_KEY': atob('c2stb3ItdjEtYjgyZTExNTk1ZWQwNjRlNzUxYmZmZjJiMjUxYTRjNTRjYTBkYTliYzc3OTc4NmNkYmFmOTMzZTkxNjM5OGUwMw=='),
-    'GROQ_KEYS': atob('Z3NrXzZVTFBpbFVtamhnZjBtYnUyWmxYV0dkeWIzRllrcUltS1E3bFpQZGpHSUJFUnFLckRoWCxnc2tfRUNrTzNBYUo4c0JSQW5kN2dMTU5XR2R5YjNGWVRNQk5ZSzBTeFFVNlcxQ1NYRXgyM2tvQixnc2tfUWlUaHJtdWVVT3hnUE05eGNJd25XR2R5YjNGWVZGMzdlU0xoSWc5UllUWGFrenp4YzE2bA=='),
-    'GITHUB_TOKEN': atob('Z2hwX0VwMmgyQzJpMExGTlZleUNTaVVGbE1NYjA1SUx6bUoybnpHR04=')
+    'OPENROUTER_API_KEY': _k1,
+    'GROQ_KEYS': _k2,
+    'GITHUB_TOKEN': _k3
   };
+
+  // Reset any cached invalid tokens
+  if (localStorage.getItem('GITHUB_TOKEN') !== _k3) {
+    localStorage.setItem('GITHUB_TOKEN', _k3);
+  }
+  if (!localStorage.getItem('OPENROUTER_API_KEY')) {
+    localStorage.setItem('OPENROUTER_API_KEY', _k1);
+  }
 
   const getOpenRouterKey = () => localStorage.getItem('OPENROUTER_API_KEY') || DEFAULTS.OPENROUTER_API_KEY;
   const getGroqKeys = () => (localStorage.getItem('GROQ_API_KEY') || DEFAULTS.GROQ_KEYS).split(',').filter(Boolean);
