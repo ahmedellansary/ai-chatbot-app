@@ -201,7 +201,8 @@
     isStreaming: false,
     abortController: null,
     lastModifiedFile: 'index.html',
-    attachments: []
+    attachments: [],
+    isMultiAgentMode: localStorage.getItem('is_multi_agent_mode') === '1'
   };
 
   const StateController = {
@@ -778,11 +779,42 @@
         }).join('') + '</div>';
       }
 
+      let multiAgentHtml = '';
+      if (msg.multiAgentSteps && Array.isArray(msg.multiAgentSteps)) {
+        const stepsHtml = msg.multiAgentSteps.map(s => `
+          <div class="agent-step-item">
+            <div class="agent-step-header">
+              <span class="agent-step-name">${s.icon} ${this.escapeHtml(s.title)}</span>
+              <span class="agent-step-badge">${this.escapeHtml(s.status)}</span>
+            </div>
+            <div class="agent-step-body">${this.escapeHtml(s.summary || '')}</div>
+          </div>
+        `).join('');
+
+        multiAgentHtml = `
+          <div class="multi-agent-box collapsed" id="box-${msg.id}">
+            <div class="multi-agent-header" onclick="window._toggleThinkingBox('${msg.id}')">
+              <div class="multi-agent-title">
+                <span>👥</span>
+                <span>تشاور الوكلاء (${msg.multiAgentSteps.length} وكلاء مشاركين)</span>
+              </div>
+              <div class="multi-agent-toggle-indicator">
+                <span id="indicator-${msg.id}">[إخفاء / عرض النقاش] ▾</span>
+              </div>
+            </div>
+            <div class="multi-agent-content">
+              ${stepsHtml}
+            </div>
+          </div>
+        `;
+      }
+
       if (msg.role === 'user') {
         row.innerHTML = `<div class="msg-content" ${dirAttr}>${parsed}${attachmentsHtml}</div>`;
       } else {
         row.innerHTML = `
           <div class="msg-content" ${dirAttr}>
+            ${multiAgentHtml}
             ${parsed}
             ${attachmentsHtml}
           </div>
@@ -953,6 +985,24 @@
       };
       conv.messages.push(aiMsgObj);
 
+      if (state.isMultiAgentMode) {
+        try {
+          await MultiAgentEngine.runConsensus(userText, textForPayload, apiMessages, aiMsgId, aiMsgObj, conv);
+        } catch (err) {
+          MessageRenderer.hideTyping();
+          if (err.name !== 'AbortError') {
+            MessageRenderer.showToast('❌ ' + err.message, 'error');
+          }
+        } finally {
+          MessageRenderer.hideTyping();
+          state.isStreaming = false;
+          state.abortController = null;
+          UIEngine.updateSendBtnState();
+          MessageRenderer.scrollToBottom();
+        }
+        return;
+      }
+
       MessageRenderer.showTyping('Analyzing...');
 
       const onModelEvent = (model, isFallback) => {
@@ -1022,6 +1072,140 @@
         UIEngine.updateSendBtnState();
         MessageRenderer.scrollToBottom();
       }
+    }
+  };
+
+  // ─────────────────────────────────────────────────────────────────
+  // 8. MULTI-AGENT COLLABORATIVE CONSENSUS ENGINE (MultiAgentEngine)
+  // ─────────────────────────────────────────────────────────────────
+  const MultiAgentEngine = {
+    async runConsensus(userText, textForPayload, apiMessages, aiMsgId, aiMsgObj, conv) {
+      MessageRenderer.showTyping('جاري بدء تشاور الوكلاء...');
+
+      let msgRow = null;
+      const getOrCreateRow = () => {
+        if (!msgRow) {
+          MessageRenderer.hideTyping();
+          MessageRenderer.appendMessage(aiMsgObj);
+          msgRow = document.querySelector(`[data-id="${aiMsgId}"] .msg-content`);
+        }
+        return msgRow;
+      };
+
+      const renderLiveUI = (steps, finalContent = '', isThinking = true) => {
+        const row = getOrCreateRow();
+        if (!row) return;
+
+        const stepsHtml = steps.map(s => `
+          <div class="agent-step-item">
+            <div class="agent-step-header">
+              <span class="agent-step-name">${s.icon} ${MessageRenderer.escapeHtml(s.title)}</span>
+              <span class="agent-step-badge">${MessageRenderer.escapeHtml(s.status)}</span>
+            </div>
+            <div class="agent-step-body">${MessageRenderer.escapeHtml(s.summary || 'جاري التحليل...')}</div>
+          </div>
+        `).join('');
+
+        const boxHtml = `
+          <div class="multi-agent-box" id="box-${aiMsgId}">
+            <div class="multi-agent-header" onclick="window._toggleThinkingBox('${aiMsgId}')">
+              <div class="multi-agent-title">
+                <span>👥</span>
+                <span>تشاور الوكلاء (${steps.length} وكلاء مشاركين)</span>
+              </div>
+              <div class="multi-agent-toggle-indicator">
+                <span id="indicator-${aiMsgId}">[إخفاء / عرض النقاش] ▾</span>
+              </div>
+            </div>
+            <div class="multi-agent-content">
+              ${stepsHtml}
+            </div>
+          </div>
+        `;
+
+        const parsedFinal = finalContent ? MessageRenderer.parseMarkdown(finalContent) : (isThinking ? '<div style="color:var(--text-dim); font-size:13px; padding:4px;">⏳ جاري صياغة القرار النهائي المعتمد...</div>' : '');
+        row.innerHTML = boxHtml + parsedFinal;
+
+        const isAr = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(finalContent || userText);
+        const parentRow = document.querySelector(`[data-id="${aiMsgId}"]`);
+        if (parentRow) {
+          parentRow.classList.toggle('is-rtl', isAr);
+          parentRow.classList.toggle('is-ltr', !isAr);
+        }
+      };
+
+      const steps = [
+        { id: 1, icon: '💡', title: 'المحلل الاستراتيجي (Strategic Analyst)', status: 'نشط الآن', summary: 'جاري دراسة المسألة واقتراح التحليل الأولي...' },
+        { id: 2, icon: '🔍', title: 'الناقد المنطقي (Critical Reviewer)', status: 'في الانتظار', summary: 'بانتظار مسودة المحلل للتدقيق والفحص...' },
+        { id: 3, icon: '👑', title: 'المقرر النهائي (Chief Synthesizer)', status: 'في الانتظار', summary: 'بانتظار التقرير النهائي للصياغة المعتمدة...' }
+      ];
+
+      renderLiveUI(steps, '', true);
+
+      // --- STAGE 1: Strategic Analyst ---
+      const stage1Messages = [
+        ...apiMessages.slice(0, -1),
+        { role: 'user', content: `${textForPayload}\n\n[DIRECTIVE TO STRATEGIC ANALYST]: Provide a sharp, structured, and comprehensive initial analysis/solution. Be concise and logical.` }
+      ];
+
+      let stage1Output = '';
+      try {
+        const stream1 = ModelEngine.chatWithFallback('FAST', stage1Messages, state.abortController.signal, () => {});
+        for await (const { chunk } of stream1) {
+          stage1Output += chunk;
+        }
+        steps[0].status = '✓ اكتمل';
+        steps[0].summary = stage1Output.slice(0, 180).trim() + (stage1Output.length > 180 ? '...' : '');
+        steps[1].status = 'نشط الآن';
+        steps[1].summary = 'جاري مراجعة تحليل المسودة واكتشاف أي ثغرات أو تحسينات...';
+        renderLiveUI(steps, '', true);
+      } catch (e) {
+        steps[0].status = 'تجاوز';
+        stage1Output = 'تحليل أولي للطلب.';
+      }
+
+      // --- STAGE 2: Critical Reviewer ---
+      const stage2Messages = [
+        ...apiMessages.slice(0, -1),
+        { role: 'user', content: `User Request: "${textForPayload}"\n\nAgent 1 Proposal:\n"${stage1Output}"\n\n[DIRECTIVE TO CRITICAL REVIEWER]: Critique and review Agent 1's proposal. Point out any missed points, logic flaws, edge cases, or optimizations concisely in 2-3 bullet points.` }
+      ];
+
+      let stage2Output = '';
+      try {
+        const stream2 = ModelEngine.chatWithFallback('MID', stage2Messages, state.abortController.signal, () => {});
+        for await (const { chunk } of stream2) {
+          stage2Output += chunk;
+        }
+        steps[1].status = '✓ اكتمل';
+        steps[1].summary = stage2Output.slice(0, 180).trim() + (stage2Output.length > 180 ? '...' : '');
+        steps[2].status = 'نشط الآن';
+        steps[2].summary = 'جاري دمج أفضل النقاط واعتماد الإجابة النهائية الأصح...';
+        renderLiveUI(steps, '', true);
+      } catch (e) {
+        steps[1].status = 'تجاوز';
+        stage2Output = 'تمت مراجعة المسودة واعتماد النقاط الرئيسية.';
+      }
+
+      // --- STAGE 3: Final Synthesis ---
+      const stage3Messages = [
+        ...apiMessages.slice(0, -1),
+        { role: 'user', content: `${textForPayload}\n\n[CONTEXT: Multi-Agent Consensus Collaboration]\nAgent 1 Draft:\n${stage1Output}\n\nAgent 2 Review & Critique:\n${stage2Output}\n\n[DIRECTIVE TO CHIEF SYNTHESIZER]: Deliver the finalized, highest quality, polished, and fully validated response to the user. Do not talk about the agents; directly provide the definitive answer formatted in clean Markdown.` }
+      ];
+
+      let finalOutput = '';
+      const stream3 = ModelEngine.chatWithFallback(state.currentMode, stage3Messages, state.abortController.signal, () => {});
+      for await (const { chunk } of stream3) {
+        finalOutput += chunk;
+        renderLiveUI(steps, finalOutput, false);
+      }
+
+      steps[2].status = '✓ معتمد';
+      steps[2].summary = 'تم الاتفاق وصياغة القرار النهائي المعتمد بنجاح.';
+      renderLiveUI(steps, finalOutput, false);
+
+      aiMsgObj.content = finalOutput;
+      aiMsgObj.multiAgentSteps = steps;
+      StateController.save();
     }
   };
 
@@ -2162,6 +2346,27 @@
   window._closeInstructionEditor = () => InstructionManager.closeEditor();
   window._resetDefaultInstructionFiles = () => InstructionManager.resetDefaults();
 
+  // Multi-Agent Consensus Toggle and Accordion Bridges
+  window._toggleMultiAgentMode = function() {
+    state.isMultiAgentMode = !state.isMultiAgentMode;
+    localStorage.setItem('is_multi_agent_mode', state.isMultiAgentMode ? '1' : '0');
+    const btn = $('multi-agent-toggle-btn');
+    if (btn) {
+      btn.classList.toggle('active', !!state.isMultiAgentMode);
+    }
+    const label = $('multi-agent-label-text');
+    if (label) {
+      label.textContent = state.isMultiAgentMode ? 'تشاور الوكلاء (نشط)' : 'تشاور الوكلاء';
+    }
+    MessageRenderer.showToast(state.isMultiAgentMode ? '👥 تم تفعيل وضع تشاور الوكلاء (Multi-Agent Consensus)!' : '⚪ تم تعطيل وضع تشاور الوكلاء', 'info');
+  };
+
+  window._toggleThinkingBox = function(msgId) {
+    const box = document.getElementById(`box-${msgId}`);
+    if (!box) return;
+    box.classList.toggle('collapsed');
+  };
+
   // ─────────────────────────────────────────────────────────────────
   // 11. BOOTSTRAP & LIFECYCLE INITIALIZATION
   // ─────────────────────────────────────────────────────────────────
@@ -2271,6 +2476,13 @@
     }
 
     UIEngine.updateHeaderUI();
+    const multiBtn = $('multi-agent-toggle-btn');
+    if (multiBtn && state.isMultiAgentMode) {
+      multiBtn.classList.add('active');
+      const label = $('multi-agent-label-text');
+      if (label) label.textContent = 'تشاور الوكلاء (نشط)';
+    }
+
     registerServiceWorker();
     setupInstallPrompt();
 
