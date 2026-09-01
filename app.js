@@ -1022,25 +1022,19 @@
       };
       conv.messages.push(aiMsgObj);
 
-      const isArabic = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(textForPayload);
-      const initialStageText = isArabic ? 'جاري تحليل المدخلات...' : 'Analyzing prompt & context...';
-      MessageRenderer.showTyping(initialStageText);
+      MessageRenderer.showTyping('Analyzing...');
 
       const onModelEvent = (model, isFallback) => {
         aiMsgObj.model = isDev ? `Developer (${model.name})` : model.name;
         aiMsgObj.usedFallback = isFallback;
 
-        const connectText = isArabic
-          ? (isFallback ? `تبديل تلقائي إلى ${model.name}...` : `الاتصال بـ ${model.name}...`)
-          : (isFallback ? `Switching to ${model.name}...` : `Connecting to ${model.name}...`);
-        
+        const connectText = isFallback ? `Switching to ${model.name}...` : `Connecting to ${model.name}...`;
         MessageRenderer.setThinkingStage(connectText);
 
         if (MessageRenderer._thinkingTimer) clearTimeout(MessageRenderer._thinkingTimer);
         MessageRenderer._thinkingTimer = setTimeout(() => {
-          const reasoningText = isArabic ? `استحضار الأفكار وصياغة الرد...` : `Reasoning & formulating response...`;
-          MessageRenderer.setThinkingStage(reasoningText);
-        }, 600);
+          MessageRenderer.setThinkingStage(`Reasoning & thinking...`);
+        }, 550);
       };
 
       try {
