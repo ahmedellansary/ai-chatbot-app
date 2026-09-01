@@ -885,8 +885,11 @@
       return { textForPayload, currentAttachments };
     },
 
-    buildSystemPrompt() {
-      return state.systemPrompt;
+    async buildSystemPrompt() {
+      if (!state.systemPrompt) {
+        await loadSystemPrompt();
+      }
+      return state.systemPrompt || 'You are X.v1, an advanced creative AI assistant, strategic critic, and director.';
     },
 
     async sendMessage(userText) {
@@ -912,7 +915,7 @@
       state.isStreaming = true;
       state.abortController = new AbortController();
 
-      const systemPromptForCall = this.buildSystemPrompt();
+      const systemPromptForCall = await this.buildSystemPrompt();
       const recentMessages = conv.messages
         .filter(m => m.id !== userMsg.id)
         .slice(-8);
