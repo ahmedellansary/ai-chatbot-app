@@ -551,7 +551,7 @@
       // Auto-fetch relevant repo files from GitHub so the AI has full context of existing code!
       if (attachedTexts.length === 0 && textForPayload) {
         const promptLower = textForPayload.toLowerCase();
-        const knownFiles = ['index.html', 'style.css', 'app.js', 'dev.html', 'dev_style.css', 'dev.js', 'models.js', 'sw.js', 'models.json', 'system_prompt.txt', 'dev_prompt.txt'];
+        const knownFiles = ['dev.html', 'dev_style.css', 'dev.js', 'index.html', 'style.css', 'app.js', 'instructions.json', 'models.js', 'sw.js', 'models.json', 'system_prompt.txt', 'dev_prompt.txt'];
         const targetFilesToFetch = [];
 
         for (const kf of knownFiles) {
@@ -561,25 +561,41 @@
         }
 
         if (targetFilesToFetch.length === 0) {
-          if (/تصميم|ستايل|لون|شكل|خلفية|css|style|border|color|theme|زر|input|textarea|header/i.test(promptLower)) {
-            targetFilesToFetch.push('style.css');
-          } else if (/شات بوت|شات|رسائل|مهارات|برومبت|app|chat|send|دالة|وظيفة|كود/i.test(promptLower)) {
-            targetFilesToFetch.push('app.js');
-          } else if (/مطور|ديف|dev|github|نشر|commit/i.test(promptLower)) {
+          const isDevRelated = /مطور|ديف|dev|استوديو|موديل|مودلز|مهندس|agent|دروب|قائمة|github|نشر|commit|rollback|ملفات|editor|preview/i.test(promptLower);
+          
+          if (isDevRelated) {
+            if (/تصميم|ستايل|لون|شكل|خلفية|css|style|border|دروب|dropdown|قائمة/i.test(promptLower)) {
+              targetFilesToFetch.push('dev_style.css');
+            }
+            if (/html|زر|modal|عنصر|dom|واجهة|هيكل/i.test(promptLower)) {
+              targetFilesToFetch.push('dev.html');
+            }
             targetFilesToFetch.push('dev.js');
+          } else if (/تصميم|ستايل|لون|شكل|خلفية|css|style|border|color|theme/i.test(promptLower)) {
+            targetFilesToFetch.push('style.css');
+          } else if (/شات بوت|شات|رسائل|مهارات|تعليمات|فلاش باك|برومبت|app|chat|send|دالة|وظيفة|كود/i.test(promptLower)) {
+            targetFilesToFetch.push('app.js');
+          } else {
+            targetFilesToFetch.push('dev.js');
+            targetFilesToFetch.push('dev.html');
           }
         }
 
-        for (const tf of targetFilesToFetch.slice(0, 2)) {
+        // Deduplicate
+        const uniqueTargets = [...new Set(targetFilesToFetch)].slice(0, 3);
+
+        for (const tf of uniqueTargets) {
           try {
             const fetched = await DevGitHubService.getFile(tf);
             if (fetched && fetched.content) {
-              textForPayload += `\n\n--- [CURRENT LIVE REPO FILE: ${tf}] ---\n${fetched.content}\n--- [END OF ${tf}] ---\n`;
+              textForPayload += `\n\n--- [LIVE GITHUB REPO FILE: ${tf}] ---\n${fetched.content}\n--- [END OF ${tf}] ---\n`;
             }
           } catch (e) {
             console.log(`[SmartContext] Could not auto-fetch ${tf}:`, e.message);
           }
         }
+
+        textForPayload += `\n\n[REPO CONTEXT: GitHub Repository has full active files: dev.html, dev_style.css, dev.js, index.html, style.css, app.js, instructions.json, models.json, sw.js. You have direct context of these files. Never ask the user to upload them manually.]`;
       }
 
       const attachedImages = currentAttachments.filter(a => a.type.startsWith('image/'));
@@ -1639,6 +1655,69 @@
     } catch (e) {
       DevUIEngine.showToast(`❌ فشل الحفظ: ${e.message}`, 'error');
     }
+  };
+
+  // ─── Agent / Model Selector Modal Handlers ───
+  window._openAgentModal = function() {
+    const modal = $('agent-modal');
+    if (!modal) return;
+    window._renderAgentsList('all');
+    modal.classList.remove('hidden');
+    DevUIEngine.closeSidebar();
+  };
+
+  window._closeAgentModal = function() {
+    $('agent-modal')?.classList.add('hidden');
+  };
+
+  window._filterAgents = function(filter) {
+    document.querySelectorAll('.agent-tab').forEach(tab => {
+      tab.classList.toggle('active', tab.getAttribute('data-filter') === filter);
+    });
+    window._renderAgentsList(filter);
+  };
+
+  window._renderAgentsList = function(filter = 'all') {
+    const container = $('agents-grid');
+    if (!container) return;
+
+    const filtered = DEV_AGENTS.filter(a => filter === 'all' || a.category === filter);
+    container.innerHTML = filtered.map(agent => {
+      const isSelected = (state.activeAgentId || DEV_AGENTS[0].id) === agent.id;
+      return `
+        <div class="agent-card ${isSelected ? 'selected' : ''}" onclick="window._selectAgent('${agent.id}')">
+          <div class="agent-card-header">
+            <span class="agent-card-icon">${agent.icon || '👨‍💻'}</span>
+            <div class="agent-card-title-wrap">
+              <div class="agent-card-name">${DevUIEngine.escapeHtml(agent.name)}</div>
+              <div class="agent-card-meta">
+                <span class="agent-badge ${agent.provider}">${agent.provider.toUpperCase()}</span>
+                <span class="agent-badge">${agent.params || ''}</span>
+              </div>
+            </div>
+            ${isSelected ? '<span class="agent-selected-check">✓</span>' : ''}
+          </div>
+          <div class="agent-card-desc">${DevUIEngine.escapeHtml(agent.desc || '')}</div>
+        </div>
+      `;
+    }).join('');
+  };
+
+  window._selectAgent = function(agentId) {
+    const agent = DEV_AGENTS.find(a => a.id === agentId);
+    if (!agent) return;
+
+    state.activeAgentId = agent.id;
+    localStorage.setItem('active_dev_agent_id', agent.id);
+
+    // Update Header UI
+    const nameEl = $('header-agent-name');
+    const iconEl = $('header-agent-icon');
+    if (nameEl) nameEl.textContent = agent.name;
+    if (iconEl) iconEl.textContent = agent.icon || '👨‍💻';
+
+    window._closeAgentModal();
+    DevUIEngine.showToast(`🎯 تم اختيار المهندس: ${agent.name}`, 'success');
   };
 
   window._openRollbackModal = async function() {
