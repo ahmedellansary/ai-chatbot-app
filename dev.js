@@ -710,41 +710,52 @@
       let startY = 0;
       let currentPull = 0;
       let isTracking = false;
+      let isAtTop = false;
+      let isAtBottom = false;
+      let pullDirection = null;
       const PULL_THRESHOLD = 45;
 
       const onTouchStart = (e) => {
         if (e.touches.length !== 1) return;
         const chatArea = $('chat-area');
-        const scrollTop = chatArea ? chatArea.scrollTop : 0;
+        if (!chatArea) return;
+        const scrollTop = chatArea.scrollTop;
+        const scrollHeight = chatArea.scrollHeight;
+        const clientHeight = chatArea.clientHeight;
+
         startY = e.touches[0].clientY;
-        isTracking = (scrollTop <= 4);
+        isAtTop = (scrollTop <= 4);
+        isAtBottom = (scrollTop + clientHeight >= scrollHeight - 6);
+        isTracking = (isAtTop || isAtBottom);
+        pullDirection = null;
         currentPull = 0;
       };
 
       const onTouchMove = (e) => {
         if (!isTracking || e.touches.length !== 1) return;
-        const chatArea = $('chat-area');
-        const scrollTop = chatArea ? chatArea.scrollTop : 0;
-
-        if (scrollTop > 4) {
-          isTracking = false;
-          indicator.classList.remove('visible');
-          indicator.style.opacity = '0';
-          indicator.style.transform = 'translate3d(-50%, -80px, 0) scale(0.85)';
-          return;
-        }
-
         const y = e.touches[0].clientY;
         const diff = y - startY;
 
-        if (diff > 4) {
+        if (isAtTop && diff > 4 && (!pullDirection || pullDirection === 'top')) {
+          pullDirection = 'top';
           if (e.cancelable) e.preventDefault();
           currentPull = diff;
           const visualPull = Math.min(diff * 0.45, 75);
+          indicator.classList.remove('pull-bottom');
           indicator.classList.add('visible');
           indicator.style.opacity = '1';
           indicator.style.transform = `translate3d(-50%, ${visualPull - 25}px, 0) scale(1)`;
           if (spinner) spinner.style.transform = `rotate(${diff * 2.8}deg)`;
+        } else if (isAtBottom && diff < -4 && (!pullDirection || pullDirection === 'bottom')) {
+          pullDirection = 'bottom';
+          if (e.cancelable) e.preventDefault();
+          currentPull = Math.abs(diff);
+          const visualPull = Math.min(Math.abs(diff) * 0.45, 75);
+          indicator.classList.add('pull-bottom');
+          indicator.classList.add('visible');
+          indicator.style.opacity = '1';
+          indicator.style.transform = `translate3d(-50%, ${25 - visualPull}px, 0) scale(1)`;
+          if (spinner) spinner.style.transform = `rotate(${-diff * 2.8}deg)`;
         } else {
           indicator.classList.remove('visible');
           indicator.style.opacity = '0';
@@ -757,7 +768,11 @@
 
         if (currentPull >= PULL_THRESHOLD) {
           indicator.classList.add('refreshing');
-          indicator.style.transform = 'translate3d(-50%, 18px, 0) scale(1)';
+          if (pullDirection === 'bottom') {
+            indicator.style.transform = 'translate3d(-50%, -18px, 0) scale(1)';
+          } else {
+            indicator.style.transform = 'translate3d(-50%, 18px, 0) scale(1)';
+          }
 
           if ('serviceWorker' in navigator) {
             navigator.serviceWorker.getRegistrations().then(regs => {
@@ -765,14 +780,17 @@
             }).catch(() => {});
           }
 
-          setTimeout(() => location.reload(), 280);
+          setTimeout(() => location.reload(), 320);
         } else {
-          indicator.classList.remove('visible');
+          indicator.classList.remove('visible', 'refreshing');
           indicator.style.opacity = '0';
-          indicator.style.transform = 'translate3d(-50%, -80px, 0) scale(0.85)';
+          indicator.style.transform = pullDirection === 'bottom'
+            ? 'translate3d(-50%, 80px, 0) scale(0.85)'
+            : 'translate3d(-50%, -80px, 0) scale(0.85)';
           if (spinner) spinner.style.transform = '';
         }
         currentPull = 0;
+        pullDirection = null;
       };
 
       document.addEventListener('touchstart', onTouchStart, { passive: true });
