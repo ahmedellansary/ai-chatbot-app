@@ -22,17 +22,18 @@
     'GITHUB_TOKEN': _k3
   };
 
-  // Reset any cached invalid tokens
-  if (localStorage.getItem('GITHUB_TOKEN') !== _k3) {
-    localStorage.setItem('GITHUB_TOKEN', _k3);
-  }
-  if (!localStorage.getItem('OPENROUTER_API_KEY')) {
-    localStorage.setItem('OPENROUTER_API_KEY', _k1);
-  }
-
-  const getOpenRouterKey = () => localStorage.getItem('OPENROUTER_API_KEY') || DEFAULTS.OPENROUTER_API_KEY;
-  const getGroqKeys = () => (localStorage.getItem('GROQ_API_KEY') || DEFAULTS.GROQ_KEYS).split(',').filter(Boolean);
-  const getGitHubToken = () => localStorage.getItem('GITHUB_TOKEN') || DEFAULTS.GITHUB_TOKEN;
+  const getOpenRouterKey = () => {
+    const k = localStorage.getItem('OPENROUTER_API_KEY');
+    return (k && k.trim()) ? k.trim() : DEFAULTS.OPENROUTER_API_KEY;
+  };
+  const getGroqKeys = () => {
+    const k = localStorage.getItem('GROQ_API_KEY');
+    return (k && k.trim()) ? k.split(',').map(s => s.trim()).filter(Boolean) : DEFAULTS.GROQ_KEYS.split(',');
+  };
+  const getGitHubToken = () => {
+    const k = localStorage.getItem('GITHUB_TOKEN');
+    return (k && k.trim()) ? k.trim() : DEFAULTS.GITHUB_TOKEN;
+  };
 
   let groqKeyIndex = 0;
   const getGroqKey = () => {
@@ -57,18 +58,21 @@
   // ─── Model Tiers ───
   const MODELS = {
     HIGH: [
+      { id: 'openai/gpt-oss-120b', name: 'GPT OSS 120B (Ultra)', provider: 'groq' },
+      { id: 'qwen/qwen3.8-27b', name: 'Qwen3 27B Ultra', provider: 'groq' },
       { id: 'nvidia/nemotron-3-ultra-550b-a55b:free', name: 'Nemotron Ultra 550B', provider: 'openrouter' },
       { id: 'minimax/minimax-m3:free', name: 'MiniMax M3', provider: 'openrouter' }
     ],
     MID: [
-      { id: 'nvidia/nemotron-3-super-120b-a12b:free', name: 'Nemotron Super 120B', provider: 'openrouter' },
       { id: 'openai/gpt-oss-120b', name: 'GPT OSS 120B', provider: 'groq' },
-      { id: 'qwen/qwen3.8-27b', name: 'Qwen3 27B', provider: 'groq' }
+      { id: 'groq/compound', name: 'Groq Compound', provider: 'groq' },
+      { id: 'qwen/qwen3.8-27b', name: 'Qwen3 27B', provider: 'groq' },
+      { id: 'nvidia/nemotron-3-super-120b-a12b:free', name: 'Nemotron Super 120B', provider: 'openrouter' }
     ],
     FAST: [
       { id: 'groq/compound', name: 'Groq Compound', provider: 'groq' },
       { id: 'qwen/qwen3.6-27b', name: 'Qwen3.6 27B', provider: 'groq' },
-      { id: 'nvidia/nemotron-3.5-lightning:free', name: 'Nemotron Lightning', provider: 'openrouter' }
+      { id: 'openai/gpt-oss-20b', name: 'GPT OSS 20B', provider: 'groq' }
     ]
   };
 
@@ -88,6 +92,13 @@
   };
 
   const $ = id => document.getElementById(id);
+const safeSelectorId = id => {
+  const value = String(id ?? '');
+  if (typeof CSS !== 'undefined' && typeof CSS.escape === 'function') {
+    return CSS.escape(value);
+  }
+  return value.replace(/([\\"'\s:#.\[\]\(\)\[\]])/g, '\\$1');
+};
 // small helper $$ similar to querySelectorAll array — ensure existing code that uses $$ works
 if (typeof $$ === 'undefined') {
   window.$$ = (sel, root = document) => Array.from((root || document).querySelectorAll(sel));
@@ -381,6 +392,7 @@ if (typeof $$ === 'undefined') {
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let buffer = '';
+    let tokensEmitted = 0;
 
     try {
       while (true) {
@@ -393,14 +405,39 @@ if (typeof $$ === 'undefined') {
 
         for (const line of lines) {
           const trimmed = line.trim();
-          if (!trimmed || !trimmed.startsWith('data: ')) continue;
+          if (!trimmed) continue;
+          if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+            try {
+              const obj = JSON.parse(trimmed);
+              if (obj.error) throw new Error(obj.error.message || 'Stream error');
+            } catch (e) {
+              if (e.message && !e.message.includes('JSON')) throw e;
+            }
+          }
+          if (!trimmed.startsWith('data: ')) continue;
           const data = trimmed.slice(6);
           if (data === '[DONE]') return;
           try {
             const parsed = JSON.parse(data);
+            if (parsed.error) throw new Error(parsed.error.message || 'Stream error');
             const delta = parsed.choices?.[0]?.delta?.content;
-            if (delta) yield delta;
-          } catch {}
+            if (delta) {
+              yield delta;
+              tokensEmitted++;
+            }
+          } catch (e) {
+            if (e.message && !e.message.includes('JSON')) throw e;
+          }
+        }
+      }
+      if (tokensEmitted === 0 && buffer.trim()) {
+        try {
+          const parsed = JSON.parse(buffer.trim());
+          if (parsed.error) throw new Error(parsed.error.message || 'Stream error');
+          const content = parsed.choices?.[0]?.message?.content;
+          if (content) yield content;
+        } catch (e) {
+          if (e.message && !e.message.includes('JSON')) throw e;
         }
       }
     } finally {
@@ -912,12 +949,17 @@ if (typeof $$ === 'undefined') {
 
   function appendMessage(msg) {
     const container = $('chat-container');
-    if (!container) return;
+    if (!container || !msg) return;
 
     const welcome = container.querySelector('.welcome-screen');
     if (welcome) container.innerHTML = '';
 
-    container.appendChild(createMessageRow(msg));
+    const existingRow = container.querySelector(`.message-row[data-id="${safeSelectorId(msg.id || '')}"]`);
+    if (existingRow) {
+      existingRow.replaceWith(createMessageRow(msg));
+    } else {
+      container.appendChild(createMessageRow(msg));
+    }
     scrollToBottom();
   }
 
@@ -956,7 +998,6 @@ if (typeof $$ === 'undefined') {
     const userMsg = addMessage('user', userText.trim() || 'ملف مرفق', null, currentAttachments);
     appendMessage(userMsg);
 
-    showTyping();
     state.isStreaming = true;
     state.abortController = new AbortController();
 
@@ -1279,10 +1320,7 @@ if (typeof $$ === 'undefined') {
 
   function showTyping() {
     const container = $('chat-container');
-    if (!container) return;
-
-    const existing = $('typing-indicator');
-    if (existing) existing.remove();
+    if (!container || $('typing-indicator')) return;
 
     const typing = document.createElement('div');
     typing.id = 'typing-indicator';
@@ -1431,43 +1469,48 @@ if (typeof $$ === 'undefined') {
   }
 
   // ─── Owner / App Lock Helpers (guarded) ───
-  // Provide safe fallbacks if the build/deployed bundle lacks these functions,
-  // to avoid ReferenceError during initialization which breaks event binding.
-  if (typeof isAppUnlocked !== 'function') {
-    function isAppUnlocked() {
+  // Keep these in outer function scope so setupEventListeners can call them
+  // before the rest of the page finishes initializing.
+  function isAppUnlocked() {
+    try {
       return localStorage.getItem('nytron_app_unlocked') === '1';
+    } catch {
+      return false;
     }
   }
 
-  if (typeof isOwnerUnlocked !== 'function') {
-    function isOwnerUnlocked() {
+  function isOwnerUnlocked() {
+    try {
       // Owner unlocked if explicit owner flag present or app-level unlock exists
       return localStorage.getItem('owner_unlocked') === '1' || isAppUnlocked();
+    } catch {
+      return false;
     }
   }
 
-  if (typeof updateOwnerLockUI !== 'function') {
-    function updateOwnerLockUI() {
-      try {
-        const btn = document.getElementById('btn-toggle-owner-lock');
-        const badge = document.getElementById('owner-lock-badge');
-        const unlocked = isOwnerUnlocked();
-        if (btn) {
-          // Use concise labels; keep Arabic/English neutral icons
-          btn.textContent = unlocked ? '🔓 Owner: Unlocked' : '🔒 Owner: Locked';
-          btn.setAttribute('aria-pressed', unlocked ? 'true' : 'false');
-        }
-        if (badge) {
-          badge.textContent = unlocked ? 'مفتوح' : 'مقفل';
-        }
-      } catch (e) {
-        // Non-fatal; ensure no throw during early init
-        console.warn('updateOwnerLockUI fallback failed', e);
+  function updateOwnerLockUI() {
+    try {
+      const btn = document.getElementById('btn-toggle-owner-lock');
+      const badge = document.getElementById('owner-lock-badge');
+      const unlocked = isOwnerUnlocked();
+      if (btn) {
+        // Use concise labels; keep Arabic/English neutral icons
+        btn.textContent = unlocked ? '🔓 Owner: Unlocked' : '🔒 Owner: Locked';
+        btn.setAttribute('aria-pressed', unlocked ? 'true' : 'false');
       }
+      if (badge) {
+        badge.textContent = unlocked ? 'مفتوح' : 'مقفل';
+      }
+    } catch (e) {
+      // Non-fatal; ensure no throw during early init
+      console.warn('updateOwnerLockUI fallback failed', e);
     }
   }
 
   function setupEventListeners() {
+    if (window.__chatListenersBound) return;
+    window.__chatListenersBound = true;
+
     // Universal delegated click handler for all buttons
     document.addEventListener('click', (e) => {
       // Sidebar Toggle / Header dots
