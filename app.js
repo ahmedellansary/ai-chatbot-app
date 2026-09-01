@@ -500,6 +500,92 @@
     localStorage.setItem('conversations', JSON.stringify(state.conversations));
   }
 
+  // ─── Owner Security Lock Subsystem (حماية المالك بالـ PIN) ───
+  const DEFAULT_PIN_HASH = '158a323a7ba44870f23d96f1516dd70aa48e9a72db4ebb026b0a89e212a208ab'; // PIN: 2026
+
+  async function sha256Hex(str) {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(str);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  function isOwnerUnlocked() {
+    return localStorage.getItem('owner_unlocked') === 'true';
+  }
+
+  function updateOwnerLockUI() {
+    const icon = $('owner-lock-icon');
+    const text = $('owner-lock-text');
+    const unlocked = isOwnerUnlocked();
+    if (icon) icon.textContent = unlocked ? '🔓' : '🔒';
+    if (text) text.textContent = unlocked ? 'تسجيل خروج المالك' : 'تسجيل دخول المالك';
+  }
+
+  function promptOwnerAuth(onSuccess) {
+    if (isOwnerUnlocked()) {
+      if (typeof onSuccess === 'function') onSuccess();
+      return;
+    }
+
+    const modal = $('owner-auth-modal');
+    const pinInput = $('owner-pin-input');
+    const submitBtn = $('owner-auth-submit');
+    const cancelBtn = $('owner-auth-cancel');
+
+    if (!modal) {
+      if (typeof onSuccess === 'function') onSuccess();
+      return;
+    }
+
+    modal.classList.remove('hidden');
+    if (pinInput) {
+      pinInput.value = '';
+      setTimeout(() => pinInput.focus(), 150);
+    }
+
+    const handleAuth = async () => {
+      const pin = pinInput ? pinInput.value.trim() : '';
+      if (!pin) {
+        showToast('يرجى إدخال رمز الـ PIN', 'warning');
+        return;
+      }
+
+      const inputHash = await sha256Hex(pin);
+      const savedHash = localStorage.getItem('owner_custom_pin_hash') || DEFAULT_PIN_HASH;
+
+      if (inputHash === savedHash) {
+        localStorage.setItem('owner_unlocked', 'true');
+        modal.classList.add('hidden');
+        updateOwnerLockUI();
+        showToast('🔐 تم التحقق من هوية المالك بنجاح!', 'success');
+        if (typeof onSuccess === 'function') onSuccess();
+      } else {
+        showToast('❌ رمز PIN غير صحيح! عملية التعديل محظورة.', 'error');
+        if (pinInput) {
+          pinInput.value = '';
+          pinInput.style.borderColor = 'var(--error)';
+          setTimeout(() => pinInput.style.borderColor = '', 1000);
+        }
+      }
+    };
+
+    if (submitBtn) submitBtn.onclick = handleAuth;
+    if (pinInput) {
+      pinInput.onkeydown = (e) => {
+        if (e.key === 'Enter') handleAuth();
+      };
+    }
+
+    if (cancelBtn) {
+      cancelBtn.onclick = () => {
+        modal.classList.add('hidden');
+        showToast('تم إلغاء التحقق', 'info');
+      };
+    }
+  }
+
   function newConversation() {
     const id = generateId();
     const conv = {
@@ -517,6 +603,11 @@
   }
 
   function startDevChat(initialPrompt = '') {
+    if (!isOwnerUnlocked()) {
+      promptOwnerAuth(() => startDevChat(initialPrompt));
+      return;
+    }
+
     const existing = state.conversations.find(c => c.isDev);
     let devConvId = existing ? existing.id : null;
 
@@ -530,7 +621,7 @@
           {
             id: generateId(),
             role: 'ai',
-            content: `مرحباً بك في **شات المطور الذكي** 🛠️\n\nأنا مهندس برمجيات التطبيق (AI Lead Developer). أستطيع تعديل التطبيق وتحديث ملفاته ورفعها على GitHub فوراً.\n\nتستطيع أن تطلب مني:\n- *"غيّر لغة الواجهة إلى الإنجليزية وخلي النصوص LTR"*\n- *"عدّل ألوان أو أحجام العناصر"*\n- *"أضف ميزة أو زر جديد"*\n\n🔒 **الأمان التام:** سأعرض عليك بطاقة تفاعلية لتأكيد النشر، ومعك زر **استرجاع فوري (Rollback)** وزر **مراجعة آخر تعديل فقط** لتجنب أي هلوسة. ما التعديل المطلوب؟`,
+            content: `مرحباً بك في **شات المطور الذكي** 🛠️\n\nأنا مهندس برمجيات التطبيق (AI Lead Developer). أستطيع تعديل التطبيق وتحديث ملفاته ورفعها على GitHub فوراً.\n\nتستطيع أن تطلب مني:\n- *"غيّر لغة الواجهة إلى الإنجليزية وخلي النصوص LTR"*\n- *"عدّل ألوان أو أحجام العناصر"*\n- *"أضف ميزة أو زر جديد"*\n\n🔒 **الأمان التام:** وضع المطور مقفل بالـ PIN الخاص بك، ومعك زر **استرجاع فوري (Rollback)** وزر **مراجعة آخر تعديل فقط** لتجنب أي هلوسة. ما التعديل المطلوب؟`,
             model: devModel ? `Developer (${devModel.name})` : 'Nemotron Lead Developer',
             usedFallback: false,
             timestamp: new Date().toISOString()
@@ -551,7 +642,7 @@
 
     if (initialPrompt) {
       $('user-input').value = initialPrompt;
-      $('send-btn').disabled = false;
+      $('send-btn').classList.remove('hidden');
       $('send-btn').click();
     }
   }
@@ -1066,6 +1157,11 @@
   }
 
   window._deployProposal = async (propId) => {
+    if (!isOwnerUnlocked()) {
+      promptOwnerAuth(() => window._deployProposal(propId));
+      return;
+    }
+
     const data = window._pendingDevModifications[propId];
     if (!data) return;
 
@@ -1126,7 +1222,7 @@
 هل هناك أي مشكلة؟ إذا كان به خطأ أصلحه، وإذا كان ممتازاً أكد ذلك.`;
 
     $('user-input').value = reviewPrompt;
-    $('send-btn').disabled = false;
+    $('send-btn').classList.remove('hidden');
     $('send-btn').click();
   };
 
@@ -1137,17 +1233,35 @@
     showToast('تم إلغاء التعديل', 'info');
   };
 
-  window._emergencyRollback = rollbackToPreviousCommit;
+  window._emergencyRollback = () => {
+    if (!isOwnerUnlocked()) {
+      promptOwnerAuth(() => rollbackToPreviousCommit());
+      return;
+    }
+    rollbackToPreviousCommit();
+  };
 
   // ─── Emergency Controls Handler ───
   function setupEmergencyControls() {
     $('btn-emergency-rollback')?.addEventListener('click', () => {
+      if (!isOwnerUnlocked()) {
+        promptOwnerAuth(() => rollbackToPreviousCommit());
+        return;
+      }
       if (confirm('هل أنت متأكد من رغبتك في استرجاع آخر نسخة سابقة للتطبيق؟')) {
         rollbackToPreviousCommit();
       }
     });
 
     $('btn-emergency-fix')?.addEventListener('click', () => {
+      if (!isOwnerUnlocked()) {
+        promptOwnerAuth(() => {
+          startDevChat('راجع آخر تعديل قمنا به فقط وافحص مشكلته بدقة دون المساس بباقي التطبيق، ثم أصلحه.');
+          $('sidebar').classList.remove('open');
+          $('overlay').classList.remove('active');
+        });
+        return;
+      }
       startDevChat('راجع آخر تعديل قمنا به فقط وافحص مشكلته بدقة دون المساس بباقي التطبيق، ثم أصلحه.');
       $('sidebar').classList.remove('open');
       $('overlay').classList.remove('active');
@@ -1346,6 +1460,20 @@
       $('overlay').classList.remove('active');
     });
 
+    $('btn-toggle-owner-lock')?.addEventListener('click', () => {
+      if (isOwnerUnlocked()) {
+        localStorage.removeItem('owner_unlocked');
+        updateOwnerLockUI();
+        showToast('🔒 تم تسجيل الخروج وقفل وضع المطور', 'info');
+      } else {
+        promptOwnerAuth(() => {
+          $('sidebar').classList.remove('open');
+          $('overlay').classList.remove('active');
+        });
+      }
+    });
+
+    updateOwnerLockUI();
     setupEmergencyControls();
     setupPullToRefresh();
     setupAttachmentHandler();
