@@ -201,6 +201,7 @@
       const gate = $('app-lock-gate');
       const form = $('lock-gate-form');
       const pinInput = $('gate-pin-input');
+      const unlockBtn = $('gate-unlock-btn');
       if (!gate) return;
 
       if (!this.isUnlocked()) {
@@ -223,6 +224,7 @@
         }
 
         isVerifying = true;
+        if (unlockBtn) unlockBtn.innerHTML = '<span>جاري التحقق...</span> <span>⏳</span>';
         try {
           const isValid = await this.verify(password);
           if (isValid) {
@@ -239,6 +241,7 @@
           }
         } finally {
           isVerifying = false;
+          if (unlockBtn) unlockBtn.innerHTML = '<span>فتح بيئة المطور</span> <span>🔓</span>';
         }
       };
 
@@ -246,6 +249,22 @@
         form.onsubmit = (e) => {
           e.preventDefault();
           handleGateSubmit();
+        };
+      }
+
+      if (unlockBtn) {
+        unlockBtn.onclick = (e) => {
+          e.preventDefault();
+          handleGateSubmit();
+        };
+      }
+
+      if (pinInput) {
+        pinInput.onkeydown = (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            handleGateSubmit();
+          }
         };
       }
     }
