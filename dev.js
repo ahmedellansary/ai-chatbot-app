@@ -91,16 +91,6 @@
       priority: 1
     },
     {
-      id: 'qwen/qwen3.6-27b',
-      provider: 'groq',
-      name: 'Qwen 3.6 27B Logic Coder',
-      icon: '👨‍💻',
-      category: 'code',
-      params: '27B Logic',
-      desc: 'استدلال منطقي وبرمجي سريع للمهام الخفيفة والمراجعات.',
-      priority: 1
-    },
-    {
       id: 'openai/gpt-oss-20b',
       provider: 'groq',
       name: 'GPT OSS 20B Rapid Coder',
