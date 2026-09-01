@@ -787,12 +787,12 @@
     },
 
     createMessageRow(msg) {
+      const hasArabic = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(msg.content || '');
       const row = document.createElement('div');
-      row.className = `message-row ${msg.role}`;
+      row.className = `message-row ${msg.role} ${hasArabic ? 'is-rtl' : 'is-ltr'}`;
       row.dataset.id = msg.id;
 
       const parsed = msg.role === 'ai' ? this.parseMarkdown(msg.content) : this.escapeHtml(msg.content);
-      const hasArabic = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(msg.content || '');
       const dirAttr = hasArabic ? 'dir="rtl" style="text-align: right;"' : 'dir="ltr" style="text-align: left;"';
 
       let attachmentsHtml = '';
@@ -1061,6 +1061,14 @@
 
           if (msgRow) {
             msgRow.innerHTML = MessageRenderer.parseMarkdown(fullContent);
+            const isAr = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(fullContent);
+            const parentRow = document.querySelector(`[data-id="${aiMsgId}"]`);
+            if (parentRow) {
+              parentRow.classList.toggle('is-rtl', isAr);
+              parentRow.classList.toggle('is-ltr', !isAr);
+            }
+            msgRow.setAttribute('dir', isAr ? 'rtl' : 'ltr');
+            msgRow.style.textAlign = isAr ? 'right' : 'left';
           }
         }
 
