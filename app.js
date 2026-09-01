@@ -1952,6 +1952,40 @@
     GitHubService.rollbackToPreviousCommit();
   };
 
+  window._clearAppCache = async function() {
+    try {
+      const preservedConversations = localStorage.getItem('conversations');
+      const preservedAuth = localStorage.getItem('DEV_MODE_AUTH_HASH');
+      const preservedGroq = localStorage.getItem('GROQ_API_KEY');
+      const preservedOr = localStorage.getItem('OPENROUTER_API_KEY');
+      const preservedGh = localStorage.getItem('GITHUB_TOKEN');
+
+      if (typeof caches !== 'undefined' && caches.keys) {
+        const cacheNames = await caches.keys();
+        await Promise.all(cacheNames.map(name => caches.delete(name)));
+      }
+
+      if (typeof sessionStorage !== 'undefined') {
+        sessionStorage.clear();
+      }
+
+      localStorage.clear();
+      if (preservedConversations) localStorage.setItem('conversations', preservedConversations);
+      if (preservedAuth) localStorage.setItem('DEV_MODE_AUTH_HASH', preservedAuth);
+      if (preservedGroq) localStorage.setItem('GROQ_API_KEY', preservedGroq);
+      if (preservedOr) localStorage.setItem('OPENROUTER_API_KEY', preservedOr);
+      if (preservedGh) localStorage.setItem('GITHUB_TOKEN', preservedGh);
+
+      MessageRenderer.showToast('✅ تم تنظيف الكاش بنجاح مع الحفاظ على كافة المحادثات!', 'success');
+      setTimeout(() => {
+        window.location.reload();
+      }, 600);
+    } catch (e) {
+      console.warn('[Cache] Clear error:', e);
+      window.location.reload();
+    }
+  };
+
   // ─────────────────────────────────────────────────────────────────
   // 11. BOOTSTRAP & LIFECYCLE INITIALIZATION
   // ─────────────────────────────────────────────────────────────────
