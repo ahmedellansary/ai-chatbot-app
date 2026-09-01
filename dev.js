@@ -658,17 +658,20 @@
             </div>
             <div class="dev-proposal-desc">📝 <strong>التغيير:</strong> ${DevUIEngine.escapeHtml(data.message || 'جاهز للنشر على GitHub')}</div>
             <div class="dev-proposal-btns">
+              <button class="dev-btn-action preview" onclick="window._previewProposal('${propId}')">
+                <span>👁️</span>
+                <span>معاينة حية افتراضية للتعديل</span>
+              </button>
               <button class="dev-btn-action deploy" onclick="window._deployProposal('${propId}')">
                 <span>🚀</span>
-                <span>نشر التعديل على GitHub وتطبيق التحديث</span>
+                <span>نشر التعديل على GitHub</span>
               </button>
               <button class="dev-btn-action review-fix" onclick="window._reviewProposal('${propId}')">
                 <span>🔍</span>
-                <span>مراجعة الكود المقترح</span>
+                <span>فحص الكود</span>
               </button>
               <button class="dev-btn-action cancel" onclick="window._cancelProposal('${propId}')">
                 <span>✕</span>
-                <span>إلغاء</span>
               </button>
             </div>
           `;
@@ -1258,6 +1261,106 @@
     if (row) row.innerHTML = DevUIEngine.parseMarkdown(report);
   };
 
+  window._previewProposal = async function(propId) {
+    const proposal = state.pendingModifications[propId];
+    if (!proposal) {
+      DevUIEngine.showToast('تعذر العثور على التعديل المطلوب للمعاينة', 'error');
+      return;
+    }
+
+    const modal = $('dev-preview-modal');
+    const frame = $('preview-sandbox-frame');
+    const badge = $('preview-file-badge');
+    const deployBtn = $('preview-deploy-btn');
+    if (!modal || !frame) return;
+
+    if (badge) badge.textContent = proposal.file;
+    if (deployBtn) {
+      deployBtn.onclick = () => {
+        window._deployProposal(propId);
+      };
+    }
+
+    modal.classList.remove('hidden');
+    DevUIEngine.showToast('⏳ جاري تجهيز المعاينة الافتراضية للتعديل...', 'info');
+
+    try {
+      const targetFile = (proposal.file || '').toLowerCase().trim();
+      let previewHtml = '';
+
+      if (targetFile.includes('index.html')) {
+        previewHtml = proposal.content;
+      } else if (targetFile.includes('style.css')) {
+        const res = await fetch('./index.html?t=' + Date.now());
+        let baseHtml = res.ok ? await res.text() : '<!DOCTYPE html><html><head><meta charset="utf-8"></head><body></body></html>';
+        if (baseHtml.includes('style.css')) {
+          previewHtml = baseHtml.replace(/<link[^>]*href=["'][^"']*style\.css[^"']*["'][^>]*>/i, `<style>${proposal.content}</style>`);
+        } else {
+          previewHtml = baseHtml.replace('</head>', `<style>${proposal.content}</style></head>`);
+        }
+      } else if (targetFile.includes('app.js')) {
+        const res = await fetch('./index.html?t=' + Date.now());
+        let baseHtml = res.ok ? await res.text() : '<!DOCTYPE html><html><head><meta charset="utf-8"></head><body></body></html>';
+        if (baseHtml.includes('app.js')) {
+          previewHtml = baseHtml.replace(/<script[^>]*src=["'][^"']*app\.js[^"']*["'][^>]*><\/script>/i, `<script>${proposal.content}<\/script>`);
+        } else {
+          previewHtml = baseHtml.replace('</body>', `<script>${proposal.content}<\/script></body>`);
+        }
+      } else if (targetFile.includes('dev.html')) {
+        previewHtml = proposal.content;
+      } else if (targetFile.includes('dev_style.css')) {
+        const res = await fetch('./dev.html?t=' + Date.now());
+        let baseHtml = res.ok ? await res.text() : '<!DOCTYPE html><html><head><meta charset="utf-8"></head><body></body></html>';
+        if (baseHtml.includes('dev_style.css')) {
+          previewHtml = baseHtml.replace(/<link[^>]*href=["'][^"']*dev_style\.css[^"']*["'][^>]*>/i, `<style>${proposal.content}</style>`);
+        } else {
+          previewHtml = baseHtml.replace('</head>', `<style>${proposal.content}</style></head>`);
+        }
+      } else if (targetFile.includes('dev.js')) {
+        const res = await fetch('./dev.html?t=' + Date.now());
+        let baseHtml = res.ok ? await res.text() : '<!DOCTYPE html><html><head><meta charset="utf-8"></head><body></body></html>';
+        if (baseHtml.includes('dev.js')) {
+          previewHtml = baseHtml.replace(/<script[^>]*src=["'][^"']*dev\.js[^"']*["'][^>]*><\/script>/i, `<script>${proposal.content}<\/script>`);
+        } else {
+          previewHtml = baseHtml.replace('</body>', `<script>${proposal.content}<\/script></body>`);
+        }
+      } else {
+        previewHtml = `
+          <!DOCTYPE html>
+          <html lang="ar" dir="rtl">
+          <head>
+            <meta charset="UTF-8">
+            <style>
+              body { background: #0d0d10; color: #fff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 24px; }
+              h2 { color: #60a5fa; display: flex; align-items: center; gap: 8px; font-size: 18px; }
+              pre { background: #14141b; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 18px; font-family: monospace; font-size: 13.5px; color: #a5f3fc; overflow: auto; line-height: 1.6; direction: ltr; text-align: left; }
+              .info-card { background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.25); border-radius: 10px; padding: 12px 16px; font-size: 13px; color: #bfdbfe; margin-bottom: 16px; }
+            </style>
+          </head>
+          <body>
+            <h2><span>📄</span> <span>معاينة محتوى الملف: ${DevUIEngine.escapeHtml(proposal.file)}</span></h2>
+            <div class="info-card">💡 هذا الملف تم إعداده وسيتم تحديثه في المستودع عند الضغط على زر النشر أعلاه.</div>
+            <pre>${DevUIEngine.escapeHtml(proposal.content)}</pre>
+          </body>
+          </html>
+        `;
+      }
+
+      frame.srcdoc = previewHtml;
+      DevUIEngine.showToast('✅ تم تشغيل المعاينة الافتراضية بنجاح!', 'success');
+    } catch (err) {
+      console.error('Preview error:', err);
+      DevUIEngine.showToast('تعذر تحميل ملفات المعاينة: ' + err.message, 'error');
+    }
+  };
+
+  window._closePreviewModal = function() {
+    const modal = $('dev-preview-modal');
+    const frame = $('preview-sandbox-frame');
+    if (modal) modal.classList.add('hidden');
+    if (frame) frame.srcdoc = '';
+  };
+
   window._deployProposal = async function(propId) {
     const data = state.pendingModifications[propId];
     if (!data) return;
@@ -1265,6 +1368,7 @@
     DevUIEngine.showToast(`🚀 جاري رفع التعديل لملف ${data.file} على GitHub...`, 'info');
     try {
       await DevGitHubService.commitFile(data.file, data.content, data.message || `Update ${data.file} via Dev Portal`);
+      window._closePreviewModal();
       const card = $(`proposal-${propId}`);
       if (card) {
         card.className = 'dev-centered-banner';
