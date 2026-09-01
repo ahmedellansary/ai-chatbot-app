@@ -1750,44 +1750,51 @@ if (typeof $$ === 'undefined') {
     if (!indicator) return;
 
     const spinner = indicator.querySelector('.pull-refresh-spinner');
-
     let startY = 0;
     let currentPull = 0;
-    let isTracking = false;
-    const THRESHOLD = 50;
+    let isPulling = false;
+    const PULL_THRESHOLD = 45;
 
-    document.addEventListener('touchstart', (e) => {
+    window.addEventListener('touchstart', (e) => {
+      if (e.touches.length !== 1) return;
       const chatArea = $('chat-area');
       const scrollTop = chatArea ? chatArea.scrollTop : 0;
-      if (scrollTop <= 2 && e.touches.length === 1) {
-        startY = e.touches[0].clientY;
-        isTracking = true;
+      startY = e.touches[0].clientY;
+      if (scrollTop <= 5) {
+        isPulling = true;
         currentPull = 0;
+      } else {
+        isPulling = false;
       }
     }, { passive: true });
 
-    document.addEventListener('touchmove', (e) => {
-      if (!isTracking) return;
+    window.addEventListener('touchmove', (e) => {
+      if (!isPulling || e.touches.length !== 1) return;
+      const chatArea = $('chat-area');
+      const scrollTop = chatArea ? chatArea.scrollTop : 0;
+
+      if (scrollTop > 5) {
+        isPulling = false;
+        indicator.classList.remove('visible');
+        indicator.style.opacity = '0';
+        indicator.style.transform = 'translate(-50%, -80px) scale(0.85)';
+        return;
+      }
+
       const y = e.touches[0].clientY;
       const diff = y - startY;
 
-      if (diff > 0) {
-        const chatArea = $('chat-area');
-        if (chatArea && chatArea.scrollTop > 2) {
-          isTracking = false;
-          return;
-        }
-
+      if (diff > 5) {
         if (e.cancelable) e.preventDefault();
 
-        currentPull = Math.min(diff * 0.5, 75);
+        currentPull = diff;
+        const visualPull = Math.min(diff * 0.45, 75);
         indicator.classList.add('visible');
         indicator.style.opacity = '1';
-        indicator.style.transform = `translate(-50%, ${currentPull - 35}px) scale(1)`;
+        indicator.style.transform = `translate3d(-50%, ${visualPull - 30}px, 0) scale(1)`;
 
         if (spinner) {
-          const deg = (diff / THRESHOLD) * 280;
-          spinner.style.transform = `rotate(${deg}deg)`;
+          spinner.style.transform = `rotate(${diff * 2.8}deg)`;
         }
       } else {
         indicator.classList.remove('visible');
@@ -1795,13 +1802,13 @@ if (typeof $$ === 'undefined') {
       }
     }, { passive: false });
 
-    document.addEventListener('touchend', () => {
-      if (!isTracking) return;
-      isTracking = false;
+    window.addEventListener('touchend', () => {
+      if (!isPulling) return;
+      isPulling = false;
 
-      if (currentPull >= THRESHOLD * 0.35) {
+      if (currentPull >= PULL_THRESHOLD) {
         indicator.classList.add('refreshing');
-        indicator.style.transform = 'translate(-50%, 18px) scale(1)';
+        indicator.style.transform = 'translate3d(-50%, 18px, 0) scale(1)';
 
         setTimeout(() => {
           window.location.reload();
@@ -1809,7 +1816,7 @@ if (typeof $$ === 'undefined') {
       } else {
         indicator.classList.remove('visible');
         indicator.style.opacity = '0';
-        indicator.style.transform = 'translate(-50%, -80px) scale(0.85)';
+        indicator.style.transform = 'translate3d(-50%, -80px, 0) scale(0.85)';
         if (spinner) spinner.style.transform = '';
       }
       currentPull = 0;
