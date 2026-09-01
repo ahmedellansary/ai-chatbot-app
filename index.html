@@ -56,6 +56,10 @@
     <div id="conversations-list"></div>
 
     <div class="sidebar-footer">
+      <button class="footer-btn" id="btn-toggle-owner-lock">
+        <span id="owner-lock-icon">🔒</span>
+        <span id="owner-lock-text">تسجيل دخول المالك</span>
+      </button>
       <button class="footer-btn" id="install-btn" style="display:none;">
         <span>📲</span>
         <span>تثبيت التطبيق على الموبايل</span>
@@ -206,6 +210,24 @@
     <div class="startup-check-actions">
       <button class="startup-check-btn success" id="startup-check-ok">موافق</button>
       <button class="startup-check-btn danger" id="startup-check-fix">مراجعة وإصلاح</button>
+    </div>
+  </div>
+
+  <!-- ═══ Owner Security Authentication Modal (قفل المالك السري) ═══ -->
+  <div id="owner-auth-modal" class="owner-modal hidden" aria-live="polite">
+    <div class="owner-modal-card">
+      <div class="owner-modal-icon">🔐</div>
+      <h3 class="owner-modal-title">التحقق من هوية المالك</h3>
+      <p class="owner-modal-desc">وضع المطور والتعديل على GitHub محمي برمز سري خاص بالمالك فقط لمنع أي تعديل خارجي.</p>
+      
+      <div class="pin-input-wrap">
+        <input type="password" id="owner-pin-input" class="owner-pin-input" placeholder="أدخل رمز الـ PIN السري" maxlength="12" autocomplete="off">
+      </div>
+
+      <div class="owner-modal-actions">
+        <button id="owner-auth-submit" class="owner-modal-btn primary">تأكيد ودخول</button>
+        <button id="owner-auth-cancel" class="owner-modal-btn cancel">إلغاء</button>
+      </div>
     </div>
   </div>
 
