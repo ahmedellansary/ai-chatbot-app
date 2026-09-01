@@ -1053,11 +1053,14 @@
             MessageRenderer.hideTyping();
             MessageRenderer.appendMessage(aiMsgObj);
             msgRow = document.querySelector(`[data-id="${aiMsgId}"] .msg-content`);
+            const aiElem = document.querySelector(`[data-id="${aiMsgId}"]`);
+            if (aiElem && typeof aiElem.scrollIntoView === 'function') {
+              aiElem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
           }
 
           if (msgRow) {
             msgRow.innerHTML = MessageRenderer.parseMarkdown(fullContent);
-            MessageRenderer.scrollToBottom();
           }
         }
 
