@@ -39,6 +39,39 @@
       </button>
     </div>
 
+    <!-- OpenMAIC Multi-Agent Skills Section -->
+    <div class="sidebar-section-title">الأوضاع المتقدمة (OpenMAIC)</div>
+    <div class="sidebar-skills-grid">
+      <button class="skill-menu-btn" onclick="window._triggerSkill('roundtable')">
+        <span class="skill-icon">👥</span>
+        <div class="skill-info">
+          <div class="skill-name">طاولة النقاش (Roundtable)</div>
+          <div class="skill-sub">3 وكلاء يناقشون فكرتك</div>
+        </div>
+      </button>
+      <button class="skill-menu-btn" onclick="window._triggerSkill('mindmap')">
+        <span class="skill-icon">🗺️</span>
+        <div class="skill-info">
+          <div class="skill-name">الخرائط الذهنية (Mind Map)</div>
+          <div class="skill-sub">رسم شجري مرئي تفاعلي</div>
+        </div>
+      </button>
+      <button class="skill-menu-btn" onclick="window._triggerSkill('slides')">
+        <span class="skill-icon">📊</span>
+        <div class="skill-info">
+          <div class="skill-name">صانع الشرائح (Slide Deck)</div>
+          <div class="skill-sub">عرض تقديمي تفاعلي جاهز</div>
+        </div>
+      </button>
+      <button class="skill-menu-btn" onclick="window._triggerSkill('sandbox')">
+        <span class="skill-icon">🧪</span>
+        <div class="skill-info">
+          <div class="skill-name">مختبر المحاكاة (Sandbox)</div>
+          <div class="skill-sub">تشغيل وتجربة الأكواد حياً</div>
+        </div>
+      </button>
+    </div>
+
     <!-- Emergency Controls (أزرار الطوارئ) -->
     <div class="emergency-box">
       <div class="emergency-title">🚨 تحكم الطوارئ (Safety Controls)</div>
@@ -115,8 +148,29 @@
       <div class="chat-container" id="chat-container"></div>
     </div>
 
-    <!-- Floating Input Bar -->
+    <!-- Floating Input Bar & Quick Skills -->
     <div id="input-section">
+
+      <!-- Skills Quick Selector Bar -->
+      <div class="skills-bar" id="skills-bar">
+        <button class="skill-chip" onclick="window._triggerSkill('roundtable')">
+          <span>👥</span>
+          <span>طاولة النقاش</span>
+        </button>
+        <button class="skill-chip" onclick="window._triggerSkill('mindmap')">
+          <span>🗺️</span>
+          <span>خريطة ذهنية</span>
+        </button>
+        <button class="skill-chip" onclick="window._triggerSkill('slides')">
+          <span>📊</span>
+          <span>صانع شرائح</span>
+        </button>
+        <button class="skill-chip" onclick="window._triggerSkill('sandbox')">
+          <span>🧪</span>
+          <span>محاكاة تفاعلية</span>
+        </button>
+      </div>
+
       <div class="input-container">
 
         <!-- Attachment Previews -->
@@ -126,7 +180,7 @@
         <textarea
           id="user-input"
           class="chat-textarea"
-          placeholder="اكتب رسالتك أو اطلب تعديلاً..."
+          placeholder="اكتب رسالتك أو اختر مهارة..."
           rows="1"
           autocomplete="off"
         ></textarea>
@@ -204,6 +258,49 @@
     </div>
 
   </main>
+
+  <!-- ═══ Interactive Live Sandbox Modal (مشغل المحاكاة الحية) ═══ -->
+  <div id="sandbox-modal" class="custom-modal hidden">
+    <div class="custom-modal-card sandbox-card">
+      <div class="custom-modal-header">
+        <div class="modal-header-title">
+          <span>🧪</span>
+          <span>مختبر المحاكاة التفاعلية (Live Sandbox)</span>
+        </div>
+        <div class="modal-header-actions">
+          <button class="icon-btn" onclick="window._reloadSandbox()" title="إعادة تشغيل">🔄</button>
+          <button class="icon-btn" onclick="window._closeSandbox()" title="إغلاق">✕</button>
+        </div>
+      </div>
+      <div class="sandbox-iframe-wrap">
+        <iframe id="sandbox-frame" sandbox="allow-scripts allow-modals allow-same-origin" title="Sandbox Output"></iframe>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ Interactive Slide Deck Presentation Modal (عارض الشرائح التفاعلي) ═══ -->
+  <div id="slides-modal" class="custom-modal hidden">
+    <div class="custom-modal-card slides-card">
+      <div class="custom-modal-header">
+        <div class="modal-header-title">
+          <span>📊</span>
+          <span id="slides-deck-title">العرض التقديمي التفاعلي</span>
+        </div>
+        <div class="modal-header-actions">
+          <button class="modal-action-btn" onclick="window._exportSlidesHTML()">📥 تنزيل العرض</button>
+          <button class="icon-btn" onclick="window._closeSlides()" title="إغلاق">✕</button>
+        </div>
+      </div>
+      <div class="slides-viewer-body">
+        <div class="slide-content-area" id="slide-content-area"></div>
+      </div>
+      <div class="slides-footer-controls">
+        <button class="slide-nav-btn" onclick="window._prevSlide()">◀ السابق</button>
+        <span id="slide-indicator" class="slide-indicator">1 / 1</span>
+        <button class="slide-nav-btn" onclick="window._nextSlide()">التالي ▶</button>
+      </div>
+    </div>
+  </div>
 
   <div id="startup-check" class="startup-check hidden" aria-live="polite">
     <div class="startup-check-header">🔎 تحقق الواجهة</div>
