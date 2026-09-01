@@ -114,6 +114,9 @@
     <!-- Floating Input Bar (Claude & ChatGPT Style) -->
     <div id="input-section">
       <div class="input-container">
+        <!-- Attachment Previews (معاينة المرفقات) -->
+        <div id="attachment-preview-container" class="attachment-previews hidden"></div>
+
         <textarea
           id="user-input"
           class="chat-textarea"
@@ -121,12 +124,20 @@
           rows="1"
           autocomplete="off"
         ></textarea>
+
         <div class="input-actions-bar">
           <div class="input-left-info" id="input-mode-indicator">
+            <button class="attach-btn" id="attach-btn" title="إرفاق ملفات أو صور">
+              <span>📎</span>
+            </button>
             <span class="mode-tag">الشات الطبيعي</span>
           </div>
+
           <button id="send-btn" class="send-btn" disabled aria-label="إرسال">↑</button>
         </div>
+
+        <!-- Hidden Native File Input -->
+        <input type="file" id="file-upload-input" multiple accept="image/*,text/*,.pdf,.txt,.js,.py,.html,.css,.json,.md,.csv" style="display: none;">
       </div>
     </div>
 
