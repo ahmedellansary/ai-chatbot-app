@@ -831,9 +831,12 @@
         });
 
         input.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            this.handleSend();
+          if (e.key === 'Enter') {
+            // Enter inserts a newline naturally without sending
+            setTimeout(() => {
+              input.style.height = 'auto';
+              input.style.height = Math.min(input.scrollHeight, 180) + 'px';
+            }, 10);
           }
         });
       }
@@ -1480,10 +1483,26 @@
     navigator.serviceWorker.register('./sw.js').catch(() => {});
   }
 
+  function lockViewportHeight() {
+    const h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+    document.documentElement.style.setProperty('--app-height', `${h}px`);
+  }
+
+  window.addEventListener('resize', lockViewportHeight);
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', lockViewportHeight);
+    window.visualViewport.addEventListener('scroll', lockViewportHeight);
+  }
+  lockViewportHeight();
+
   // Auto-init on DOM ready
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => DevUIEngine.init());
+    document.addEventListener('DOMContentLoaded', () => {
+      lockViewportHeight();
+      DevUIEngine.init();
+    });
   } else {
+    lockViewportHeight();
     DevUIEngine.init();
   }
 
