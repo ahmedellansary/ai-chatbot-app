@@ -1721,45 +1721,68 @@
     try {
       const targetFile = (proposal.file || '').toLowerCase().trim();
       let previewHtml = '';
+      let appNameLabel = 'الشات الرئيسي';
 
-      if (targetFile.includes('index.html')) {
+      const baseUrl = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '/');
+      const baseTag = `<base href="${baseUrl}">`;
+
+      if (targetFile.includes('ops.html')) {
         previewHtml = proposal.content;
-      } else if (targetFile.includes('style.css')) {
-        const res = await fetch('./index.html?t=' + Date.now());
+        appNameLabel = 'مركز العمليات والاسترجاع';
+      } else if (targetFile.includes('ops_style.css')) {
+        const res = await fetch('./ops.html?t=' + Date.now());
         let baseHtml = res.ok ? await res.text() : '<!DOCTYPE html><html><head><meta charset="utf-8"></head><body></body></html>';
-        // If content is full stylesheet
-        if (proposal.content.length > 10000) {
-          previewHtml = baseHtml.replace(/<link[^>]*href=["'][^"']*style\.css[^"']*["'][^>]*>/i, `<style>${proposal.content}</style>`);
-        } else {
-          // If content is a surgical patch, inject it as an override layer in head!
+        previewHtml = baseHtml.replace(/<link[^>]*href=["'][^"']*ops_style\.css[^"']*["'][^>]*>/i, `<style>${proposal.content}</style>`);
+        if (!previewHtml.includes(proposal.content)) {
           previewHtml = baseHtml.replace('</head>', `<style id="patch-override">${proposal.content}</style></head>`);
         }
-      } else if (targetFile.includes('app.js')) {
-        const res = await fetch('./index.html?t=' + Date.now());
+        appNameLabel = 'مركز العمليات والاسترجاع';
+      } else if (targetFile.includes('ops.js')) {
+        const res = await fetch('./ops.html?t=' + Date.now());
         let baseHtml = res.ok ? await res.text() : '<!DOCTYPE html><html><head><meta charset="utf-8"></head><body></body></html>';
-        if (proposal.content.length > 20000) {
-          previewHtml = baseHtml.replace(/<script[^>]*src=["'][^"']*app\.js[^"']*["'][^>]*><\/script>/i, `<script>${proposal.content}<\/script>`);
-        } else {
+        previewHtml = baseHtml.replace(/<script[^>]*src=["'][^"']*ops\.js[^"']*["'][^>]*><\/script>/i, `<script>${proposal.content}<\/script>`);
+        if (!previewHtml.includes(proposal.content)) {
           previewHtml = baseHtml.replace('</body>', `<script id="patch-override">${proposal.content}<\/script></body>`);
         }
+        appNameLabel = 'مركز العمليات والاسترجاع';
       } else if (targetFile.includes('dev.html')) {
         previewHtml = proposal.content;
+        appNameLabel = 'استوديو المطور';
       } else if (targetFile.includes('dev_style.css')) {
         const res = await fetch('./dev.html?t=' + Date.now());
         let baseHtml = res.ok ? await res.text() : '<!DOCTYPE html><html><head><meta charset="utf-8"></head><body></body></html>';
-        if (proposal.content.length > 10000) {
-          previewHtml = baseHtml.replace(/<link[^>]*href=["'][^"']*dev_style\.css[^"']*["'][^>]*>/i, `<style>${proposal.content}</style>`);
-        } else {
+        previewHtml = baseHtml.replace(/<link[^>]*href=["'][^"']*dev_style\.css[^"']*["'][^>]*>/i, `<style>${proposal.content}</style>`);
+        if (!previewHtml.includes(proposal.content)) {
           previewHtml = baseHtml.replace('</head>', `<style id="patch-override">${proposal.content}</style></head>`);
         }
+        appNameLabel = 'استوديو المطور';
       } else if (targetFile.includes('dev.js')) {
         const res = await fetch('./dev.html?t=' + Date.now());
         let baseHtml = res.ok ? await res.text() : '<!DOCTYPE html><html><head><meta charset="utf-8"></head><body></body></html>';
-        if (proposal.content.length > 20000) {
-          previewHtml = baseHtml.replace(/<script[^>]*src=["'][^"']*dev\.js[^"']*["'][^>]*><\/script>/i, `<script>${proposal.content}<\/script>`);
-        } else {
+        previewHtml = baseHtml.replace(/<script[^>]*src=["'][^"']*dev\.js[^"']*["'][^>]*><\/script>/i, `<script>${proposal.content}<\/script>`);
+        if (!previewHtml.includes(proposal.content)) {
           previewHtml = baseHtml.replace('</body>', `<script id="patch-override">${proposal.content}<\/script></body>`);
         }
+        appNameLabel = 'استوديو المطور';
+      } else if (targetFile.includes('index.html')) {
+        previewHtml = proposal.content;
+        appNameLabel = 'الشات الرئيسي';
+      } else if (targetFile.includes('style.css')) {
+        const res = await fetch('./index.html?t=' + Date.now());
+        let baseHtml = res.ok ? await res.text() : '<!DOCTYPE html><html><head><meta charset="utf-8"></head><body></body></html>';
+        previewHtml = baseHtml.replace(/<link[^>]*href=["'][^"']*style\.css[^"']*["'][^>]*>/i, `<style>${proposal.content}</style>`);
+        if (!previewHtml.includes(proposal.content)) {
+          previewHtml = baseHtml.replace('</head>', `<style id="patch-override">${proposal.content}</style></head>`);
+        }
+        appNameLabel = 'الشات الرئيسي';
+      } else if (targetFile.includes('app.js')) {
+        const res = await fetch('./index.html?t=' + Date.now());
+        let baseHtml = res.ok ? await res.text() : '<!DOCTYPE html><html><head><meta charset="utf-8"></head><body></body></html>';
+        previewHtml = baseHtml.replace(/<script[^>]*src=["'][^"']*app\.js[^"']*["'][^>]*><\/script>/i, `<script>${proposal.content}<\/script>`);
+        if (!previewHtml.includes(proposal.content)) {
+          previewHtml = baseHtml.replace('</body>', `<script id="patch-override">${proposal.content}<\/script></body>`);
+        }
+        appNameLabel = 'الشات الرئيسي';
       } else {
         previewHtml = `
           <!DOCTYPE html>
@@ -1782,18 +1805,21 @@
         `;
       }
 
+      if (badge) badge.textContent = `${proposal.file} (${appNameLabel})`;
+
       const bypassSnippet = `
         <script>
           window.__IS_DEV_PREVIEW = true;
           try {
             sessionStorage.setItem('xv1_authenticated', 'true');
             sessionStorage.setItem('DEV_PORTAL_UNLOCKED', 'true');
+            sessionStorage.setItem('OPS_PORTAL_UNLOCKED', 'true');
             sessionStorage.setItem('owner_unlocked', '1');
             localStorage.setItem('owner_unlocked', '1');
           } catch(e) {}
         </script>
         <style>
-          #app-lock-gate, .app-lock-gate, #auth-overlay, .auth-overlay {
+          #app-lock-gate, .app-lock-gate, #ops-lock-gate, #auth-overlay, .auth-overlay {
             display: none !important;
             pointer-events: none !important;
             visibility: hidden !important;
@@ -1803,13 +1829,13 @@
       `;
 
       if (previewHtml.includes('<head>')) {
-        previewHtml = previewHtml.replace('<head>', '<head>' + bypassSnippet);
+        previewHtml = previewHtml.replace('<head>', '<head>' + baseTag + bypassSnippet);
       } else {
-        previewHtml = bypassSnippet + previewHtml;
+        previewHtml = baseTag + bypassSnippet + previewHtml;
       }
 
       frame.srcdoc = previewHtml;
-      DevUIEngine.showToast('✅ تم تشغيل المعاينة الافتراضية بنجاح دون طلب كلمة سر!', 'success');
+      DevUIEngine.showToast(`✅ تم تشغيل معاينة (${appNameLabel}) بنجاح!`, 'success');
     } catch (err) {
       console.error('Preview error:', err);
       DevUIEngine.showToast('تعذر تحميل ملفات المعاينة: ' + err.message, 'error');
