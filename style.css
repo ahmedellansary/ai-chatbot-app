@@ -356,6 +356,12 @@ html, body {
   transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
 }
 
+.pull-refresh-indicator.pull-bottom {
+  top: auto;
+  bottom: 85px;
+  transform: translate(-50%, 80px) scale(0.85);
+}
+
 .pull-refresh-indicator.visible {
   opacity: 1;
 }
@@ -363,6 +369,11 @@ html, body {
 .pull-refresh-indicator.refreshing {
   opacity: 1;
   transform: translate(-50%, 20px) scale(1);
+}
+
+.pull-refresh-indicator.pull-bottom.refreshing {
+  opacity: 1;
+  transform: translate(-50%, -18px) scale(1);
 }
 
 .pull-refresh-spinner {
