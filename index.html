@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="en" dir="ltr">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#131314">
-  <meta name="description" content="X.v1 — المساعد الذكي المتقدم">
+  <meta name="description" content="X.v1 — Advanced Intelligent Assistant">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="X.v1">
@@ -17,21 +17,21 @@
 <body>
 <div id="app">
 
-  <!-- ═══ Drawer Sidebar (القائمة الجانبية) ═══ -->
+  <!-- ═══ Drawer Sidebar (Left Side) ═══ -->
   <aside id="sidebar">
     <div class="sidebar-header">
       <div class="brand-logo">
         <span class="brand-star-icon">✦</span>
         <span>X.v1</span>
       </div>
-      <button class="icon-btn" id="close-sidebar-btn" aria-label="إغلاق">✕</button>
+      <button class="icon-btn" id="close-sidebar-btn" aria-label="Close">✕</button>
     </div>
 
     <!-- Main Navigation Actions -->
     <div class="sidebar-nav">
       <button class="nav-btn primary" id="btn-new-chat">
         <span>＋</span>
-        <span>محادثة جديدة</span>
+        <span>New Chat</span>
       </button>
       <button class="nav-btn dev" id="btn-dev-chat">
         <span>🛠️</span>
@@ -39,91 +39,71 @@
       </button>
     </div>
 
-    <!-- OpenMAIC Multi-Agent Skills Section -->
-    <div class="sidebar-section-title">الأوضاع المتقدمة (OpenMAIC)</div>
+    <!-- OpenMAIC Advanced Skills Section -->
+    <div class="sidebar-section-title">AI Skills</div>
     <div class="sidebar-skills-grid">
       <button class="skill-menu-btn" onclick="window._triggerSkill('roundtable')">
         <span class="skill-icon">👥</span>
         <div class="skill-info">
-          <div class="skill-name">طاولة النقاش (Roundtable)</div>
-          <div class="skill-sub">3 وكلاء يناقشون فكرتك</div>
+          <div class="skill-name">Roundtable</div>
+          <div class="skill-sub">3 AI agents analyze your idea</div>
         </div>
       </button>
       <button class="skill-menu-btn" onclick="window._triggerSkill('mindmap')">
         <span class="skill-icon">🗺️</span>
         <div class="skill-info">
-          <div class="skill-name">الخرائط الذهنية (Mind Map)</div>
-          <div class="skill-sub">رسم شجري مرئي تفاعلي</div>
+          <div class="skill-name">Mind Map</div>
+          <div class="skill-sub">Interactive visual breakdown</div>
         </div>
       </button>
       <button class="skill-menu-btn" onclick="window._triggerSkill('slides')">
         <span class="skill-icon">📊</span>
         <div class="skill-info">
-          <div class="skill-name">صانع الشرائح (Slide Deck)</div>
-          <div class="skill-sub">عرض تقديمي تفاعلي جاهز</div>
+          <div class="skill-name">Slide Deck</div>
+          <div class="skill-sub">Interactive presentation deck</div>
         </div>
       </button>
       <button class="skill-menu-btn" onclick="window._triggerSkill('sandbox')">
         <span class="skill-icon">🧪</span>
         <div class="skill-info">
-          <div class="skill-name">مختبر المحاكاة (Sandbox)</div>
-          <div class="skill-sub">تشغيل وتجربة الأكواد حياً</div>
+          <div class="skill-name">Live Sandbox</div>
+          <div class="skill-sub">Run interactive code & widgets</div>
         </div>
       </button>
     </div>
 
-    <div class="sidebar-section-title">المحادثات السابقة</div>
+    <div class="sidebar-section-title">Recent Chats</div>
     <div id="conversations-list"></div>
 
     <div class="sidebar-footer">
       <button class="footer-btn" id="install-btn" style="display:none;">
         <span>📲</span>
-        <span>تثبيت التطبيق على الموبايل</span>
+        <span>Install App</span>
       </button>
       <button class="footer-btn" onclick="localStorage.clear(); location.reload()">
         <span>🗑️</span>
-        <span>مسح السجل والكاش</span>
+        <span>Clear History & Cache</span>
       </button>
     </div>
   </aside>
 
-  <!-- ═══ Main View (الواجهة الرئيسية) ═══ -->
+  <!-- ═══ Main View ═══ -->
   <main id="main">
 
     <!-- Top Header -->
     <header id="header">
-      <button class="icon-btn" id="sidebar-toggle" aria-label="القائمة">
+      <button class="icon-btn" id="sidebar-toggle" aria-label="Menu">
         <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round">
           <line x1="4" y1="7" x2="20" y2="7"></line>
           <line x1="4" y1="17" x2="20" y2="17"></line>
         </svg>
       </button>
-
-      <div class="header-right-actions">
-        <!-- New Chat Bubble Icon -->
-        <button class="icon-btn" id="header-new-chat-btn" title="محادثة جديدة" aria-label="محادثة جديدة">
-          <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-            <line x1="12" y1="8" x2="12" y2="14"></line>
-            <line x1="9" y1="11" x2="15" y2="11"></line>
-          </svg>
-        </button>
-
-        <!-- Overflow Menu Dots -->
-        <button class="icon-btn" id="header-dots-btn" title="خيارات" aria-label="خيارات">
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
-            <circle cx="12" cy="6" r="1.8"></circle>
-            <circle cx="12" cy="12" r="1.8"></circle>
-            <circle cx="12" cy="18" r="1.8"></circle>
-          </svg>
-        </button>
-      </div>
     </header>
 
-    <!-- Pull to Refresh Touch Indicator (اسحب للتحديث باللمس) -->
+    <!-- Pull to Refresh Touch Indicator -->
     <div id="pull-refresh-indicator" class="pull-refresh-indicator">
       <span class="pull-icon">↓</span>
-      <span class="pull-text">اسحب للتحديث</span>
+      <span class="pull-text">Pull to refresh</span>
     </div>
 
     <!-- Chat Messages Feed -->
@@ -138,19 +118,19 @@
       <div class="skills-bar" id="skills-bar">
         <button class="skill-chip" onclick="window._triggerSkill('roundtable')">
           <span>👥</span>
-          <span>طاولة النقاش</span>
+          <span>Roundtable</span>
         </button>
         <button class="skill-chip" onclick="window._triggerSkill('mindmap')">
           <span>🗺️</span>
-          <span>خريطة ذهنية</span>
+          <span>Mind Map</span>
         </button>
         <button class="skill-chip" onclick="window._triggerSkill('slides')">
           <span>📊</span>
-          <span>صانع شرائح</span>
+          <span>Slide Deck</span>
         </button>
         <button class="skill-chip" onclick="window._triggerSkill('sandbox')">
           <span>🧪</span>
-          <span>محاكاة تفاعلية</span>
+          <span>Sandbox</span>
         </button>
       </div>
 
@@ -163,7 +143,7 @@
         <textarea
           id="user-input"
           class="chat-textarea"
-          placeholder="اكتب رسالتك أو اختر مهارة..."
+          placeholder="Reply to X.v1..."
           rows="1"
           autocomplete="off"
         ></textarea>
@@ -174,7 +154,7 @@
           <!-- Left Controls (Plus & Model Pill) -->
           <div class="input-bottom-left">
             <!-- Plus / Attach Button -->
-            <button class="claude-plus-btn" id="attach-btn" title="إرفاق ملفات أو صور" aria-label="إرفاق">
+            <button class="claude-plus-btn" id="attach-btn" title="Attach files or photos" aria-label="Attach">
               <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round">
                 <line x1="12" y1="5" x2="12" y2="19"></line>
                 <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -208,7 +188,7 @@
           <!-- Right Controls (Mic, Waveform Voice & Send) -->
           <div class="input-bottom-right">
             <!-- Mic Button -->
-            <button class="claude-voice-btn" id="mic-btn" title="تسجيل صوتي">
+            <button class="claude-voice-btn" id="mic-btn" title="Voice Input">
               <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
                 <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
@@ -217,7 +197,7 @@
             </button>
 
             <!-- Audio Waveform Button -->
-            <button class="claude-waveform-pill" id="voice-mode-btn" title="وضع الصوت التفاعلي">
+            <button class="claude-waveform-pill" id="voice-mode-btn" title="Voice Mode">
               <span class="wave-bar"></span>
               <span class="wave-bar"></span>
               <span class="wave-bar"></span>
@@ -225,7 +205,7 @@
             </button>
 
             <!-- Send Button (Visible when typing) -->
-            <button id="send-btn" class="claude-send-btn hidden" aria-label="إرسال">
+            <button id="send-btn" class="claude-send-btn hidden" aria-label="Send">
               <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round">
                 <line x1="12" y1="19" x2="12" y2="5"></line>
                 <polyline points="5 12 12 5 19 12"></polyline>
@@ -242,17 +222,17 @@
 
   </main>
 
-  <!-- ═══ Interactive Live Sandbox Modal (مشغل المحاكاة الحية) ═══ -->
+  <!-- ═══ Interactive Live Sandbox Modal ═══ -->
   <div id="sandbox-modal" class="custom-modal hidden">
     <div class="custom-modal-card sandbox-card">
       <div class="custom-modal-header">
         <div class="modal-header-title">
           <span>🧪</span>
-          <span>مختبر المحاكاة التفاعلية (Live Sandbox)</span>
+          <span>Live Interactive Sandbox</span>
         </div>
         <div class="modal-header-actions">
-          <button class="icon-btn" onclick="window._reloadSandbox()" title="إعادة تشغيل">🔄</button>
-          <button class="icon-btn" onclick="window._closeSandbox()" title="إغلاق">✕</button>
+          <button class="icon-btn" onclick="window._reloadSandbox()" title="Restart">🔄</button>
+          <button class="icon-btn" onclick="window._closeSandbox()" title="Close">✕</button>
         </div>
       </div>
       <div class="sandbox-iframe-wrap">
@@ -261,36 +241,36 @@
     </div>
   </div>
 
-  <!-- ═══ Interactive Slide Deck Presentation Modal (عارض الشرائح التفاعلي) ═══ -->
+  <!-- ═══ Interactive Slide Deck Presentation Modal ═══ -->
   <div id="slides-modal" class="custom-modal hidden">
     <div class="custom-modal-card slides-card">
       <div class="custom-modal-header">
         <div class="modal-header-title">
           <span>📊</span>
-          <span id="slides-deck-title">العرض التقديمي التفاعلي</span>
+          <span id="slides-deck-title">Interactive Slide Deck</span>
         </div>
         <div class="modal-header-actions">
-          <button class="modal-action-btn" onclick="window._exportSlidesHTML()">📥 تنزيل العرض</button>
-          <button class="icon-btn" onclick="window._closeSlides()" title="إغلاق">✕</button>
+          <button class="modal-action-btn" onclick="window._exportSlidesHTML()">📥 Download HTML</button>
+          <button class="icon-btn" onclick="window._closeSlides()" title="Close">✕</button>
         </div>
       </div>
       <div class="slides-viewer-body">
         <div class="slide-content-area" id="slide-content-area"></div>
       </div>
       <div class="slides-footer-controls">
-        <button class="slide-nav-btn" onclick="window._prevSlide()">◀ السابق</button>
+        <button class="slide-nav-btn" onclick="window._prevSlide()">◀ Previous</button>
         <span id="slide-indicator" class="slide-indicator">1 / 1</span>
-        <button class="slide-nav-btn" onclick="window._nextSlide()">التالي ▶</button>
+        <button class="slide-nav-btn" onclick="window._nextSlide()">Next ▶</button>
       </div>
     </div>
   </div>
 
-  <!-- ═══ Full Screen App Lock Gate (شاشة القفل العامة للتطبيق) ═══ -->
+  <!-- ═══ Full Screen App Lock Gate ═══ -->
   <div id="app-lock-gate" class="app-lock-gate hidden" aria-live="polite">
     <div class="lock-gate-card">
       <div class="lock-gate-star">✦</div>
       <h2 class="lock-gate-title">X.v1</h2>
-      <p class="lock-gate-sub">التطبيق محمي ومقفل بالكامل. يرجى إدخال كلمة السر للدخول.</p>
+      <p class="lock-gate-sub">Enter your access password to unlock the workspace.</p>
 
       <form id="lock-gate-form" class="lock-gate-form" onsubmit="event.preventDefault()">
         <div class="lock-input-group">
@@ -298,18 +278,18 @@
             type="password"
             id="gate-pin-input"
             class="lock-gate-input"
-            placeholder="أدخل كلمة السر"
+            placeholder="Password"
             maxlength="24"
             autocomplete="off"
           >
-          <button type="submit" id="gate-unlock-btn" class="lock-gate-btn" aria-label="دخول">
-            <span>دخول</span>
+          <button type="submit" id="gate-unlock-btn" class="lock-gate-btn" aria-label="Unlock">
+            <span>Unlock</span>
             <span>🔓</span>
           </button>
         </div>
       </form>
 
-      <div class="lock-gate-footer">🔐 مشفر ومحمي بالكامل</div>
+      <div class="lock-gate-footer">🔐 Encrypted & Protected</div>
     </div>
   </div>
 
