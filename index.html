@@ -100,10 +100,12 @@
       </button>
     </header>
 
-    <!-- Pull to Refresh Touch Indicator -->
-    <div id="pull-refresh-indicator" class="pull-refresh-indicator">
-      <span class="pull-icon">↓</span>
-      <span class="pull-text">Pull to refresh</span>
+    <!-- Modern Circular Pull to Refresh Indicator (سهم مدور مودرن بدون نصوص) -->
+    <div id="pull-refresh-indicator" class="pull-refresh-indicator" aria-hidden="true">
+      <svg class="pull-refresh-spinner" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round">
+        <path d="M21 12a9 9 0 1 1-6.219-8.56"></path>
+        <polyline points="21 3 21 9 15 9"></polyline>
+      </svg>
     </div>
 
     <!-- Chat Messages Feed -->
@@ -111,28 +113,8 @@
       <div class="chat-container" id="chat-container"></div>
     </div>
 
-    <!-- Floating Input Bar & Quick Skills -->
+    <!-- Floating Input Bar -->
     <div id="input-section">
-
-      <!-- Skills Quick Selector Bar -->
-      <div class="skills-bar" id="skills-bar">
-        <button class="skill-chip" onclick="window._triggerSkill('roundtable')">
-          <span>👥</span>
-          <span>Roundtable</span>
-        </button>
-        <button class="skill-chip" onclick="window._triggerSkill('mindmap')">
-          <span>🗺️</span>
-          <span>Mind Map</span>
-        </button>
-        <button class="skill-chip" onclick="window._triggerSkill('slides')">
-          <span>📊</span>
-          <span>Slide Deck</span>
-        </button>
-        <button class="skill-chip" onclick="window._triggerSkill('sandbox')">
-          <span>🧪</span>
-          <span>Sandbox</span>
-        </button>
-      </div>
 
       <div class="input-container">
 
@@ -151,7 +133,7 @@
         <!-- Bottom Controls Row inside Container -->
         <div class="input-bottom-bar">
           
-          <!-- Left Controls (Plus & Model Pill) -->
+          <!-- Left Controls (Plus, Skills Button & Model Pill) -->
           <div class="input-bottom-left">
             <!-- Plus / Attach Button -->
             <button class="claude-plus-btn" id="attach-btn" title="Attach files or photos" aria-label="Attach">
@@ -160,6 +142,44 @@
                 <line x1="5" y1="12" x2="19" y2="12"></line>
               </svg>
             </button>
+
+            <!-- Vertical Skills Trigger & Menu (قائمة الميزات الرأسية) -->
+            <div style="position: relative;">
+              <button class="claude-skills-btn" id="skills-menu-trigger" title="AI Skills & Tools" aria-label="Skills">
+                <span style="font-size: 14px;">✨</span>
+              </button>
+
+              <div class="skills-vertical-menu" id="skills-vertical-menu">
+                <button class="skills-menu-opt" onclick="window._triggerSkill('roundtable')">
+                  <span class="skill-opt-icon">👥</span>
+                  <div class="skill-opt-text">
+                    <div class="skill-opt-title">Roundtable</div>
+                    <div class="skill-opt-desc">Multi-agent debate & review</div>
+                  </div>
+                </button>
+                <button class="skills-menu-opt" onclick="window._triggerSkill('mindmap')">
+                  <span class="skill-opt-icon">🗺️</span>
+                  <div class="skill-opt-text">
+                    <div class="skill-opt-title">Mind Map</div>
+                    <div class="skill-opt-desc">Interactive visual tree outline</div>
+                  </div>
+                </button>
+                <button class="skills-menu-opt" onclick="window._triggerSkill('slides')">
+                  <span class="skill-opt-icon">📊</span>
+                  <div class="skill-opt-text">
+                    <div class="skill-opt-title">Slide Deck</div>
+                    <div class="skill-opt-desc">1-click presentation slides</div>
+                  </div>
+                </button>
+                <button class="skills-menu-opt" onclick="window._triggerSkill('sandbox')">
+                  <span class="skill-opt-icon">🧪</span>
+                  <div class="skill-opt-text">
+                    <div class="skill-opt-title">Live Sandbox</div>
+                    <div class="skill-opt-desc">Interactive app & code tester</div>
+                  </div>
+                </button>
+              </div>
+            </div>
 
             <!-- Model Selector Pill -->
             <div style="position: relative;">
