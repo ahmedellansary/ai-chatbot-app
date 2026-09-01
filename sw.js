@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ai-chat-v3';
+const CACHE_NAME = 'nytron-chat-v4';
 
 // Install immediately
 self.addEventListener('install', event => {
