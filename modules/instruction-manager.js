@@ -9,27 +9,32 @@
     activeEditingId: null,
 
     async load() {
+      const CURRENT_VERSION = 'v178_json';
       try {
+        const storedVer = localStorage.getItem('instruction_files_version');
+        const custom = localStorage.getItem('instruction_files');
+        
+        // If version is current and content is valid JSON, load saved
+        if (storedVer === CURRENT_VERSION && custom) {
+          try {
+            const parsed = JSON.parse(custom);
+            const hasLegacy = parsed.some(f => {
+              if (!f || !f.content) return true;
+              try { JSON.parse(f.content); return false; } catch(e) { return true; }
+            });
+            if (!hasLegacy && Array.isArray(parsed) && parsed.length) {
+              this.files = parsed;
+              return this.files;
+            }
+          } catch(e) {}
+        }
+
+        // Auto-migrate to clean JSON default templates from instructions.json
         const res = await fetch('./instructions.json?t=' + Date.now());
         if (res.ok) {
-          const fresh = await res.json();
-          const custom = localStorage.getItem('instruction_files');
-          if (custom) {
-            try {
-              const parsed = JSON.parse(custom);
-              // Check if any file has non-JSON content
-              const hasLegacy = parsed.some(f => {
-                if (!f || !f.content) return true;
-                try { JSON.parse(f.content); return false; } catch(e) { return true; }
-              });
-              if (!hasLegacy && Array.isArray(parsed) && parsed.length) {
-                this.files = parsed;
-                return this.files;
-              }
-            } catch(e) {}
-          }
-          this.files = fresh;
+          this.files = await res.json();
           this.save();
+          localStorage.setItem('instruction_files_version', CURRENT_VERSION);
           return this.files;
         }
       } catch (e) {
