@@ -9,135 +9,30 @@
   'use strict';
 
   // ─────────────────────────────────────────────────────────────────
-  // 1. CONFIGURATION & VAULT
+  // 1. CONFIGURATION & VAULT — Unified (config.js)
   // ─────────────────────────────────────────────────────────────────
-  const _k3 = ['ghp_Ep2hC2i0', 'LFNVeyCSiUFlMMb0', '5ILzmJ2nzGGN'].join('');
-
-  const OpsConfig = {
-    githubUser: 'ahmedellansary',
-    githubRepo: 'ai-chatbot-app',
-    branch: 'main',
-    getGithubToken() {
-      const stored = localStorage.getItem('GITHUB_TOKEN');
-      return (stored && stored.trim()) ? stored.trim() : _k3;
-    }
-  };
+  const OpsConfig = window.OpsConfig || window.ConfigVault || window.DevConfigVault || (() => {
+    const _k3f = ['ghp_Ep2hC2i0', 'LFNVeyCSiUFlMMb0', '5ILzmJ2nzGGN'].join('');
+    return {
+      githubUser: 'ahmedellansary', githubRepo: 'ai-chatbot-app', branch: 'main',
+      getGithubToken(){ const s=localStorage.getItem('GITHUB_TOKEN'); return (s&&s.trim())?s.trim():_k3f; },
+      getGitHubToken(){ return this.getGithubToken(); }
+    };
+  })();
 
   // ─────────────────────────────────────────────────────────────────
-  // 2. AUTHENTICATION & SECURITY (OpsAuthManager)
+  // 2. AUTHENTICATION & SECURITY — Unified (auth.js)
   // ─────────────────────────────────────────────────────────────────
-  const MASTER_RECORD = 'd34a56498cc5f912d1f55cefd6382af6:c000fd79842150a9fdb7b3d30ed0f964652ad5ba078beb7b7f9c47a523a16595';
-
-  const OpsAuthManager = {
-    async sha256(str) {
-      const buffer = new TextEncoder().encode(str);
-      const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
-      return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
-    },
-
-    async verify(password) {
-      if (!password) return false;
-      const cleanPass = password.trim();
-      if (cleanPass === 'A7med011@@') return true;
-      const customPin = localStorage.getItem('OPS_CUSTOM_PIN');
-      if (customPin && cleanPass === customPin) return true;
-      try {
-        const [salt, expectedHash] = MASTER_RECORD.split(':');
-        const calculated = await this.sha256(salt + ':' + cleanPass);
-        return calculated === expectedHash;
-      } catch (e) {
-        return false;
-      }
-    },
-
-    isUnlocked() {
-      if (typeof window !== 'undefined' && window.__IS_DEV_PREVIEW === true) {
-        return true;
-      }
-      return sessionStorage.getItem('OPS_PORTAL_UNLOCKED') === 'true';
-    },
-
-    unlock() {
-      sessionStorage.setItem('OPS_PORTAL_UNLOCKED', 'true');
-    },
-
-    lock() {
-      sessionStorage.removeItem('OPS_PORTAL_UNLOCKED');
-      this.setupGate();
-    },
-
-    setupGate() {
-      const gate = document.getElementById('ops-lock-gate');
-      const form = document.getElementById('ops-lock-form');
-      const pinInput = document.getElementById('ops-gate-pin-input');
-      const unlockBtn = document.getElementById('ops-gate-unlock-btn');
-      if (!gate) return;
-
-      if (!this.isUnlocked()) {
-        gate.classList.remove('hidden');
-        if (pinInput) {
-          pinInput.value = '';
-          setTimeout(() => pinInput.focus(), 150);
-        }
-      } else {
-        gate.classList.add('hidden');
-      }
-
-      let isVerifying = false;
-      const handleGateSubmit = async () => {
-        if (isVerifying) return;
-        const password = pinInput ? pinInput.value.trim() : '';
-        if (!password) {
-          OpsUI.showToast('يرجى كتابة كلمة السر', 'warning');
-          return;
-        }
-
-        isVerifying = true;
-        if (unlockBtn) unlockBtn.innerHTML = '<span>جاري التحقق...</span> <span>⏳</span>';
-        try {
-          const isValid = await this.verify(password);
-          if (isValid) {
-            this.unlock();
-            gate.classList.add('hidden');
-            OpsApp.initData();
-          } else {
-            OpsUI.showToast('❌ كلمة السر غير صحيحة!', 'error');
-            if (pinInput) {
-              pinInput.value = '';
-              pinInput.style.borderColor = 'var(--accent-rose)';
-              setTimeout(() => pinInput.style.borderColor = '', 1000);
-            }
-          }
-        } finally {
-          isVerifying = false;
-          if (unlockBtn) unlockBtn.innerHTML = '<span>فتح مركز العمليات</span> <span>🔓</span>';
-        }
-      };
-
-      if (form) {
-        form.onsubmit = (e) => {
-          e.preventDefault();
-          handleGateSubmit();
-        };
-      }
-
-      if (unlockBtn) {
-        unlockBtn.onclick = (e) => {
-          e.preventDefault();
-          handleGateSubmit();
-        };
-      }
-
-      if (pinInput) {
-        pinInput.onkeydown = (e) => {
-          if (e.key === 'Enter') {
-            e.preventDefault();
-            handleGateSubmit();
-          }
-        };
-      }
-    }
-  };
+  const MASTER_RECORD = window.MASTER_AUTH_RECORD || 'd34a56498cc5f912d1f55cefd6382af6:c000fd79842150a9fdb7b3d30ed0f964652ad5ba078beb7b7f9c47a523a16595';
+  const OpsAuthManager = window.OpsAuthManager || window.AuthManager || (window.createAuthManager ? window.createAuthManager({
+    storageKey: 'OPS_PORTAL_UNLOCKED',
+    previewFlag: '__IS_DEV_PREVIEW',
+    legacyKeys: [],
+    gateId: 'ops-lock-gate',
+    formId: 'ops-lock-form',
+    inputId: 'ops-gate-pin-input',
+    buttonId: 'ops-gate-unlock-btn'
+  }) : null);
 
   // ─────────────────────────────────────────────────────────────────
   // 3. AUDIT LOGGING SERVICE (OpsLogger)
@@ -178,136 +73,20 @@
   };
 
   // ─────────────────────────────────────────────────────────────────
-  // 4. GITHUB API & ROLLBACK ENGINE (OpsGitHubEngine)
+  // 4. GITHUB API & ROLLBACK ENGINE — Unified (github.js)
   // ─────────────────────────────────────────────────────────────────
-  const OpsGitHubEngine = {
-    getHeaders() {
-      return {
-        'Authorization': `Bearer ${OpsConfig.getGithubToken()}`,
-        'Accept': 'application/vnd.github.v3+json',
-        'Content-Type': 'application/json',
-        'User-Agent': 'Xv1-Ops-Portal'
-      };
-    },
-
-    async getFile(path, ref = OpsConfig.branch) {
-      const url = `https://api.github.com/repos/${OpsConfig.githubUser}/${OpsConfig.githubRepo}/contents/${path}?ref=${ref}&t=${Date.now()}`;
-      const res = await fetch(url, { headers: this.getHeaders() });
-      if (!res.ok) throw new Error(`HTTP ${res.status}: Failed to fetch ${path}`);
-      const data = await res.json();
-      const binaryStr = atob(data.content.replace(/\s/g, ''));
-      const bytes = Uint8Array.from(binaryStr, c => c.charCodeAt(0));
-      const content = new TextDecoder('utf-8').decode(bytes);
-      return { sha: data.sha, content };
-    },
-
-    async commitFile(path, content, message, skipCacheBump = false) {
-      let sha = null;
-      try {
-        const existing = await this.getFile(path);
-        sha = existing.sha;
-      } catch (e) {}
-
-      const bytes = new TextEncoder().encode(content);
-      let binaryStr = '';
-      for (let i = 0; i < bytes.length; i++) {
-        binaryStr += String.fromCharCode(bytes[i]);
-      }
-      const encodedContent = btoa(binaryStr);
-
-      const url = `https://api.github.com/repos/${OpsConfig.githubUser}/${OpsConfig.githubRepo}/contents/${path}`;
-      const body = {
-        message: message || `Rollback ${path} via X.v1 Ops Portal`,
-        content: encodedContent,
-        branch: OpsConfig.branch
-      };
-      if (sha) body.sha = sha;
-
-      const res = await fetch(url, {
-        method: 'PUT',
-        headers: this.getHeaders(),
-        body: JSON.stringify(body)
-      });
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.message || `HTTP ${res.status}: Commit failed`);
-      }
-
-      const result = await res.json();
-      if (!skipCacheBump && path !== 'sw.js') {
-        this.bumpServiceWorkerVersion().catch(() => {});
-      }
-      return result;
-    },
-
-    async bumpServiceWorkerVersion() {
-      try {
-        const swData = await this.getFile('sw.js');
-        let swContent = swData.content;
-        const match = swContent.match(/const\s+CACHE_NAME\s*=\s*['"]xv1-chat-v(\d+)['"]/);
-        if (match) {
-          const nextVer = parseInt(match[1], 10) + 1;
-          const newSwContent = swContent.replace(
-            /const\s+CACHE_NAME\s*=\s*['"]xv1-chat-v\d+['"]/,
-            `const CACHE_NAME = 'xv1-chat-v${nextVer}'`
-          );
-          await this.commitFile('sw.js', newSwContent, `⚡ Auto-bump cache to v${nextVer} for instant rollback`, true);
-          OpsLogger.log('deploy', `Auto-bumped Service Worker Cache to v${nextVer}`);
-        }
-      } catch (err) {
-        console.warn('[Cache Sync] Could not bump sw.js:', err);
-      }
-    },
-
-    async listCommits(perPage = 30) {
-      const url = `https://api.github.com/repos/${OpsConfig.githubUser}/${OpsConfig.githubRepo}/commits?per_page=${perPage}&sha=${OpsConfig.branch}&t=${Date.now()}`;
-      const res = await fetch(url, { headers: this.getHeaders() });
-      if (!res.ok) throw new Error(`HTTP ${res.status}: Failed to fetch commit history`);
-      return await res.json();
-    },
-
-    async getCommit(sha) {
-      const url = `https://api.github.com/repos/${OpsConfig.githubUser}/${OpsConfig.githubRepo}/commits/${sha}`;
-      const res = await fetch(url, { headers: this.getHeaders() });
-      if (!res.ok) throw new Error(`HTTP ${res.status}: Failed to fetch commit details`);
-      return await res.json();
-    },
-
-    async rollbackToSnapshot(targetCommitSha, commitMsg = '') {
-      OpsUI.showToast(`⏳ جاري فحص الملفات المعدلة في النسخة ${targetCommitSha.slice(0, 7)}...`, 'info');
-      
-      // Fetch full commit details to get modified files
-      const commitDetails = await this.getCommit(targetCommitSha);
-      const files = (commitDetails.files || []).map(f => f.filename);
-
-      if (files.length === 0) {
-        // Fallback to production core files
-        files.push('dev.html', 'dev_style.css', 'dev.js', 'index.html', 'style.css', 'app.js');
-      }
-
-      let restoredCount = 0;
-      for (const file of files) {
-        if (file === 'sw.js' || file.startsWith('.')) continue;
-        try {
-          const url = `https://raw.githubusercontent.com/${OpsConfig.githubUser}/${OpsConfig.githubRepo}/${targetCommitSha}/${file}`;
-          const res = await fetch(url);
-          if (!res.ok) continue;
-          const oldContent = await res.text();
-          await this.commitFile(file, oldContent, `⏪ [Ops Rollback] Restored ${file} to ${targetCommitSha.slice(0, 7)}: ${commitMsg}`, true);
-          restoredCount++;
-        } catch (e) {
-          console.warn(`[Rollback] Skipped file ${file}:`, e.message);
-        }
-      }
-
-      // Always bump SW version once at the end
-      await this.bumpServiceWorkerVersion();
-
-      OpsLogger.log('rollback', `استرجاع زمني ناجح للنسخة ${targetCommitSha.slice(0, 7)}`, `تم استرجاع ${restoredCount} ملفات (${files.join(', ')})`);
-      return { restoredCount, totalFiles: files.length };
-    }
-  };
+  const OpsGitHubEngine = window.OpsGitHubEngine || window.GitHubService || window.UnifiedGitHub || window.DevGitHubService || (() => {
+    const _gh = window.GitHubService || window.UnifiedGitHub;
+    return _gh || {
+      getHeaders(){ return {'Authorization':`Bearer ${OpsConfig.getGithubToken()}`,'Accept':'application/vnd.github.v3+json','Content-Type':'application/json','User-Agent':'Xv1-Ops-Portal'}; },
+      async getFile(p,ref=OpsConfig.branch){ const u=`https://api.github.com/repos/${OpsConfig.githubUser}/${OpsConfig.githubRepo}/contents/${p}?ref=${ref}&t=${Date.now()}`; const r=await fetch(u,{headers:this.getHeaders()}); if(!r.ok) throw new Error(`HTTP ${r.status}: Failed to fetch ${p}`); const d=await r.json(); const b=atob(d.content.replace(/\s/g,'')); const u8=Uint8Array.from(b,c=>c.charCodeAt(0)); return {sha:d.sha, content:new TextDecoder('utf-8').decode(u8)}; },
+      async commitFile(p,c,m,s=false){ let s1=null; try{ s1=(await this.getFile(p)).sha; }catch{} const b=new TextEncoder().encode(c); let s2=''; for(let i=0;i<b.length;i++) s2+=String.fromCharCode(b[i]); const e=btoa(s2); const u=`https://api.github.com/repos/${OpsConfig.githubUser}/${OpsConfig.githubRepo}/contents/${p}`; const bd={message:m||`Rollback ${p} via X.v1 Ops Portal`,content:e,branch:OpsConfig.branch}; if(s1) bd.sha=s1; const r=await fetch(u,{method:'PUT',headers:this.getHeaders(),body:JSON.stringify(bd)}); if(!r.ok) throw new Error((await r.json().catch(()=>({}))).message||`HTTP ${r.status}`); const res=await r.json(); if(!s&&p!=='sw.js') this.bumpServiceWorkerVersion().catch(()=>{}); return res; },
+      async bumpServiceWorkerVersion(){ try{ const d=await this.getFile('sw.js'); const ma=d.content.match(/const\s+CACHE_NAME\s*=\s*['"]xv1-chat-v(\d+)['"]/); if(ma){ const n=parseInt(ma[1],10)+1; await this.commitFile('sw.js',d.content.replace(/const\s+CACHE_NAME\s*=\s*['"]xv1-chat-v\d+['"]/,`const CACHE_NAME = 'xv1-chat-v${n}'`),`⚡ Auto-bump cache to v${n}`,true); OpsLogger.log('deploy',`Auto-bumped Service Worker Cache to v${n}`); } }catch(e){ console.warn('[Cache Sync] Could not bump sw.js:',e); } },
+      async listCommits(pp=30){ const u=`https://api.github.com/repos/${OpsConfig.githubUser}/${OpsConfig.githubRepo}/commits?per_page=${pp}&sha=${OpsConfig.branch}&t=${Date.now()}`; const r=await fetch(u,{headers:this.getHeaders()}); if(!r.ok) throw new Error(`HTTP ${r.status}: Failed to fetch commit history`); return await r.json(); },
+      async getCommit(s){ const u=`https://api.github.com/repos/${OpsConfig.githubUser}/${OpsConfig.githubRepo}/commits/${s}`; const r=await fetch(u,{headers:this.getHeaders()}); if(!r.ok) throw new Error(`HTTP ${r.status}: Failed to fetch commit details`); return await r.json(); },
+      async rollbackToSnapshot(t,c=''){ OpsUI.showToast(`⏳ جاري فحص الملفات المعدلة في النسخة ${t.slice(0,7)}...`,'info'); const d=await this.getCommit(t); let f=(d.files||[]).map(x=>x.filename); if(!f.length) f=['dev.html','dev_style.css','dev.js','index.html','style.css','app.js']; let rc=0; for(const file of f){ if(file==='sw.js'||file.startsWith('.')) continue; try{ const r=await fetch(`https://raw.githubusercontent.com/${OpsConfig.githubUser}/${OpsConfig.githubRepo}/${t}/${file}`); if(!r.ok) continue; await this.commitFile(file,await r.text(),`⏪ [Ops Rollback] Restored ${file} to ${t.slice(0,7)}: ${c}`,true); rc++; }catch(e){ console.warn('[Rollback] Skipped file',file,e.message); } } await this.bumpServiceWorkerVersion(); OpsLogger.log('rollback',`استرجاع زمني ناجح للنسخة ${t.slice(0,7)}`,`تم استرجاع ${rc} ملفات (${f.join(', ')})`); return {restoredCount:rc, totalFiles:f.length}; }
+    };
+  })();
 
   // ─────────────────────────────────────────────────────────────────
   // 5. UI CONTROLLER & EVENT HANDLERS (OpsUI)
