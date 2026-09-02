@@ -1441,29 +1441,40 @@
 /* ─── Modern Settings Tabbed Interface ─── */
 .settings-modal-tabs-bar {
   display: flex;
+  flex-direction: row;
   align-items: center;
-  gap: 6px;
-  padding: 4px;
-  background: rgba(0, 0, 0, 0.35);
+  gap: 8px;
+  padding: 5px;
+  width: 100%;
+  background: rgba(0, 0, 0, 0.4);
   border: 1px solid var(--border-subtle);
-  border-radius: 10px;
-  margin-bottom: 14px;
+  border-radius: 12px;
+  margin-bottom: 12px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.settings-modal-tabs-bar::-webkit-scrollbar {
+  display: none;
 }
 
 .settings-tab-btn {
   flex: 1;
-  display: flex;
+  min-width: max-content;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 7px;
-  padding: 8px 12px;
-  font-size: 12.5px;
+  padding: 9px 14px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--text-muted);
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 8px;
+  border-radius: 9px;
   cursor: pointer;
+  white-space: nowrap;
   transition: all 0.2s ease;
 }
 
@@ -1475,14 +1486,15 @@
 .settings-tab-btn.active {
   color: #fff;
   background: var(--bg-card);
-  border-color: var(--border-subtle);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  border-color: var(--border-focus);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
 }
 
 .settings-tab-pane {
   display: flex;
   flex-direction: column;
   gap: 14px;
+  width: 100%;
   animation: fadeIn 0.2s ease-out;
 }
 
@@ -1496,6 +1508,7 @@
   border-radius: 10px;
   padding: 14px;
   margin-top: 6px;
+  width: 100%;
 }
 
 .typography-preview-text {
@@ -1510,10 +1523,11 @@
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 10px;
-  margin-top: 10px;
+  margin-top: 8px;
+  width: 100%;
 }
 
-@media (max-width: 480px) {
+@media (max-width: 500px) {
   .theme-selector-grid {
     grid-template-columns: 1fr;
   }
@@ -1522,11 +1536,13 @@
 .theme-card-btn {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  width: 100%;
   background: var(--bg-card);
   border: 1px solid var(--border-subtle);
-  border-radius: 10px;
+  border-radius: 12px;
   color: var(--text-main);
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
@@ -1547,7 +1563,12 @@
 }
 
 .theme-preview-dot {
-  width: 18px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 8px rgba(0,0,0,0.4);
+}
   height: 18px;
   border-radius: 50%;
   flex-shrink: 0;
