@@ -329,6 +329,37 @@
           </div>
         </div>
 
+        <!-- Usage Section (Auto — Real Data) -->
+        <div class="settings-section usage-section" id="usage-section" style="margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border-subtle);">
+          <div class="settings-section-title">
+            <span>📊</span>
+            <span>الاستهلاك</span>
+            <span id="usage-live-dot" class="usage-live-dot" title="تحديث تلقائي"></span>
+          </div>
+          <div class="usage-grid">
+            <div class="usage-card openrouter">
+              <div class="usage-card-head"><span>OpenRouter</span><span class="usage-badge real">Real</span></div>
+              <div class="usage-stats">
+                <div class="usage-stat"><span class="usage-num" id="or-tokens">—</span><span class="usage-label">Tokens</span></div>
+                <div class="usage-stat"><span class="usage-num" id="or-reqs">—</span><span class="usage-label">Reqs</span></div>
+              </div>
+              <div class="usage-sub" id="or-sub">جاري الجلب...</div>
+            </div>
+            <div class="usage-card groq">
+              <div class="usage-card-head"><span>Groq</span><span class="usage-badge local">Tracked</span></div>
+              <div class="usage-stats">
+                <div class="usage-stat"><span class="usage-num" id="groq-tokens">—</span><span class="usage-label">Tokens</span></div>
+                <div class="usage-stat"><span class="usage-num" id="groq-reqs">—</span><span class="usage-label">Reqs</span></div>
+              </div>
+              <div class="usage-sub" id="groq-sub">آخر موديل: —</div>
+            </div>
+          </div>
+          <div class="usage-footer">
+            <span id="usage-last-model" class="usage-last">—</span>
+            <button class="settings-action-btn" onclick="window._refreshUsage()">تحديث</button>
+          </div>
+        </div>
+
         <!-- Storage & Cache Section -->
         <div class="settings-section" style="margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border-subtle);">
           <div class="settings-section-title">
