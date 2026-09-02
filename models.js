@@ -127,8 +127,12 @@ async function callOpenRouter(model, messages, signal) {
     max_tokens: 8192
   };
 
+  let timedOut = false;
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 10000);
+  const timeoutId = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, 7000);
   const combinedSignal = signal ? AbortSignal.any([signal, controller.signal]) : controller.signal;
 
   try {
@@ -152,6 +156,7 @@ async function callOpenRouter(model, messages, signal) {
     return response;
   } catch(e) {
     clearTimeout(timeoutId);
+    if (timedOut) throw new Error('MODEL_TIMEOUT');
     throw e;
   }
 }
@@ -176,8 +181,12 @@ async function callGroq(model, messages, signal) {
     'Content-Type': 'application/json'
   };
 
+  let timedOut = false;
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 8000);
+  const timeoutId = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, 7000);
   const combinedSignal = signal ? AbortSignal.any([signal, controller.signal]) : controller.signal;
 
   try {
@@ -207,6 +216,7 @@ async function callGroq(model, messages, signal) {
     return response;
   } catch(e) {
     clearTimeout(timeoutId);
+    if (timedOut) throw new Error('MODEL_TIMEOUT');
     throw e;
   }
 }
@@ -267,7 +277,7 @@ async function* chatWithFallback(tier, messages, signal, onModelChange) {
 
     let succeeded = false;
 
-    // Try available keys for the strongest model first before falling back to next model
+    // Try available keys for the model first before falling back to next model
     for (let attempt = 0; attempt < keyCount; attempt++) {
       try {
         const response = model.provider === 'groq'
@@ -280,19 +290,19 @@ async function* chatWithFallback(tier, messages, signal, onModelChange) {
         succeeded = true;
         return;
       } catch (err) {
-        if (err.name === 'AbortError') throw err;
+        if (signal && signal.aborted) throw err;
         console.warn(`[Model Router] ${model.name} (Key ${attempt + 1}/${keyCount}) failed:`, err.message);
 
-        // If request is too large for this specific model, immediately fall back to the next model in cascade
-        if (/413|too large|content too large|limit \d+/i.test(err.message)) {
+        // If request is too large, timed out, or not available, immediately fall back to the next model in cascade
+        if (/413|too large|content too large|limit \d+|MODEL_TIMEOUT|only available on/i.test(err.message)) {
           break;
         }
 
-        // If rate limit / quota, rotate to next key of the SAME strong model
+        // If rate limit / quota, rotate to next key of the SAME model
         if (err.message === 'RATE_LIMIT' || /429|rate limit|rpm/i.test(err.message)) {
           if (model.provider === 'groq') rotateGroqKey();
           else rotateOpenRouterKey();
-          continue; // Next key on the same strong model
+          continue; // Next key on the same model
         } else {
           // If offline / bad request / server error, switch to next model in tier
           break;
