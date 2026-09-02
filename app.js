@@ -2185,24 +2185,37 @@
   async function updateVersionBadge() {
     const vEl = document.getElementById('app-version-text');
     const dEl = document.getElementById('app-last-update');
-    if (vEl) {
+    const topEl = document.getElementById('chat-status-text');
+    let ver = '';
+    let dateStr = '';
+    if (vEl || topEl) {
       try {
         const r = await fetch('./sw.js?t='+Date.now());
         const t = await r.text();
         const m = t.match(/xv1-chat-v(\d+)/);
-        if (m) vEl.textContent = 'v'+m[1];
+        if (m) { ver = 'v'+m[1]; if (vEl) vEl.textContent = ver; }
       } catch {}
     }
-    if (dEl) {
+    if (dEl || topEl) {
       try {
         const r = await fetch('https://api.github.com/repos/ahmedellansary/ai-chatbot-app/commits?per_page=1&t='+Date.now());
         if (r.ok) {
           const j = await r.json();
           const date = j[0]?.commit?.committer?.date || j[0]?.commit?.author?.date;
-          if (date) { dEl.textContent = new Date(date).toLocaleDateString('ar-EG', {year:'numeric', month:'short', day:'numeric'}); return; }
+          if (date) { dateStr = new Date(date).toLocaleDateString('ar-EG', {year:'numeric', month:'short', day:'numeric'}); if (dEl) dEl.textContent = dateStr; }
         }
       } catch {}
-      dEl.textContent = new Date().toLocaleDateString('ar-EG', {year:'numeric', month:'short', day:'numeric'});
+      if (!dateStr) { dateStr = new Date().toLocaleDateString('ar-EG', {year:'numeric', month:'short', day:'numeric'}); if (dEl) dEl.textContent = dateStr; }
+    }
+    if (topEl) {
+      try {
+        const r2 = await fetch('./version.json?t='+Date.now());
+        if (r2.ok) {
+          const j2 = await r2.json();
+          if (j2.version && j2.updated_at) { topEl.textContent = `X (V${j2.version}) ${j2.updated_at}`; return; }
+        }
+      } catch {}
+      topEl.textContent = `X (${ver || 'V164'}) ${dateStr}`;
     }
   }
 
