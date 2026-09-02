@@ -276,7 +276,7 @@
           messages,
           stream: true,
           temperature: 0.7,
-          max_tokens: 8192
+          max_tokens: 4096
         }),
         signal
       });
@@ -1006,6 +1006,9 @@
       try { UsageTracker.record(aiMsgObj.model || 'Multi-Agent', 'groq', textForPayload, finalOutput); } catch {}
     }
   };
+
+  try { window.ChatEngine = ChatEngine; } catch(e) {}
+  try { window.MultiAgentEngine = MultiAgentEngine; } catch(e) {}
 
   // ─────────────────────────────────────────────────────────────────
   // 8. SKILLS ENGINE & SANDBOX (SkillsEngine)
