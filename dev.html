@@ -220,28 +220,44 @@
 
   <!-- ═══ File Explorer & Live Code Editor Modal ═══ -->
   <div id="files-modal" class="custom-modal hidden">
-    <div class="custom-modal-card" style="max-width: 900px; height: 88vh;">
+    <div class="custom-modal-card" style="max-width: 920px; height: 90vh;">
       <div class="custom-modal-header">
         <div class="modal-header-title">
           <span>📁</span>
-          <span>Repository File Editor</span>
+          <span>Repository File Explorer</span>
+          <span id="files-count-badge" class="files-count-badge">3 of 15 files</span>
         </div>
         <button class="icon-btn" onclick="window._closeFilesModal()">✕</button>
       </div>
       <div class="modal-body" style="flex:1; display:flex; flex-direction:column; gap:10px;">
-        <div style="display:flex; gap:6px; flex-wrap:wrap;">
-          <button class="icon-btn active" id="btn-file-index" onclick="window._selectFileForEditing('index.html')">📄 index.html</button>
-          <button class="icon-btn" id="btn-file-style" onclick="window._selectFileForEditing('style.css')">🎨 style.css</button>
-          <button class="icon-btn" id="btn-file-app" onclick="window._selectFileForEditing('app.js')">⚙️ app.js</button>
-          <button class="icon-btn" id="btn-file-prompt" onclick="window._selectFileForEditing('system_prompt.txt')">🧠 system_prompt.txt</button>
-          <button class="icon-btn" id="btn-file-sw" onclick="window._selectFileForEditing('sw.js')">⚡ sw.js</button>
-        </div>
-        <div id="all-files-grid" style="display:flex; gap:6px; flex-wrap:wrap; max-height:110px; overflow-y:auto; padding:6px; background:rgba(255,255,255,0.03); border:1px solid var(--border-subtle); border-radius:10px;">
-          <span style="font-size:11px; color:var(--text-dim);">Fetching repository files...</span>
+        
+        <!-- Smart Compact File Explorer Group -->
+        <div class="repo-files-explorer-wrap">
+          <div class="repo-files-topbar">
+            <!-- Top 3 Primary File Pills -->
+            <div id="top-files-pills" class="repo-files-pills">
+              <!-- Dynamically rendered: 3 files -->
+            </div>
+
+            <!-- Toggle Button for remaining files -->
+            <button id="toggle-more-files-btn" class="toggle-more-files-btn" onclick="window._toggleMoreFiles()">
+              <span id="more-files-text">+ More Files</span>
+              <span id="more-files-chevron">▾</span>
+            </button>
+          </div>
+
+          <!-- Collapsible Extended Files Grid -->
+          <div id="extended-files-grid" class="extended-files-grid hidden">
+            <!-- Dynamically populated with remaining repository files -->
+          </div>
         </div>
         
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
-          <span id="current-editing-filename" style="font-weight:700; color:#fbbf24; font-size:13px; font-family:var(--font-mono);">Active: index.html</span>
+        <!-- Active File Indicator & Commit Bar -->
+        <div class="active-file-editor-bar">
+          <div class="active-file-info">
+            <span class="active-file-dot"></span>
+            <span id="current-editing-filename" class="active-file-label">Active: index.html</span>
+          </div>
           <button class="dev-btn-action deploy" onclick="window._commitCurrentEditorFile()">
             <span>💾</span>
             <span>Commit & Push to GitHub</span>
