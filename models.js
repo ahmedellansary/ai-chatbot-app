@@ -38,35 +38,36 @@ const rotateGroqKey = () => {
   groqKeyIndex++;
 };
 
-// ─── Model Tiers — Unified 11-model set (matches models.json) ───
+// ─── Model Tiers — Unified active model set (matches models.json) ───
 const MODELS = {
   HIGH: [
     { id: 'nvidia/nemotron-3-ultra-550b-a55b:free', name: 'Nemotron 3 Ultra 550B', provider: 'openrouter' },
-    { id: 'nvidia/nemotron-3-super-120b-a12b:free', name: 'Nemotron 3 Super 120B', provider: 'openrouter' },
     { id: 'minimax/minimax-m3:free', name: 'MiniMax M3', provider: 'openrouter' },
     { id: 'openai/gpt-oss-120b', name: 'GPT OSS 120B', provider: 'groq' },
-    { id: 'meta-llama/llama-3.3-70b-instruct:free', name: 'Llama 3.3 70B', provider: 'openrouter' }
+    { id: 'nvidia/nemotron-3-super-120b-a12b:free', name: 'Nemotron 3 Super 120B', provider: 'openrouter' }
   ],
   MID: [
-    { id: 'qwen/qwen-2.5-coder-32b-instruct:free', name: 'Qwen 2.5 Coder 32B', provider: 'openrouter' },
+    { id: 'openai/gpt-oss-120b', name: 'GPT OSS 120B', provider: 'groq' },
     { id: 'minimax/minimax-m2.7:free', name: 'MiniMax M2.7', provider: 'openrouter' },
     { id: 'qwen/qwen3.8-27b', name: 'Qwen 3.8 27B', provider: 'groq' },
-    { id: 'openai/gpt-oss-20b', name: 'GPT OSS 20B', provider: 'groq' }
+    { id: 'openai/gpt-oss-20b', name: 'GPT OSS 20B', provider: 'groq' },
+    { id: 'nvidia/nemotron-3-super-120b-a12b:free', name: 'Nemotron 3 Super 120B', provider: 'openrouter' }
   ],
   FAST: [
     { id: 'groq/compound', name: 'Groq Compound', provider: 'groq' },
     { id: 'qwen/qwen3.8-27b', name: 'Qwen 3.8 27B', provider: 'groq' },
+    { id: 'openai/gpt-oss-20b', name: 'GPT OSS 20B', provider: 'groq' },
     { id: 'groq/compound-mini', name: 'Groq Compound Mini', provider: 'groq' }
   ]
 };
 
 const DEV_MODELS = [
   { id: 'openai/gpt-oss-120b', name: 'GPT OSS 120B Lead Architect', provider: 'groq' },
-  { id: 'meta-llama/llama-3.3-70b-instruct:free', name: 'Llama 3.3 70B Instruct', provider: 'openrouter' },
-  { id: 'qwen/qwen-2.5-coder-32b-instruct:free', name: 'Qwen 2.5 Coder 32B', provider: 'openrouter' },
+  { id: 'nvidia/nemotron-3-ultra-550b-a55b:free', name: 'Nemotron 3 Ultra 550B', provider: 'openrouter' },
+  { id: 'minimax/minimax-m3:free', name: 'MiniMax M3 Architect', provider: 'openrouter' },
   { id: 'qwen/qwen3.8-27b', name: 'Qwen 3.8 27B Fast Coder', provider: 'groq' },
   { id: 'groq/compound', name: 'Groq Compound', provider: 'groq' },
-  { id: 'minimax/minimax-m3:free', name: 'MiniMax M3 Architect', provider: 'openrouter' }
+  { id: 'minimax/minimax-m2.7:free', name: 'MiniMax M2.7 Reasoning', provider: 'openrouter' }
 ];
 
 async function callOpenRouter(model, messages, signal) {
@@ -113,7 +114,7 @@ async function callGroq(model, messages, signal) {
       messages,
       stream: true,
       temperature: 0.7,
-      max_tokens: 8192
+      max_tokens: 4096
     }),
     signal
   });
