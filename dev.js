@@ -2352,6 +2352,16 @@
     }
   };
 
+  window._switchDevSettingsTab = function(tabName) {
+    $$('#dev-settings-modal .settings-tab-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.getAttribute('data-tab') === tabName);
+    });
+    $$('#dev-settings-modal .settings-tab-pane').forEach(pane => {
+      pane.classList.toggle('hidden', pane.id !== `dev-tab-${tabName}`);
+      pane.classList.toggle('active', pane.id === `dev-tab-${tabName}`);
+    });
+  };
+
   window._setAppTheme = function(themeName) {
     document.documentElement.setAttribute('data-theme', themeName);
     localStorage.setItem('xv1_theme', themeName);
