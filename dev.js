@@ -11,6 +11,7 @@
   function generateId() {
     return 'dev_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 8);
   }
+  try { window.generateId = generateId; } catch(e) {}
 
   // ─────────────────────────────────────────────────────────────────
   // 1. CONFIGURATION & CREDENTIALS VAULT — Unified (config.js)
@@ -128,6 +129,7 @@
       priority: 3
     }
   ];
+  try { window.DEV_AGENTS = DEV_AGENTS; } catch(e) {}
 
   // ─────────────────────────────────────────────────────────────────
   // 3. AUTHENTICATION & LOCK GATE (DevAuthManager)
@@ -178,8 +180,9 @@
     currentEditingFile: 'index.html',
     attachments: []
   };
+  try { window._devState = state; window.devState = state; } catch(e) {}
 
-  const DevState = {
+  const DevState = window.createDevState ? window.createDevState(state, { generateId: generateId, DEV_AGENTS: DEV_AGENTS, $: (typeof $ !== "undefined" ? $ : function(id){return document.getElementById(id);}) }) : {
     load() {
       try {
         const saved = localStorage.getItem('dev_conversations');
@@ -280,11 +283,11 @@
       return msg;
     }
   };
-
+  try { window.DevState = DevState; } catch(e) {}
   // ─────────────────────────────────────────────────────────────────
   // 6. DEV CHAT & SMART FALLBACK CASCADE ENGINE (DevChatEngine)
   // ─────────────────────────────────────────────────────────────────
-  const DevChatEngine = {
+  const DevChatEngine = window.DevChatEngine || {
     getAdaptiveConfigForDev(agent, estimatedTokens = 0) {
       if (estimatedTokens > 5000) return { recentCount: 10, maxBriefingChars: 1200 };
       if (!agent) return { recentCount: 10, maxBriefingChars: 1200 };
@@ -786,7 +789,7 @@
       }
     }
   };
-
+  try { window.DevChatEngine = DevChatEngine; } catch(e) {}
   async function updateDevVersionBadge() {
     const badgeEl = $('dev-status-badge-text');
     if (!badgeEl) return;
@@ -837,7 +840,7 @@
   // ─────────────────────────────────────────────────────────────────
   // 7. UI ENGINE & MODALS (DevUIEngine)
   // ─────────────────────────────────────────────────────────────────
-  const DevUIEngine = {
+  const DevUIEngine = window.DevUIEngine || {
     setupSmoothKineticScroll() {
       // Native hardware-accelerated touch scrolling enabled via CSS
     },
@@ -1360,7 +1363,7 @@
       }, 3500);
     }
   };
-
+  try { window.DevUIEngine = DevUIEngine; } catch(e) {}
   // ─────────────────────────────────────────────────────────────────
   // 8. GLOBAL WINDOW BRIDGES FOR DEV OPERATIONS & TOOLS
   // ─────────────────────────────────────────────────────────────────
@@ -2025,6 +2028,10 @@
   function $(id) {
     return document.getElementById(id);
   }
+  function $$(sel, root = document) {
+    return (root || document).querySelectorAll(sel);
+  }
+  try { window.$ = $; window.$$ = $$; } catch(e) {}
 
   // PWA Install Prompt Handler
   let deferredPrompt = null;
