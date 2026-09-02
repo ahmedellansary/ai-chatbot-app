@@ -246,7 +246,8 @@
       var label = _get$('selected-agent-label');
       var icon = _get$('selected-agent-icon');
       var mode = (state && state.currentMode) ? state.currentMode : 'MID';
-      if (label) label.textContent = mode;
+      var labelText = (mode === 'MID') ? 'Balanced' : mode;
+      if (label) label.textContent = labelText;
       if (icon) {
         if (mode === 'HIGH') icon.textContent = '🚀';
         else if (mode === 'FAST') icon.textContent = '⚡';
@@ -260,13 +261,17 @@
       var menu = _get$('model-dropdown-menu');
       var self = this;
       if (!pill || !menu) return;
-      var TIERS = ['HIGH', 'MID', 'FAST'];
+      var TIERS = [
+        { id: 'HIGH', label: 'HIGH' },
+        { id: 'MID', label: 'Balanced' },
+        { id: 'FAST', label: 'FAST' }
+      ];
       var renderMenu = function () {
         var state = d.state || window._devState;
         var current = (state && state.currentMode) ? state.currentMode : 'MID';
-        menu.innerHTML = TIERS.map(function (tier) {
-          var isActive = tier === current;
-          return '\n            <button type="button" class="dropdown-opt ' + (isActive ? 'active' : '') + '" onclick="window._selectDevTier(\'' + tier + '\')">\n              <div class="opt-title">\n                <span>' + tier + '</span>\n                ' + (isActive ? '<span style="color:#fbbf24; font-size:12px; font-weight:bold;">✓</span>' : '') + '\n              </div>\n            </button>';
+        menu.innerHTML = TIERS.map(function (item) {
+          var isActive = item.id === current;
+          return '\n            <button type="button" class="dropdown-opt ' + (isActive ? 'active' : '') + '" onclick="window._selectDevTier(\'' + item.id + '\')">\n              <div class="opt-title">\n                <span>' + item.label + '</span>\n                ' + (isActive ? '<span style="color:#fbbf24; font-size:12px; font-weight:bold;">✓</span>' : '') + '\n              </div>\n            </button>';
         }).join('');
       };
       pill.onclick = function (e) { e.preventDefault(); e.stopPropagation(); renderMenu(); menu.classList.toggle('show'); };
