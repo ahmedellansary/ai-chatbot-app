@@ -2517,6 +2517,9 @@
         for (const r of regs) await r.update();
       } catch {}
     }
+    window.location.reload();
+  };
+
   window._setAppTheme = function(themeName) {
     document.documentElement.setAttribute('data-theme', themeName);
     localStorage.setItem('xv1_theme', themeName);
