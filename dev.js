@@ -1920,21 +1920,10 @@
   let repoFilesCache = [];
   let isMoreFilesExpanded = false;
 
-  const getFileIcon = (p) => {
-    if (p.endsWith('.html')) return '📄';
-    if (p.endsWith('.css')) return '🎨';
-    if (p.endsWith('.js') || p.endsWith('.mjs')) return '⚙️';
-    if (p.endsWith('.json')) return '📋';
-    if (p.endsWith('.txt')) return '🧠';
-    if (p.includes('manifest')) return '📱';
-    if (p.includes('icon') || p.endsWith('.png') || p.endsWith('.jpg')) return '🖼️';
-    return '📄';
-  };
-
   function renderRepositoryFilesExplorer() {
     const topPillsContainer = $('top-files-pills');
     const extendedGrid = $('extended-files-grid');
-    const badge = $('files-count-badge');
+    const syncText = $('files-sync-text');
     const moreBtnText = $('more-files-text');
     const moreChevron = $('more-files-chevron');
     const toggleBtn = $('toggle-more-files-btn');
@@ -1952,36 +1941,37 @@
     }
 
     const remainingFiles = allFiles.filter(f => !top3.includes(f));
-    const totalCount = allFiles.length;
-    const hiddenCount = remainingFiles.length;
 
-    if (badge) {
-      badge.textContent = `${top3.length} of ${totalCount} files (${hiddenCount} hidden)`;
+    // Update Last Sync Timestamp
+    if (syncText) {
+      const savedSync = localStorage.getItem('FILES_LAST_SYNC_TIME');
+      syncText.textContent = savedSync || 'Synced';
     }
 
+    // Render Top 3 Pills without icons
     topPillsContainer.innerHTML = top3.map(file => `
       <button class="file-pill-btn ${file === activeFile ? 'active' : ''}" onclick="window._selectFileForEditing('${file.replace(/'/g, "\\'")}')">
-        <span>${getFileIcon(file)}</span>
-        <span>${file}</span>
+        ${file}
       </button>
     `).join('');
 
+    // Toggle Button
     if (toggleBtn && moreBtnText && moreChevron) {
       if (isMoreFilesExpanded) {
         toggleBtn.classList.add('expanded');
-        moreBtnText.textContent = 'Collapse Files';
+        moreBtnText.textContent = 'Collapse';
         moreChevron.textContent = '▴';
       } else {
         toggleBtn.classList.remove('expanded');
-        moreBtnText.textContent = `+${hiddenCount} More Files`;
+        moreBtnText.textContent = '+ More Files';
         moreChevron.textContent = '▾';
       }
     }
 
+    // Extended Grid without icons
     extendedGrid.innerHTML = remainingFiles.map(file => `
       <button class="file-pill-btn ${file === activeFile ? 'active' : ''}" onclick="window._selectFileForEditing('${file.replace(/'/g, "\\'")}')">
-        <span>${getFileIcon(file)}</span>
-        <span>${file}</span>
+        ${file}
       </button>
     `).join('');
 
@@ -1991,6 +1981,56 @@
   window._toggleMoreFiles = function() {
     isMoreFilesExpanded = !isMoreFilesExpanded;
     renderRepositoryFilesExplorer();
+  };
+
+  window._syncFilesManual = async function() {
+    const syncBtn = $('btn-sync-files-manual');
+    const syncText = $('files-sync-text');
+    if (syncBtn) syncBtn.classList.add('spinning');
+    if (syncText) syncText.textContent = 'Syncing...';
+
+    DevUIEngine.showToast('🔄 Comparing and syncing files with GitHub...', 'info');
+
+    const formatDateTime = (d) => {
+      const pad = (n) => String(n).padStart(2, '0');
+      const day = pad(d.getDate());
+      const month = pad(d.getMonth() + 1);
+      const year = d.getFullYear();
+      let hours = d.getHours();
+      const minutes = pad(d.getMinutes());
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      hours = hours % 12;
+      hours = hours ? hours : 12;
+      return `${day}-${month}-${year} ${hours}:${minutes}${ampm}`;
+    };
+
+    try {
+      const files = await DevGitHubService.listFiles();
+      if (files && files.length) {
+        repoFilesCache = files;
+      }
+      
+      // Reload current active file
+      const activeFile = state.currentEditingFile || 'index.html';
+      const fileData = await DevGitHubService.getFile(activeFile);
+      const editor = $('direct-code-editor');
+      if (editor && fileData && fileData.content) {
+        editor.value = fileData.content;
+      }
+
+      const syncTimestamp = `Synced: ${formatDateTime(new Date())}`;
+      localStorage.setItem('FILES_LAST_SYNC_TIME', syncTimestamp);
+      if (syncText) syncText.textContent = syncTimestamp;
+
+      renderRepositoryFilesExplorer();
+      updateDevVersionBadge().catch(()=>{});
+      DevUIEngine.showToast(`✅ Synced ${repoFilesCache.length} repository files successfully!`, 'success');
+    } catch (e) {
+      DevUIEngine.showToast(`⚠️ Sync notice: ${e.message}`, 'error');
+      if (syncText) syncText.textContent = 'Sync failed';
+    } finally {
+      if (syncBtn) syncBtn.classList.remove('spinning');
+    }
   };
 
   window._openFilesModal = async function() {
