@@ -32,8 +32,41 @@
   // ─────────────────────────────────────────────────────────────────
   // 2. DEV AGENTS CATALOG (Hierarchy: Coding -> High-Params -> Fast)
   // ─────────────────────────────────────────────────────────────────
+  const DEV_TIER_MODELS = (window.DEV_TIER_MODELS) || {
+    HIGH: [
+      { id: 'poolside/laguna-s-2.1:free', name: 'Laguna S 2.1 (118B Coding Agent)', provider: 'openrouter' },
+      { id: 'z-ai/glm-5.2:free', name: 'GLM 5.2 Reasoning (1M)', provider: 'openrouter' },
+      { id: 'thinkingmachines/inkling:free', name: 'Inkling 975B (MoE)', provider: 'openrouter' },
+      { id: 'minimax/minimax-m3:free', name: 'MiniMax M3 Architect', provider: 'openrouter' },
+      { id: 'nvidia/nemotron-3-ultra-550b-a55b:free', name: 'Nemotron 3 Ultra 550B', provider: 'openrouter' }
+    ],
+    MID: [
+      { id: 'poolside/laguna-s-2.1:free', name: 'Laguna S 2.1 (118B Coding Agent)', provider: 'openrouter' },
+      { id: 'openai/gpt-oss-120b', name: 'GPT OSS 120B Lead Architect', provider: 'groq' },
+      { id: 'cohere/north-mini-code:free', name: 'North Mini Code (30B)', provider: 'openrouter' },
+      { id: 'minimax/minimax-m2.7:free', name: 'MiniMax M2.7 Reasoning', provider: 'openrouter' },
+      { id: 'qwen/qwen3.8-27b', name: 'Qwen 3.8 27B Fast Coder', provider: 'groq' }
+    ],
+    FAST: [
+      { id: 'qwen/qwen3.8-27b', name: 'Qwen 3.8 27B Fast Coder', provider: 'groq' },
+      { id: 'poolside/laguna-xs-2.1:free', name: 'Laguna XS 2.1 (33B)', provider: 'openrouter' },
+      { id: 'cohere/north-mini-code:free', name: 'North Mini Code', provider: 'openrouter' },
+      { id: 'groq/compound', name: 'Groq Compound', provider: 'groq' },
+      { id: 'openai/gpt-oss-20b', name: 'GPT OSS 20B', provider: 'groq' }
+    ]
+  };
+
   const DEV_AGENTS = [
-    // ═══ 1. المتخصصين في البرمجة والأكواد (Coding Specialists - Top Priority) ═══
+    {
+      id: 'poolside/laguna-s-2.1:free',
+      provider: 'openrouter',
+      name: 'Laguna S 2.1 (118B Coding Agent)',
+      icon: '🏄',
+      category: 'code',
+      params: '118B Coder',
+      desc: 'بطل البرمجة وهندسة الأكواد المتصدر لاختبارات Terminal-Bench و DeepSWE.',
+      priority: 1
+    },
     {
       id: 'openai/gpt-oss-120b',
       provider: 'groq',
@@ -45,23 +78,23 @@
       priority: 1
     },
     {
-      id: 'meta-llama/llama-3.3-70b-instruct:free',
+      id: 'z-ai/glm-5.2:free',
       provider: 'openrouter',
-      name: 'Llama 3.3 70B Coder (128k)',
-      icon: '🦙',
+      name: 'GLM 5.2 Reasoning (1M)',
+      icon: '🧠',
       category: 'code',
-      params: '70B 128k',
-      desc: 'عملاق البرمجة المفتوح بسياق 128,000 توكن للمشاريع الكبيرة والملفات الضخمة دون أي اقتطاع.',
+      params: '1M Context',
+      desc: 'عملاق التفكير الهندسي البرمجي بسياق 1M لإدارة وتطوير المشاريع الكاملة.',
       priority: 1
     },
     {
-      id: 'qwen/qwen-2.5-coder-32b-instruct:free',
+      id: 'cohere/north-mini-code:free',
       provider: 'openrouter',
-      name: 'Qwen 2.5 Coder 32B (128k)',
-      icon: '👨‍💻',
+      name: 'Cohere North Mini Code (30B)',
+      icon: '💻',
       category: 'code',
-      params: '32B Coder',
-      desc: 'متخصص رائد في كتابة ومراجعة شفرات المصدر والمشاريع البرمجية المعقدة.',
+      params: '30B Agentic',
+      desc: 'أول وكيل برمجي متخصص من Cohere لمهام هندسة البرمجيات والطرفية.',
       priority: 1
     },
     {
@@ -75,61 +108,37 @@
       priority: 1
     },
     {
-      id: 'groq/compound',
-      provider: 'groq',
-      name: 'AGENT_ROUTER (Compound Coder)',
-      icon: '🧠',
-      category: 'code',
-      params: 'Agent Router',
-      desc: 'وكيل البرمجة المركب الذكي يوجه طلبات التطوير تلقائياً لأفضل خطة معمارية.',
-      priority: 1
-    },
-    {
-      id: 'openai/gpt-oss-20b',
-      provider: 'groq',
-      name: 'GPT OSS 20B Rapid Coder',
-      icon: '⚡',
-      category: 'code',
-      params: '20B Rapid',
-      desc: 'مطور خفيف وسريع جداً للإجابات والتعديلات الفورية.',
-      priority: 1
-    },
-
-    // ═══ 2. الأعلى معالم والقدرات المعمارية والسياق العملاق (128k - 200k Context) ═══
-    {
-      id: 'minimax/minimax-m3:free',
-      provider: 'openrouter',
-      name: 'MiniMax M3 Architect',
-      icon: '👑',
-      category: 'reasoning',
-      params: '456B Context',
-      desc: 'نموذج عملاق ذو سياق استيعاب ضخم للمشاريع متعددة الملفات والمراجعات الكبرى.',
-      priority: 2
-    },
-    {
       id: 'minimax/minimax-m2.7:free',
       provider: 'openrouter',
       name: 'MiniMax M2.7 Reasoning',
-      icon: '🧠',
+      icon: '🔬',
       category: 'reasoning',
-      params: 'M2.7 Reason',
-      desc: 'تخطيط وتحليل المنطق المعماري البرمجي والتعديلات الهيكلية.',
+      params: 'M2.7 Agent',
+      desc: 'تصحيح الأخطاء المباشر Live Debugging وتحليل الأسباب الجذرية.',
       priority: 2
     },
-
-    // ═══ 3. السرعة الفائقة والمهام الخفيفة (Ultra-Fast Execution) ═══
     {
-      id: 'groq/compound-mini',
-      provider: 'groq',
-      name: 'Groq Compound Mini',
+      id: 'poolside/laguna-xs-2.1:free',
+      provider: 'openrouter',
+      name: 'Laguna XS 2.1 Fast (33B)',
       icon: '⚡',
       category: 'fast',
-      params: 'Mini Router',
-      desc: 'وكيل سريع مركب للمهام اليومية الخفيفة والفحص السريع.',
+      params: '33B FP8',
+      desc: 'نسخة الكود المدمجة فائقة السرعة للأوامر والتعديلات الفورية.',
+      priority: 3
+    },
+    {
+      id: 'groq/compound',
+      provider: 'groq',
+      name: 'Groq Compound Coder',
+      icon: '🧠',
+      category: 'fast',
+      params: 'Compound',
+      desc: 'وكيل البرمجة المركب الذكي يوجه طلبات التطوير تلقائياً.',
       priority: 3
     }
   ];
-  try { window.DEV_AGENTS = DEV_AGENTS; } catch(e) {}
+  try { window.DEV_AGENTS = DEV_AGENTS; window.DEV_TIER_MODELS = DEV_TIER_MODELS; } catch(e) {}
 
   // ─────────────────────────────────────────────────────────────────
   // 3. AUTHENTICATION & LOCK GATE (DevAuthManager)
