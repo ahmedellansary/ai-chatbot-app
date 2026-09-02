@@ -23,7 +23,7 @@ const getOpenRouterKeys = () => {
     const list = k.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
     if (list.length) return list;
   }
-  return [_k1];
+  return _k1.split(',').map(s => s.trim()).filter(Boolean);
 };
 
 let openRouterKeyIndex = 0;
