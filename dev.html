@@ -243,6 +243,9 @@
           <button class="icon-btn" id="btn-file-prompt" onclick="window._selectFileForEditing('system_prompt.txt')">🧠 system_prompt.txt</button>
           <button class="icon-btn" id="btn-file-sw" onclick="window._selectFileForEditing('sw.js')">⚡ sw.js</button>
         </div>
+        <div id="all-files-grid" style="display:flex; gap:6px; flex-wrap:wrap; max-height:110px; overflow-y:auto; padding:6px; background:rgba(255,255,255,0.03); border:1px solid var(--border-subtle); border-radius:10px;">
+          <span style="font-size:11px; color:var(--text-dim);">جاري جلب كل ملفات المشروع...</span>
+        </div>
         
         <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
           <span id="current-editing-filename" style="font-weight:700; color:#fbbf24; font-size:13px; font-family:var(--font-mono);">الملف الحالي: index.html</span>
