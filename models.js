@@ -12,12 +12,14 @@ const _k2 = [
 ].join(',');
 
 const getOpenRouterKey = () => {
+  if (typeof window !== 'undefined' && window.ConfigVault && window.ConfigVault.getOpenRouterKey) return window.ConfigVault.getOpenRouterKey();
   const k = (typeof window !== 'undefined' && window.AppConfig && window.AppConfig.getOpenRouterKey && window.AppConfig.getOpenRouterKey()) ||
             (typeof localStorage !== 'undefined' ? localStorage.getItem('OPENROUTER_API_KEY') : null);
   return (k && k.trim()) ? k.trim() : _k1;
 };
 
 const getGroqKeys = () => {
+  if (typeof window !== 'undefined' && window.ConfigVault && window.ConfigVault.getGroqKeys) return window.ConfigVault.getGroqKeys();
   const k = (typeof window !== 'undefined' && window.AppConfig && window.AppConfig.getGroqKeys && window.AppConfig.getGroqKeys()) ||
             (typeof localStorage !== 'undefined' ? localStorage.getItem('GROQ_API_KEY') : null);
   if (Array.isArray(k) && k.length) return k;
@@ -27,25 +29,32 @@ const getGroqKeys = () => {
 
 let groqKeyIndex = 0;
 const getGroqKey = () => {
+  if (typeof window !== 'undefined' && window.ConfigVault && window.ConfigVault.getGroqKey) return window.ConfigVault.getGroqKey();
   const keys = getGroqKeys();
   return keys[groqKeyIndex % keys.length];
 };
-const rotateGroqKey = () => { groqKeyIndex++; };
+const rotateGroqKey = () => {
+  if (typeof window !== 'undefined' && window.ConfigVault && window.ConfigVault.rotateGroqKey) return window.ConfigVault.rotateGroqKey();
+  groqKeyIndex++;
+};
 
-// ─── Model Tiers ───
+// ─── Model Tiers — Unified 11-model set (matches models.json) ───
 const MODELS = {
   HIGH: [
-    { id: 'openai/gpt-oss-120b', name: 'GPT OSS 120B', provider: 'groq' },
+    { id: 'nvidia/nemotron-3-ultra-550b-a55b:free', name: 'Nemotron 3 Ultra 550B', provider: 'openrouter' },
+    { id: 'nvidia/nemotron-3-super-120b-a12b:free', name: 'Nemotron 3 Super 120B', provider: 'openrouter' },
     { id: 'minimax/minimax-m3:free', name: 'MiniMax M3', provider: 'openrouter' },
-    { id: 'qwen/qwen3.8-27b', name: 'Qwen 3.8 27B', provider: 'groq' }
+    { id: 'openai/gpt-oss-120b', name: 'GPT OSS 120B', provider: 'groq' },
+    { id: 'meta-llama/llama-3.3-70b-instruct:free', name: 'Llama 3.3 70B', provider: 'openrouter' }
   ],
   MID: [
-    { id: 'qwen/qwen3.8-27b', name: 'Qwen 3.8 27B', provider: 'groq' },
+    { id: 'qwen/qwen-2.5-coder-32b-instruct:free', name: 'Qwen 2.5 Coder 32B', provider: 'openrouter' },
     { id: 'minimax/minimax-m2.7:free', name: 'MiniMax M2.7', provider: 'openrouter' },
+    { id: 'qwen/qwen3.8-27b', name: 'Qwen 3.8 27B', provider: 'groq' },
     { id: 'openai/gpt-oss-20b', name: 'GPT OSS 20B', provider: 'groq' }
   ],
   FAST: [
-    { id: 'groq/compound', name: 'AGENT_ROUTER (Compound)', provider: 'groq' },
+    { id: 'groq/compound', name: 'Groq Compound', provider: 'groq' },
     { id: 'qwen/qwen3.8-27b', name: 'Qwen 3.8 27B', provider: 'groq' },
     { id: 'groq/compound-mini', name: 'Groq Compound Mini', provider: 'groq' }
   ]
@@ -53,8 +62,11 @@ const MODELS = {
 
 const DEV_MODELS = [
   { id: 'openai/gpt-oss-120b', name: 'GPT OSS 120B Lead Architect', provider: 'groq' },
+  { id: 'meta-llama/llama-3.3-70b-instruct:free', name: 'Llama 3.3 70B Instruct', provider: 'openrouter' },
+  { id: 'qwen/qwen-2.5-coder-32b-instruct:free', name: 'Qwen 2.5 Coder 32B', provider: 'openrouter' },
   { id: 'qwen/qwen3.8-27b', name: 'Qwen 3.8 27B Fast Coder', provider: 'groq' },
-  { id: 'groq/compound', name: 'AGENT_ROUTER (Compound)', provider: 'groq' }
+  { id: 'groq/compound', name: 'Groq Compound', provider: 'groq' },
+  { id: 'minimax/minimax-m3:free', name: 'MiniMax M3 Architect', provider: 'openrouter' }
 ];
 
 async function callOpenRouter(model, messages, signal) {
@@ -217,3 +229,14 @@ async function* chatWithFallback(tier, messages, signal, onModelChange) {
 }
 
 export { chatWithFallback, readStream, MODELS, DEV_MODELS };
+
+// ── Global exposure for IIFE apps (Phase 2 Refactor) ──
+if (typeof window !== 'undefined') {
+  window.MODELS = MODELS;
+  window.DEV_MODELS = DEV_MODELS;
+  window.ModelEngine = { callOpenRouter, callGroq, readStream, chatWithFallback, getOpenRouterKey, getGroqKeys, getGroqKey, rotateGroqKey };
+  window.getOpenRouterKey = getOpenRouterKey;
+  window.getGroqKeys = getGroqKeys;
+  window.getGroqKey = getGroqKey;
+  window.rotateGroqKey = rotateGroqKey;
+}
