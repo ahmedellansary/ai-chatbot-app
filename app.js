@@ -204,7 +204,7 @@
     ]
   };
 
-  const ModelEngine = window.ModelEngine || {
+  const ModelEngine = Object.assign({
     normalizeCatalog(data) {
       if (!data) return [];
       const source = Array.isArray(data) ? data : Object.values(data).flat();
@@ -407,7 +407,8 @@
 
       throw new Error(`تعذر الاتصال بموديلز ${tier}. يرجى المحاولة مرة أخرى أو اختيار وضع آخر.`);
     }
-  };
+  }, window.ModelEngine || {});
+  window.ModelEngine = ModelEngine;
 
   // ─────────────────────────────────────────────────────────────────
   // 5. GITHUB & SELF-MODIFYING DEV SERVICE — Unified (github.js)
