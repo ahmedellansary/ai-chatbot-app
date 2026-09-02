@@ -84,6 +84,8 @@
     attachments: [],
     isMultiAgentMode: localStorage.getItem('is_multi_agent_mode') === '1'
   };
+  window.state = state;
+  window.AppState = state;
 
   const StateController = window.createStateController ? window.createStateController(state, { generateId, MessageRenderer: window.MessageRenderer || null, UIEngine: window.UIEngine || null, $ }) : {
     load() {
@@ -2100,6 +2102,10 @@
   function $$(sel, root = document) {
     return Array.from((root || document).querySelectorAll(sel));
   }
+  window.generateId = generateId;
+  window.$ = $;
+  window.$$ = $$;
+  window.state = state;
 
   function lockViewportHeight() {
     const h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
