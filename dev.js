@@ -58,16 +58,6 @@
 
   const DEV_AGENTS = [
     {
-      id: 'poolside/laguna-s-2.1:free',
-      provider: 'openrouter',
-      name: 'Laguna S 2.1 (118B Coding Agent)',
-      icon: '🏄',
-      category: 'code',
-      params: '118B Coder',
-      desc: 'بطل البرمجة وهندسة الأكواد المتصدر لاختبارات Terminal-Bench و DeepSWE.',
-      priority: 1
-    },
-    {
       id: 'openai/gpt-oss-120b',
       provider: 'groq',
       name: 'GPT OSS 120B Lead Architect',
@@ -75,6 +65,26 @@
       category: 'code',
       params: '120B Coder',
       desc: 'المهندس المعماري الأول لكتابة وهندسة الأكواد وتعديل ملفات التطبيق بدقة فائقة.',
+      priority: 1
+    },
+    {
+      id: 'qwen/qwen3.8-27b',
+      provider: 'groq',
+      name: 'Qwen 3.8 27B Fast Coder',
+      icon: '⚡',
+      category: 'code',
+      params: '27B Coder',
+      desc: 'خبير برمجي فائق السرعة لتصحيح الأخطاء وتوليد دوال جافاسكريبت والـ CSS.',
+      priority: 1
+    },
+    {
+      id: 'poolside/laguna-s-2.1:free',
+      provider: 'openrouter',
+      name: 'Laguna S 2.1 (118B Coding Agent)',
+      icon: '🏄',
+      category: 'code',
+      params: '118B Coder',
+      desc: 'بطل البرمجة وهندسة الأكواد المتصدر لاختبارات Terminal-Bench و DeepSWE.',
       priority: 1
     },
     {
@@ -95,16 +105,6 @@
       category: 'code',
       params: '30B Agentic',
       desc: 'أول وكيل برمجي متخصص من Cohere لمهام هندسة البرمجيات والطرفية.',
-      priority: 1
-    },
-    {
-      id: 'qwen/qwen3.8-27b',
-      provider: 'groq',
-      name: 'Qwen 3.8 27B Fast Coder',
-      icon: '⚡',
-      category: 'code',
-      params: '27B Coder',
-      desc: 'خبير برمجي فائق السرعة لتصحيح الأخطاء وتوليد دوال جافاسكريبت والـ CSS.',
       priority: 1
     },
     {
@@ -381,18 +381,31 @@
         headers['X-Title'] = 'X.v1 Dev Portal';
       }
 
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          model: agent.id,
-          messages,
-          stream: true,
-          temperature: 0.3,
-          max_tokens: isGroq ? 4096 : 8192
-        }),
-        signal
-      });
+      const ctrl = new AbortController();
+      const tm = setTimeout(() => ctrl.abort(), isGroq ? 8000 : 12000);
+      const combinedSignal = signal ? AbortSignal.any([signal, ctrl.signal]) : ctrl.signal;
+
+      let response;
+      try {
+        response = await fetch(endpoint, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            model: agent.id,
+            messages,
+            stream: true,
+            temperature: 0.3,
+            max_tokens: isGroq ? 4096 : 8192
+          }),
+          signal: combinedSignal
+        });
+        clearTimeout(tm);
+      } catch(e) {
+        clearTimeout(tm);
+        if (isGroq) DevConfigVault.rotateGroqKey?.();
+        else DevConfigVault.rotateOpenRouterKey?.();
+        throw e;
+      }
 
       if (response.status === 429) {
         if (isGroq) DevConfigVault.rotateGroqKey?.();
@@ -998,7 +1011,6 @@
         const diff = y - startY;
 
         if (diff > 8) {
-          if (e.cancelable) e.preventDefault();
           currentPull = diff;
           const visualPull = Math.min(diff * 0.45, 75);
           indicator.classList.add('visible');
@@ -1035,10 +1047,13 @@
         currentPull = 0;
       };
 
-      document.addEventListener('touchstart', onTouchStart, { passive: true });
-      document.addEventListener('touchmove', onTouchMove, { passive: false });
-      document.addEventListener('touchend', onTouchEnd, { passive: true });
-      document.addEventListener('touchcancel', onTouchEnd, { passive: true });
+      const chatArea = $('chat-area');
+      if (chatArea) {
+        chatArea.addEventListener('touchstart', onTouchStart, { passive: true });
+        chatArea.addEventListener('touchmove', onTouchMove, { passive: true });
+        chatArea.addEventListener('touchend', onTouchEnd, { passive: true });
+        chatArea.addEventListener('touchcancel', onTouchEnd, { passive: true });
+      }
     },
 
     setupEventListeners() {
