@@ -211,9 +211,9 @@
   };
 
   // ─────────────────────────────────────────────────────────────────
-  // 4. MODEL ENGINE & INTELLIGENT ROUTER (ModelEngine)
+  // 4. MODEL ENGINE & INTELLIGENT ROUTER — Unified (models.js)
   // ─────────────────────────────────────────────────────────────────
-  const MODELS = {
+  const MODELS = window.MODELS || {
     HIGH: [
       { id: 'nvidia/nemotron-3-ultra-550b-a55b:free', name: 'Nemotron 550B', provider: 'openrouter' },
       { id: 'minimax/minimax-m3:free', name: 'MiniMax M3', provider: 'openrouter' },
@@ -230,7 +230,7 @@
     ]
   };
 
-  const ModelEngine = {
+  const ModelEngine = window.ModelEngine || {
     normalizeCatalog(data) {
       if (!data) return [];
       const source = Array.isArray(data) ? data : Object.values(data).flat();
@@ -473,6 +473,7 @@
     },
 
     showToast(message, type = 'info') {
+      if (window.UnifiedToast && window.UnifiedToast.showToast) return window.UnifiedToast.showToast(message, type);
       const container = $('toast-container');
       if (!container) return;
       const toast = document.createElement('div');
@@ -1438,6 +1439,7 @@
     },
 
     setupPullToRefresh() {
+      if (window.setupUnifiedPullToRefresh) return window.setupUnifiedPullToRefresh({ indicatorId: 'pull-refresh-indicator', chatAreaId: 'chat-area', threshold: 50 });
       const indicator = $('pull-refresh-indicator');
       if (!indicator) return;
 
