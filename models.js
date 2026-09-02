@@ -132,7 +132,7 @@ async function callOpenRouter(model, messages, signal) {
   const timeoutId = setTimeout(() => {
     timedOut = true;
     controller.abort();
-  }, 6000);
+  }, 14000);
   const combinedSignal = signal ? AbortSignal.any([signal, controller.signal]) : controller.signal;
 
   try {
@@ -242,7 +242,7 @@ async function* readStream(response, signal) {
   try {
     while (true) {
       if (signal && signal.aborted) break;
-      const timeoutMs = receivedFirstChunk ? 6000 : 5000;
+      const timeoutMs = receivedFirstChunk ? 8000 : 12000;
       const { done, value } = await readWithTimeout(timeoutMs);
       if (done) break;
       receivedFirstChunk = true;
