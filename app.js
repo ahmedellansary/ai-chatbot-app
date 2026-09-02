@@ -1766,9 +1766,9 @@
   };
 
   // ─────────────────────────────────────────────────────────────────
-  // 10. MODULAR INSTRUCTION FILES MANAGER (InstructionManager)
+  // 10. MODULAR INSTRUCTION FILES MANAGER — Extracted to modules/instruction-manager.js
   // ─────────────────────────────────────────────────────────────────
-  const InstructionManager = {
+  const InstructionManager = window.InstructionManager || {
     files: [],
     activeEditingId: null,
 
