@@ -1548,7 +1548,8 @@
       if (!container) return;
       const t = document.createElement('div');
       t.className = `toast ${type}`;
-      t.innerHTML = `<span>${this.escapeHtml(message)}</span>`;
+      const cleanMsg = typeof message === 'string' ? message.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]) : '';
+      t.innerHTML = `<span>${cleanMsg}</span>`;
       container.appendChild(t);
       setTimeout(() => {
         t.style.opacity = '0';
