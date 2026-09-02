@@ -3120,3 +3120,358 @@ html, body {
   color: var(--text-main);
   box-shadow: 0 0 10px var(--accent-glow, rgba(218, 119, 86, 0.2));
 }
+
+/* ─── Ultra-Modern Developer Terminal / Code Card ─── */
+.dev-terminal-card {
+  margin: 14px 0;
+  background: #15151a;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 15px rgba(0, 0, 0, 0.35);
+  direction: ltr !important;
+  text-align: left !important;
+  font-family: var(--font-sans);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.dev-terminal-card:hover {
+  border-color: rgba(218, 119, 86, 0.35);
+  box-shadow: 0 14px 38px rgba(0, 0, 0, 0.7), 0 0 20px rgba(218, 119, 86, 0.12);
+}
+
+.terminal-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 14px;
+  background: #1d1d24;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  gap: 10px;
+}
+
+.terminal-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.terminal-icon-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 7px;
+  background: rgba(218, 119, 86, 0.15);
+  border: 1px solid rgba(218, 119, 86, 0.35);
+  color: var(--accent-color, #da7756);
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  line-height: 1.2;
+  flex-shrink: 0;
+}
+
+.terminal-lang-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #f3f4f6;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.terminal-cmd-preview {
+  font-size: 11.5px;
+  color: #9ca3af;
+  font-family: var(--font-mono);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0.85;
+}
+
+.terminal-header-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.terminal-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #e5e7eb;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: var(--font-sans);
+}
+
+.terminal-action-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.terminal-action-btn.copy-btn:hover {
+  background: rgba(218, 119, 86, 0.18);
+  border-color: rgba(218, 119, 86, 0.4);
+  color: var(--accent-color, #da7756);
+}
+
+.terminal-card-body {
+  padding: 12px 14px;
+  background: #0d0d10;
+  overflow-x: auto;
+  transition: max-height 0.25s ease;
+}
+
+.terminal-card-body.collapsed {
+  max-height: 125px;
+  overflow-y: hidden;
+  position: relative;
+}
+
+.terminal-card-body.collapsed::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 48px;
+  background: linear-gradient(to bottom, transparent, #0d0d10);
+  pointer-events: none;
+}
+
+.terminal-card-body pre {
+  margin: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+  border: none !important;
+  overflow: visible !important;
+}
+
+.terminal-card-body pre code {
+  display: block;
+  font-family: var(--font-mono) !important;
+  font-size: 13px !important;
+  line-height: 1.6 !important;
+  color: #e5e7eb !important;
+  background: transparent !important;
+  padding: 0 !important;
+  white-space: pre !important;
+  tab-size: 2;
+}
+
+.terminal-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 14px;
+  background: #191920;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.terminal-footer-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.terminal-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2.5px 8px;
+  background: rgba(16, 185, 129, 0.14);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  color: #34d399;
+  border-radius: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+}
+
+.terminal-footer-meta {
+  font-size: 11.5px;
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+}
+
+/* ─── Ultra-Sleek Modern Audio Player Card ─── */
+.modern-audio-card {
+  margin: 14px 0;
+  padding: 16px 18px;
+  background: #18181d;
+  background: linear-gradient(145deg, #1e1e25, #141418);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 18px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.55), 0 0 20px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 480px;
+  box-sizing: border-box;
+  direction: ltr !important;
+  text-align: left !important;
+  font-family: var(--font-sans);
+  transition: all 0.2s ease;
+}
+
+.modern-audio-card:hover {
+  border-color: rgba(218, 119, 86, 0.35);
+  box-shadow: 0 16px 42px rgba(0, 0, 0, 0.65), 0 0 25px rgba(218, 119, 86, 0.12);
+}
+
+.audio-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.audio-tag-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 11px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #f3f4f6;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.audio-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-color, #da7756);
+  box-shadow: 0 0 6px var(--accent-color, #da7756);
+}
+
+.audio-card-desc {
+  font-size: 13.5px;
+  color: #e5e7eb;
+  font-weight: 500;
+  line-height: 1.5;
+  margin-top: 2px;
+}
+
+.audio-progress-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin-top: 2px;
+}
+
+.audio-time {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #9ca3af;
+  font-family: var(--font-mono);
+  min-width: 32px;
+}
+
+.audio-time.total-time {
+  text-align: right;
+}
+
+.audio-progress-bar-wrap {
+  flex: 1;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  cursor: pointer;
+  position: relative;
+  transition: height 0.15s ease;
+}
+
+.audio-progress-bar-wrap:hover {
+  height: 7px;
+}
+
+.audio-progress-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--accent-color, #da7756), #fbbf24);
+  border-radius: 999px;
+  pointer-events: none;
+  transition: width 0.08s linear;
+}
+
+.audio-controls-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 4px;
+  padding-top: 4px;
+}
+
+.audio-ctrl-btn {
+  background: transparent;
+  border: none;
+  color: #9ca3af;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  transition: all 0.15s ease;
+}
+
+.audio-ctrl-btn:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.audio-ctrl-btn.speed-btn {
+  min-width: 28px;
+}
+
+.audio-ctrl-btn.download-btn:hover {
+  color: #34d399;
+  background: rgba(16, 185, 129, 0.15);
+}
+
+.audio-play-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #ffffff;
+  color: #0d0d10;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+  transition: all 0.15s ease;
+  margin: 0 4px;
+}
+
+.audio-play-btn:hover {
+  transform: scale(1.08);
+  background: #f4f4f5;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
+}
+
+.audio-play-btn:active {
+  transform: scale(0.96);
+}
