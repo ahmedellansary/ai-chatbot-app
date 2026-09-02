@@ -227,46 +227,34 @@
           <span>Repository File Explorer</span>
           <span id="files-sync-badge" class="files-sync-badge">
             <span class="sync-dot"></span>
-            <span id="files-sync-text">Synced: Just now</span>
+            <span id="files-sync-text">Synced</span>
           </span>
         </div>
-        <div class="modal-header-actions" style="display:flex; align-items:center; gap:6px;">
+        <div class="modal-header-actions" style="display:flex; align-items:center; gap:8px;">
           <button class="sync-btn" id="btn-sync-files-manual" onclick="window._syncFilesManual()" title="Manual GitHub Sync & Diff Compare">
-            <span>🔄</span>
+            <svg class="sync-svg-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+            </svg>
             <span>Sync</span>
           </button>
           <button class="icon-btn" onclick="window._closeFilesModal()">✕</button>
         </div>
       </div>
+      
       <div class="modal-body" style="flex:1; display:flex; flex-direction:column; gap:10px;">
         
-        <!-- Smart Compact File Explorer Group -->
-        <div class="repo-files-explorer-wrap">
-          <div class="repo-files-topbar">
-            <!-- Top 3 Primary File Pills -->
-            <div id="top-files-pills" class="repo-files-pills">
-              <!-- Dynamically rendered: 3 files -->
-            </div>
-
-            <!-- Toggle Button for remaining files -->
-            <button id="toggle-more-files-btn" class="toggle-more-files-btn" onclick="window._toggleMoreFiles()">
-              <span id="more-files-text">+ More Files</span>
-              <span id="more-files-chevron">▾</span>
-            </button>
-          </div>
-
-          <!-- Collapsible Extended Files Grid -->
-          <div id="extended-files-grid" class="extended-files-grid hidden">
-            <!-- Dynamically populated with remaining repository files -->
-          </div>
-        </div>
-        
-        <!-- Active File Indicator & Commit Bar -->
+        <!-- Ultra-Clean Bar: Active File Selector Dropdown + Deploy Action -->
         <div class="active-file-editor-bar">
-          <div class="active-file-info">
-            <span class="active-file-dot"></span>
-            <span id="current-editing-filename" class="active-file-label">Active: index.html</span>
+          <div class="active-file-selector-wrap">
+            <label for="repo-file-select" class="active-file-label-prefix">
+              <span class="active-file-dot"></span>
+              <span>Active File:</span>
+            </label>
+            <select id="repo-file-select" class="repo-file-dropdown-select" onchange="window._selectFileForEditing(this.value)">
+              <!-- Populated dynamically -->
+            </select>
           </div>
+
           <button class="dev-btn-action deploy" onclick="window._commitCurrentEditorFile()">
             <span>💾</span>
             <span>Commit & Push to GitHub</span>
@@ -276,7 +264,7 @@
         <textarea
           id="direct-code-editor"
           class="dev-textarea"
-          style="flex:1; width:100%; min-height:360px; background:#08080b; border:1px solid var(--border-subtle); border-radius:10px; padding:12px; font-family:var(--font-mono); font-size:12.5px; line-height:1.5; color:#f3f4f6; resize:none;"
+          style="flex:1; width:100%; min-height:380px; background:#08080b; border:1px solid var(--border-subtle); border-radius:10px; padding:12px; font-family:var(--font-mono); font-size:12.5px; line-height:1.5; color:#f3f4f6; resize:none;"
           placeholder="Select a file to inspect and edit..."
         ></textarea>
       </div>
