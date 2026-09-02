@@ -1093,8 +1093,12 @@
         });
 
         input.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter') {
-            // Enter inserts a newline naturally without sending
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            this.handleSend();
+            return;
+          }
+          if (e.key === 'Enter' && e.shiftKey) {
             setTimeout(() => {
               input.style.height = 'auto';
               input.style.height = Math.min(input.scrollHeight, 180) + 'px';
