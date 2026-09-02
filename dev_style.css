@@ -48,7 +48,7 @@ html, body {
   background: var(--bg-app);
   color: var(--text-main);
   font-family: var(--font-sans);
-  font-size: 15px;
+  font-size: 16px;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -webkit-text-size-adjust: 100%;
@@ -512,8 +512,12 @@ html, body {
 }
 
 .message-row.user {
-  align-self: flex-end;
+  align-self: flex-end !important;
   align-items: flex-end;
+  margin-left: auto !important;
+  margin-right: 0 !important;
+  /* ثبت رسالة المستخدم دائماً على اليمين حتى مع العربي */
+  direction: ltr !important;
 }
 
 .message-row.user .msg-content {
@@ -977,6 +981,19 @@ pre code {
 
 .chat-textarea::placeholder {
   color: #52525b;
+}
+
+/* Fix: تعليمات المطور لون النص أسود → أبيض */
+.dev-textarea,
+#dev-prompt-textarea,
+#direct-code-editor {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+.dev-textarea::placeholder,
+#dev-prompt-textarea::placeholder,
+#direct-code-editor::placeholder {
+  color: #9ca3af !important;
 }
 
 /* Bottom Controls Row inside Container */
