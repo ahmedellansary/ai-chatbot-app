@@ -63,18 +63,18 @@ const rotateGroqKey = () => {
 // ─── Model Tiers — Unified active model set (Strictly Isolated, Fastest & Strongest First) ───
 const MODELS = {
   HIGH: [
-    { id: 'openai/gpt-oss-120b', name: 'GPT OSS 120B (Chief Core)', provider: 'groq' },
-    { id: 'thinkingmachines/inkling:free', name: 'Inkling 975B (MoE)', provider: 'openrouter' },
-    { id: 'nvidia/nemotron-3-ultra-550b-a55b:free', name: 'Nemotron 3 Ultra 550B', provider: 'openrouter' },
+    { id: 'poolside/laguna-s-2.1:free', name: 'Laguna S 2.1 (118B)', provider: 'openrouter' },
     { id: 'minimax/minimax-m3:free', name: 'MiniMax M3 (1M)', provider: 'openrouter' },
-    { id: 'z-ai/glm-5.2:free', name: 'GLM 5.2 (1M)', provider: 'openrouter' }
+    { id: 'nvidia/nemotron-3-super-120b-a12b:free', name: 'Nemotron 3 Super 120B', provider: 'openrouter' },
+    { id: 'z-ai/glm-5.2:free', name: 'GLM 5.2 (1M)', provider: 'openrouter' },
+    { id: 'minimax/minimax-m2.7:free', name: 'MiniMax M2.7', provider: 'openrouter' }
   ],
   MID: [
-    { id: 'openai/gpt-oss-120b', name: 'GPT OSS 120B', provider: 'groq' },
+    { id: 'openai/gpt-oss-120b', name: 'GPT OSS 120B (Balanced Core)', provider: 'groq' },
     { id: 'qwen/qwen3.8-27b', name: 'Qwen 3.8 27B', provider: 'groq' },
-    { id: 'thinkingmachines/inkling-small:free', name: 'Inkling Small 276B', provider: 'openrouter' },
+    { id: 'poolside/laguna-s-2.1:free', name: 'Laguna S 2.1 (118B)', provider: 'openrouter' },
     { id: 'nvidia/nemotron-3-super-120b-a12b:free', name: 'Nemotron 3 Super 120B', provider: 'openrouter' },
-    { id: 'minimax/minimax-m2.7:free', name: 'MiniMax M2.7', provider: 'openrouter' }
+    { id: 'cohere/north-mini-code:free', name: 'North Mini Code (30B)', provider: 'openrouter' }
   ],
   FAST: [
     { id: 'qwen/qwen3.8-27b', name: 'Qwen 3.8 27B (Ultra Fast)', provider: 'groq' },
@@ -87,17 +87,18 @@ const MODELS = {
 
 const DEV_TIER_MODELS = {
   HIGH: [
-    { id: 'openai/gpt-oss-120b', name: 'GPT OSS 120B Lead Architect', provider: 'groq' },
     { id: 'poolside/laguna-s-2.1:free', name: 'Laguna S 2.1 (118B Coding Agent)', provider: 'openrouter' },
-    { id: 'thinkingmachines/inkling:free', name: 'Inkling 975B', provider: 'openrouter' },
+    { id: 'minimax/minimax-m3:free', name: 'MiniMax M3 Architect (1M)', provider: 'openrouter' },
+    { id: 'nvidia/nemotron-3-super-120b-a12b:free', name: 'Nemotron 3 Super 120B', provider: 'openrouter' },
     { id: 'z-ai/glm-5.2:free', name: 'GLM 5.2 Reasoning (1M)', provider: 'openrouter' },
-    { id: 'minimax/minimax-m3:free', name: 'MiniMax M3 Architect', provider: 'openrouter' }
+    { id: 'minimax/minimax-m2.7:free', name: 'MiniMax M2.7 Reasoning', provider: 'openrouter' }
   ],
   MID: [
     { id: 'openai/gpt-oss-120b', name: 'GPT OSS 120B Lead Architect', provider: 'groq' },
     { id: 'qwen/qwen3.8-27b', name: 'Qwen 3.8 27B Fast Coder', provider: 'groq' },
     { id: 'poolside/laguna-s-2.1:free', name: 'Laguna S 2.1 (118B Coding Agent)', provider: 'openrouter' },
-    { id: 'cohere/north-mini-code:free', name: 'North Mini Code (30B)', provider: 'openrouter' }
+    { id: 'cohere/north-mini-code:free', name: 'North Mini Code (30B)', provider: 'openrouter' },
+    { id: 'minimax/minimax-m2.7:free', name: 'MiniMax M2.7 Reasoning', provider: 'openrouter' }
   ],
   FAST: [
     { id: 'qwen/qwen3.8-27b', name: 'Qwen 3.8 27B Fast Coder', provider: 'groq' },
