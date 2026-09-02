@@ -191,21 +191,18 @@
   // ─────────────────────────────────────────────────────────────────
   const MODELS = window.MODELS || {
     HIGH: [
-      { id: 'openai/gpt-oss-120b', name: 'GPT OSS 120B (Ultra Fast)', provider: 'groq' },
-      { id: 'nvidia/nemotron-3-super-120b-a12b:free', name: 'Nemotron 3 Super 120B', provider: 'openrouter' },
-      { id: 'qwen/qwen3.8-27b', name: 'Qwen 3.8 27B', provider: 'groq' },
-      { id: 'minimax/minimax-m3:free', name: 'MiniMax M3', provider: 'openrouter' }
+      { id: 'nvidia/nemotron-3-ultra-550b-a55b:free', name: 'Nemotron 550B', provider: 'openrouter' },
+      { id: 'minimax/minimax-m3:free', name: 'MiniMax M3', provider: 'openrouter' },
+      { id: 'openai/gpt-oss-120b', name: 'GPT OSS 120B', provider: 'groq' }
     ],
     MID: [
-      { id: 'openai/gpt-oss-120b', name: 'GPT OSS 120B (Ultra Fast)', provider: 'groq' },
-      { id: 'qwen/qwen3.8-27b', name: 'Qwen 3.8 27B', provider: 'groq' },
-      { id: 'nvidia/nemotron-3-super-120b-a12b:free', name: 'Nemotron 3 Super 120B', provider: 'openrouter' },
-      { id: 'groq/compound', name: 'Groq Compound', provider: 'groq' }
+      { id: 'nvidia/nemotron-3-super-120b-a12b:free', name: 'Nemotron 120B', provider: 'openrouter' },
+      { id: 'openai/gpt-oss-120b', name: 'GPT OSS 120B', provider: 'groq' },
+      { id: 'qwen/qwen3.8-27b', name: 'Qwen 27B', provider: 'groq' }
     ],
     FAST: [
-      { id: 'qwen/qwen3.8-27b', name: 'Qwen 3.8 27B (Instant)', provider: 'groq' },
       { id: 'groq/compound', name: 'Groq Compound', provider: 'groq' },
-      { id: 'openai/gpt-oss-120b', name: 'GPT OSS 120B', provider: 'groq' }
+      { id: 'qwen/qwen3.8-27b', name: 'Qwen 27B', provider: 'groq' }
     ]
   };
 
