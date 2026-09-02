@@ -60,56 +60,50 @@ const rotateGroqKey = () => {
   groqKeyIndex++;
 };
 
-// ─── Model Tiers — Unified active model set (Strictly Isolated, Strongest to Weakest) ───
+// ─── Model Tiers — Unified active model set (Strictly Isolated, Fastest & Strongest First) ───
 const MODELS = {
   HIGH: [
+    { id: 'openai/gpt-oss-120b', name: 'GPT OSS 120B (Chief Core)', provider: 'groq' },
     { id: 'thinkingmachines/inkling:free', name: 'Inkling 975B (MoE)', provider: 'openrouter' },
     { id: 'nvidia/nemotron-3-ultra-550b-a55b:free', name: 'Nemotron 3 Ultra 550B', provider: 'openrouter' },
     { id: 'minimax/minimax-m3:free', name: 'MiniMax M3 (1M)', provider: 'openrouter' },
-    { id: 'z-ai/glm-5.2:free', name: 'GLM 5.2 (1M)', provider: 'openrouter' },
-    { id: 'nvidia/nemotron-3-super-120b-a12b:free', name: 'Nemotron 3 Super 120B', provider: 'openrouter' }
+    { id: 'z-ai/glm-5.2:free', name: 'GLM 5.2 (1M)', provider: 'openrouter' }
   ],
   MID: [
-    { id: 'nvidia/nemotron-3-super-120b-a12b:free', name: 'Nemotron 3 Super 120B', provider: 'openrouter' },
     { id: 'openai/gpt-oss-120b', name: 'GPT OSS 120B', provider: 'groq' },
-    { id: 'thinkingmachines/inkling-small:free', name: 'Inkling Small 276B', provider: 'openrouter' },
-    { id: 'minimax/minimax-m2.7:free', name: 'MiniMax M2.7', provider: 'openrouter' },
-    { id: 'inclusionai/ling-3.0-flash-fin:free', name: 'Ling 3.0 Flash Fin', provider: 'openrouter' },
     { id: 'qwen/qwen3.8-27b', name: 'Qwen 3.8 27B', provider: 'groq' },
-    { id: 'openai/gpt-oss-20b', name: 'GPT OSS 20B', provider: 'groq' }
+    { id: 'thinkingmachines/inkling-small:free', name: 'Inkling Small 276B', provider: 'openrouter' },
+    { id: 'nvidia/nemotron-3-super-120b-a12b:free', name: 'Nemotron 3 Super 120B', provider: 'openrouter' },
+    { id: 'minimax/minimax-m2.7:free', name: 'MiniMax M2.7', provider: 'openrouter' }
   ],
   FAST: [
-    { id: 'nvidia/nemotron-3.5-lightning:free', name: 'Nemotron 3.5 Lightning (1M)', provider: 'openrouter' },
-    { id: 'qwen/qwen3.8-27b', name: 'Qwen 3.8 27B', provider: 'groq' },
-    { id: 'groq/compound', name: 'Groq Compound', provider: 'groq' },
-    { id: 'poolside/laguna-xs-2.1:free', name: 'Laguna XS 2.1 (33B)', provider: 'openrouter' },
-    { id: 'cohere/north-mini-code:free', name: 'North Mini Code (30B)', provider: 'openrouter' },
+    { id: 'qwen/qwen3.8-27b', name: 'Qwen 3.8 27B (Ultra Fast)', provider: 'groq' },
     { id: 'openai/gpt-oss-20b', name: 'GPT OSS 20B', provider: 'groq' },
-    { id: 'groq/compound-mini', name: 'Groq Compound Mini', provider: 'groq' }
+    { id: 'groq/compound', name: 'Groq Compound', provider: 'groq' },
+    { id: 'nvidia/nemotron-3.5-lightning:free', name: 'Nemotron 3.5 Lightning (1M)', provider: 'openrouter' },
+    { id: 'poolside/laguna-xs-2.1:free', name: 'Laguna XS 2.1 (33B)', provider: 'openrouter' }
   ]
 };
 
 const DEV_TIER_MODELS = {
   HIGH: [
+    { id: 'openai/gpt-oss-120b', name: 'GPT OSS 120B Lead Architect', provider: 'groq' },
     { id: 'poolside/laguna-s-2.1:free', name: 'Laguna S 2.1 (118B Coding Agent)', provider: 'openrouter' },
-    { id: 'z-ai/glm-5.2:free', name: 'GLM 5.2 Reasoning (1M)', provider: 'openrouter' },
     { id: 'thinkingmachines/inkling:free', name: 'Inkling 975B', provider: 'openrouter' },
-    { id: 'minimax/minimax-m3:free', name: 'MiniMax M3 Architect', provider: 'openrouter' },
-    { id: 'nvidia/nemotron-3-ultra-550b-a55b:free', name: 'Nemotron 3 Ultra 550B', provider: 'openrouter' }
+    { id: 'z-ai/glm-5.2:free', name: 'GLM 5.2 Reasoning (1M)', provider: 'openrouter' },
+    { id: 'minimax/minimax-m3:free', name: 'MiniMax M3 Architect', provider: 'openrouter' }
   ],
   MID: [
-    { id: 'poolside/laguna-s-2.1:free', name: 'Laguna S 2.1 (118B Coding Agent)', provider: 'openrouter' },
     { id: 'openai/gpt-oss-120b', name: 'GPT OSS 120B Lead Architect', provider: 'groq' },
-    { id: 'cohere/north-mini-code:free', name: 'North Mini Code (30B)', provider: 'openrouter' },
-    { id: 'minimax/minimax-m2.7:free', name: 'MiniMax M2.7 Reasoning', provider: 'openrouter' },
-    { id: 'qwen/qwen3.8-27b', name: 'Qwen 3.8 27B Fast Coder', provider: 'groq' }
+    { id: 'qwen/qwen3.8-27b', name: 'Qwen 3.8 27B Fast Coder', provider: 'groq' },
+    { id: 'poolside/laguna-s-2.1:free', name: 'Laguna S 2.1 (118B Coding Agent)', provider: 'openrouter' },
+    { id: 'cohere/north-mini-code:free', name: 'North Mini Code (30B)', provider: 'openrouter' }
   ],
   FAST: [
     { id: 'qwen/qwen3.8-27b', name: 'Qwen 3.8 27B Fast Coder', provider: 'groq' },
-    { id: 'poolside/laguna-xs-2.1:free', name: 'Laguna XS 2.1 (33B)', provider: 'openrouter' },
-    { id: 'cohere/north-mini-code:free', name: 'North Mini Code', provider: 'openrouter' },
+    { id: 'openai/gpt-oss-20b', name: 'GPT OSS 20B Rapid Coder', provider: 'groq' },
     { id: 'groq/compound', name: 'Groq Compound', provider: 'groq' },
-    { id: 'openai/gpt-oss-20b', name: 'GPT OSS 20B', provider: 'groq' }
+    { id: 'poolside/laguna-xs-2.1:free', name: 'Laguna XS 2.1 (33B)', provider: 'openrouter' }
   ]
 };
 
@@ -132,23 +126,33 @@ async function callOpenRouter(model, messages, signal) {
     max_tokens: 8192
   };
 
-  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-    method: 'POST',
-    headers,
-    body: JSON.stringify(bodyPayload),
-    signal
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000);
+  const combinedSignal = signal ? AbortSignal.any([signal, controller.signal]) : controller.signal;
 
-  if (response.status === 429) {
-    rotateOpenRouterKey();
-    throw new Error('RATE_LIMIT');
-  }
+  try {
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(bodyPayload),
+      signal: combinedSignal
+    });
+    clearTimeout(timeoutId);
 
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({}));
-    throw new Error(err.error?.message || `HTTP ${response.status}`);
+    if (response.status === 429) {
+      rotateOpenRouterKey();
+      throw new Error('RATE_LIMIT');
+    }
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error?.message || `HTTP ${response.status}`);
+    }
+    return response;
+  } catch(e) {
+    clearTimeout(timeoutId);
+    throw e;
   }
-  return response;
 }
 
 async function callGroq(model, messages, signal) {
@@ -158,29 +162,39 @@ async function callGroq(model, messages, signal) {
     'Content-Type': 'application/json'
   };
 
-  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({
-      model: model.id,
-      messages,
-      stream: true,
-      temperature: 0.7,
-      max_tokens: 4096
-    }),
-    signal
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 8000);
+  const combinedSignal = signal ? AbortSignal.any([signal, controller.signal]) : controller.signal;
 
-  if (response.status === 429) {
-    rotateGroqKey();
-    throw new Error('RATE_LIMIT');
-  }
+  try {
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        model: model.id,
+        messages,
+        stream: true,
+        temperature: 0.7,
+        max_tokens: 4096
+      }),
+      signal: combinedSignal
+    });
+    clearTimeout(timeoutId);
 
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({}));
-    throw new Error(err.error?.message || `HTTP ${response.status}`);
+    if (response.status === 429) {
+      rotateGroqKey();
+      throw new Error('RATE_LIMIT');
+    }
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error?.message || `HTTP ${response.status}`);
+    }
+    return response;
+  } catch(e) {
+    clearTimeout(timeoutId);
+    throw e;
   }
-  return response;
 }
 
 async function* readStream(response) {
