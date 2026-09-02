@@ -28,49 +28,21 @@
   const GITHUB_BRANCH = window.GITHUB_BRANCH || 'main';
   const GITHUB_API    = window.GITHUB_API    || 'https://api.github.com';
 
-  // ── Usage Tracker (Real + Tracked, Auto) ──
-  const UsageTracker = {
+  // ── Usage Tracker — Extracted to modules/usage-tracker.js (Phase 3)
+  const UsageTracker = window.UsageTracker || {
     key: 'xv1_usage_stats',
-    load() {
-      try { return JSON.parse(localStorage.getItem(this.key) || 'null') || { or: {t:0,r:0}, groq: {t:0,r:0}, lastModel: '', lastAt: '' }; } catch { return { or: {t:0,r:0}, groq: {t:0,r:0}, lastModel: '', lastAt: '' }; }
-    },
+    load() { try { return JSON.parse(localStorage.getItem(this.key) || 'null') || { or: {t:0,r:0}, groq: {t:0,r:0}, lastModel: '', lastAt: '' }; } catch { return { or: {t:0,r:0}, groq: {t:0,r:0}, lastModel: '', lastAt: '' }; } },
     save(d) { try { localStorage.setItem(this.key, JSON.stringify(d)); } catch {} },
-    estimateTokens(text) { return Math.ceil((text||'').length / 3.5); },
-    record(modelName, provider, promptText, completionText) {
-      const d = this.load();
-      const pt = this.estimateTokens(promptText);
-      const ct = this.estimateTokens(completionText);
-      const tot = pt + ct;
-      const p = provider === 'openrouter' ? 'or' : 'groq';
-      d[p].t += tot; d[p].r += 1;
-      d.lastModel = modelName || p;
-      d.lastAt = new Date().toISOString();
-      this.save(d);
-      this.render();
-    },
-    async fetchRealOpenRouter() {
-      const el = document.getElementById('or-sub');
-      try {
-        const r = await fetch('https://openrouter.ai/api/v1/credits', { headers: { 'Authorization': `Bearer ${ConfigVault.getOpenRouterKey()}` } });
-        if (!r.ok) throw new Error();
-        const j = await r.json();
-        const data = j.data || j;
-        const used = data.total_usage ?? data.totalUsage ?? 0;
-        const credits = data.total_credits ?? data.totalCredits ?? 0;
-        if (el) el.textContent = `الرصيد: ${Number(credits).toFixed(2)} | المستهلك: ${Number(used).toFixed(3)}`;
-        const d = this.load();
-        if (used) d.or.t = Math.round(used * 1000);
-        this.save(d); this.render();
-      } catch { if (el) el.textContent = 'بيانات محلية (لا يمكن جلب الحقيقي)'; }
-    },
-    render() {
-      const d = this.load();
-      const set = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v.toLocaleString('en-US'); };
-      set('or-tokens', d.or.t); set('or-reqs', d.or.r);
-      set('groq-tokens', d.groq.t); set('groq-reqs', d.groq.r);
-      const lm = document.getElementById('usage-last-model'); if (lm) lm.textContent = d.lastModel ? `آخر: ${d.lastModel}` : '—';
-      const gs = document.getElementById('groq-sub'); if (gs) gs.textContent = d.lastModel ? `آخر موديل: ${d.lastModel}` : 'بانتظار أول طلب';
-    }
+    estimateTokens(t) { return Math.ceil((t||'').length / 3.5); },
+    record(m,p,pt,ct){ const d=this.load(); const tot=this.estimateTokens(pt)+this.estimateTokens(ct); const k=p==='openrouter'?'or':'groq'; d[k].t+=tot; d[k].r+=1; d.lastModel=m||k; d.lastAt=new Date().toISOString(); this.save(d); this.render(); },
+    async fetchRealOpenRouter(){ const el=document.getElementById('or-sub'); try{ const k=(window.ConfigVault&&window.ConfigVault.getOpenRouterKey)?window.ConfigVault.getOpenRouterKey():'';
+        const r=await fetch('https://openrouter.ai/api/v1/credits',{headers:{'Authorization':`Bearer ${k}`}}); if(!r.ok) throw new Error();
+        const j=await r.json(); const d=j.data||j; const u=d.total_usage??d.totalUsage??0; const c=d.total_credits??d.totalCredits??0;
+        if(el) el.textContent=`الرصيد: ${Number(c).toFixed(2)} | المستهلك: ${Number(u).toFixed(3)}`;
+        const s=this.load(); if(u) s.or.t=Math.round(u*1000); this.save(s); this.render(); }catch{ if(el) el.textContent='بيانات محلية (لا يمكن جلب الحقيقي)'; } },
+    render(){ const d=this.load(); const s=(id,v)=>{const e=document.getElementById(id); if(e) e.textContent=v.toLocaleString('en-US');}; s('or-tokens',d.or.t); s('or-reqs',d.or.r); s('groq-tokens',d.groq.t); s('groq-reqs',d.groq.r);
+      const lm=document.getElementById('usage-last-model'); if(lm) lm.textContent=d.lastModel?`آخر: ${d.lastModel}`:'—';
+      const gs=document.getElementById('groq-sub'); if(gs) gs.textContent=d.lastModel?`آخر موديل: ${d.lastModel}`:'بانتظار أول طلب'; }
   };
 
   // ─────────────────────────────────────────────────────────────────
