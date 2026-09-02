@@ -2494,6 +2494,103 @@
     window.location.reload();
   };
 
+  function setupSmoothKineticScroll() {
+    const chatArea = $('chat-area');
+    if (!chatArea) return;
+
+    let isTouching = false;
+    let startY = 0;
+    let lastY = 0;
+    let lastTime = 0;
+    let velocityY = 0;
+    let momentumAnimId = null;
+
+    chatArea.addEventListener('touchstart', (e) => {
+      if (e.touches.length !== 1) return;
+      isTouching = true;
+      startY = e.touches[0].clientY;
+      lastY = startY;
+      lastTime = performance.now();
+      velocityY = 0;
+      if (momentumAnimId) {
+        cancelAnimationFrame(momentumAnimId);
+        momentumAnimId = null;
+      }
+    }, { passive: true });
+
+    chatArea.addEventListener('touchmove', (e) => {
+      if (!isTouching || e.touches.length !== 1) return;
+      const now = performance.now();
+      const currentY = e.touches[0].clientY;
+      const dt = Math.max(now - lastTime, 1);
+      const dy = lastY - currentY;
+
+      const instV = dy / dt;
+      velocityY = velocityY * 0.35 + instV * 0.65;
+
+      lastY = currentY;
+      lastTime = now;
+    }, { passive: true });
+
+    chatArea.addEventListener('touchend', () => {
+      if (!isTouching) return;
+      isTouching = false;
+
+      const absV = Math.abs(velocityY);
+
+      let multiplier = 0.5;
+      let friction = 0.88;
+
+      if (absV > 1.4) {
+        multiplier = 2.2;
+        friction = 0.95;
+      } else if (absV > 0.8) {
+        multiplier = 1.3;
+        friction = 0.92;
+      }
+
+      let momentum = velocityY * multiplier * 16;
+
+      function step() {
+        if (Math.abs(momentum) < 0.15 || isTouching) return;
+        chatArea.scrollTop += momentum;
+        momentum *= friction;
+        momentumAnimId = requestAnimationFrame(step);
+      }
+
+      if (Math.abs(momentum) > 0.8) {
+        momentumAnimId = requestAnimationFrame(step);
+      }
+    }, { passive: true });
+
+    let wheelTarget = null;
+    let wheelAnimId = null;
+
+    chatArea.addEventListener('wheel', (e) => {
+      if (Math.abs(e.deltaY) < 12) return;
+      e.preventDefault();
+
+      if (wheelTarget === null) wheelTarget = chatArea.scrollTop;
+      const delta = e.deltaY;
+      const speedFactor = Math.abs(delta) > 70 ? 1.35 : 0.7;
+      wheelTarget = Math.max(0, Math.min(chatArea.scrollHeight - chatArea.clientHeight, wheelTarget + delta * speedFactor));
+
+      if (wheelAnimId) cancelAnimationFrame(wheelAnimId);
+
+      function smoothWheelStep() {
+        const diff = wheelTarget - chatArea.scrollTop;
+        if (Math.abs(diff) < 0.8) {
+          chatArea.scrollTop = wheelTarget;
+          wheelTarget = null;
+          return;
+        }
+        chatArea.scrollTop += diff * 0.16;
+        wheelAnimId = requestAnimationFrame(smoothWheelStep);
+      }
+      wheelAnimId = requestAnimationFrame(smoothWheelStep);
+    }, { passive: false });
+  }
+
   function init() {
     lockViewportHeight();
     window.addEventListener('resize', lockViewportHeight);
@@ -2505,6 +2602,7 @@
     UIEngine.setupEventListeners();
     AuthManager.setupGate();
     StateController.load();
+    setupSmoothKineticScroll();
 
     if (state.conversations.length === 0) {
       UIEngine.showWelcomeScreen();
@@ -2519,7 +2617,7 @@
     if (multiBtn && state.isMultiAgentMode) {
       multiBtn.classList.add('active');
       const label = $('multi-agent-label-text');
-      if (label) label.textContent = 'تشاور الوكلاء (نشط)';
+      if (label) label.textContent = 'Multi-Agent (Active)';
     }
 
     registerServiceWorker();
