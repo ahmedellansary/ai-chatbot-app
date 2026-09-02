@@ -179,6 +179,8 @@
         gate.classList.add('hidden');
       }
 
+      const unlockBtn = $('gate-unlock-btn');
+
       let isVerifying = false;
       const handleGateSubmit = async () => {
         if (isVerifying) return;
@@ -189,6 +191,7 @@
         }
 
         isVerifying = true;
+        if (unlockBtn) unlockBtn.innerHTML = '<span>جاري التحقق...</span> <span>⏳</span>';
         try {
           const isValid = await this.verify(password);
           if (isValid) {
@@ -205,6 +208,7 @@
           }
         } finally {
           isVerifying = false;
+          if (unlockBtn) unlockBtn.innerHTML = '<span>Unlock Workspace</span> <span>🔓</span>';
         }
       };
 
@@ -212,6 +216,22 @@
         form.onsubmit = (e) => {
           e.preventDefault();
           handleGateSubmit();
+        };
+      }
+
+      if (unlockBtn) {
+        unlockBtn.onclick = (e) => {
+          e.preventDefault();
+          handleGateSubmit();
+        };
+      }
+
+      if (pinInput) {
+        pinInput.onkeydown = (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            handleGateSubmit();
+          }
         };
       }
     },
