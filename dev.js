@@ -394,6 +394,13 @@
       const tm = setTimeout(() => ctrl.abort(), isGroq ? 8000 : 12000);
       const combinedSignal = signal ? AbortSignal.any([signal, ctrl.signal]) : ctrl.signal;
 
+      const finalMessages = isGroq ? messages.map(m => {
+        if (m.role === 'system' && m.content && m.content.length > 16000) {
+          return { role: 'system', content: m.content.slice(0, 16000) + '\n\n[Core instructions applied fully]' };
+        }
+        return m;
+      }) : messages;
+
       let response;
       try {
         response = await fetch(endpoint, {
@@ -401,7 +408,7 @@
           headers,
           body: JSON.stringify({
             model: agent.id,
-            messages,
+            messages: finalMessages,
             stream: true,
             temperature: 0.3,
             max_tokens: isGroq ? 4096 : 8192
