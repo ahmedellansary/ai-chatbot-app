@@ -98,18 +98,32 @@ async function callOpenRouter(model, messages, signal) {
     'X-Title': 'X.v1 AI Chat'
   };
 
-  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+  const bodyPayload = {
+    model: model.id,
+    messages,
+    stream: true,
+    temperature: 0.7,
+    max_tokens: 8192,
+    plugins: [{ id: 'web', max_results: 5 }]
+  };
+
+  let response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
     headers,
-    body: JSON.stringify({
-      model: model.id,
-      messages,
-      stream: true,
-      temperature: 0.7,
-      max_tokens: 8192
-    }),
+    body: JSON.stringify(bodyPayload),
     signal
   });
+
+  // Safe fallback if model endpoint does not accept web plugin
+  if (!response.ok && response.status === 400) {
+    delete bodyPayload.plugins;
+    response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(bodyPayload),
+      signal
+    });
+  }
 
   if (response.status === 429) {
     rotateOpenRouterKey();
