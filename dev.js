@@ -390,8 +390,12 @@
         headers['X-Title'] = 'X.v1 Dev Portal';
       }
 
+      let timedOut = false;
       const ctrl = new AbortController();
-      const tm = setTimeout(() => ctrl.abort(), isGroq ? 8000 : 12000);
+      const tm = setTimeout(() => {
+        timedOut = true;
+        ctrl.abort();
+      }, isGroq ? 7000 : 9000);
       const combinedSignal = signal ? AbortSignal.any([signal, ctrl.signal]) : ctrl.signal;
 
       const finalMessages = isGroq ? messages.map(m => {
@@ -420,6 +424,7 @@
         clearTimeout(tm);
         if (isGroq) DevConfigVault.rotateGroqKey?.();
         else DevConfigVault.rotateOpenRouterKey?.();
+        if (timedOut) throw new Error('MODEL_TIMEOUT');
         throw e;
       }
 
