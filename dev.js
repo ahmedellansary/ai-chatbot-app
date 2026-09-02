@@ -232,7 +232,6 @@
           if (isValid) {
             this.unlock();
             gate.classList.add('hidden');
-            DevUIEngine.showToast('🔓 مرحباً بك في بيئة المطور!', 'success');
           } else {
             DevUIEngine.showToast('❌ كلمة السر غير صحيحة!', 'error');
             if (pinInput) {
@@ -2346,8 +2345,7 @@
       if (preservedOr) localStorage.setItem('OPENROUTER_API_KEY', preservedOr);
       if (preservedGh) localStorage.setItem('GITHUB_TOKEN', preservedGh);
       if (preservedPin) localStorage.setItem('DEV_CUSTOM_PIN', preservedPin);
-      DevUIEngine.showToast('✅ تم تنظيف الكاش مع الحفاظ على مهامك!', 'success');
-      setTimeout(() => window.location.reload(), 600);
+      window.location.reload();
     } catch (e) {
       console.warn('[DevCache] Clear error:', e);
       window.location.reload();
