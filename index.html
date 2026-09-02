@@ -363,6 +363,79 @@
           </div>
         </div>
 
+        <!-- 🎨 Appearance & Themes Customization Section -->
+        <div class="settings-section" style="margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border-subtle);">
+          <div class="settings-section-title">
+            <span>🎨</span>
+            <span>الثيم والمظهر (Theme & Colors)</span>
+          </div>
+          <p class="settings-section-desc">اختر الثيم المفضل لك لتغيير المظهر بالكامل فورياً.</p>
+          
+          <div class="theme-selector-grid">
+            <button type="button" class="theme-card-btn active" data-theme="obsidian" onclick="window._setAppTheme('obsidian')">
+              <div class="theme-preview-dot obsidian"></div>
+              <div class="theme-card-info">
+                <span class="theme-title">Midnight Obsidian</span>
+                <span class="theme-sub">الداكن الكلاسيكي (الحالي)</span>
+              </div>
+            </button>
+            <button type="button" class="theme-card-btn" data-theme="emerald" onclick="window._setAppTheme('emerald')">
+              <div class="theme-preview-dot emerald"></div>
+              <div class="theme-card-info">
+                <span class="theme-title">Emerald Matrix</span>
+                <span class="theme-sub">الزمردي النيون (Cyber)</span>
+              </div>
+            </button>
+            <button type="button" class="theme-card-btn" data-theme="amethyst" onclick="window._setAppTheme('amethyst')">
+              <div class="theme-preview-dot amethyst"></div>
+              <div class="theme-card-info">
+                <span class="theme-title">Velvet Amethyst</span>
+                <span class="theme-sub">الأرجواني الملكي (Royal)</span>
+              </div>
+            </button>
+            <button type="button" class="theme-card-btn" data-theme="sapphire" onclick="window._setAppTheme('sapphire')">
+              <div class="theme-preview-dot sapphire"></div>
+              <div class="theme-card-info">
+                <span class="theme-title">Oceanic Sapphire</span>
+                <span class="theme-sub">الأزرق الكوني (Ocean)</span>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <!-- 🔤 Typography & Font Family Section -->
+        <div class="settings-section" style="margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border-subtle);">
+          <div class="settings-section-title">
+            <span>🔤</span>
+            <span>نوع وحجم الخط (Typography & Size)</span>
+          </div>
+          <p class="settings-section-desc">اضبط نوع الخط وحجمه لتجربة قراءة مريحة.</p>
+
+          <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 8px;">
+            <!-- Font Family Selector -->
+            <div>
+              <label style="font-size: 12px; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 5px;">نوع الخط (Font Family):</label>
+              <div class="custom-pill-selector-row">
+                <button type="button" class="custom-pill-btn active" data-font="inter" onclick="window._setAppFontFamily('inter')">Modern Inter</button>
+                <button type="button" class="custom-pill-btn" data-font="cairo" onclick="window._setAppFontFamily('cairo')">Cairo (عربي أنيق)</button>
+                <button type="button" class="custom-pill-btn" data-font="tajawal" onclick="window._setAppFontFamily('tajawal')">Tajawal (تجوّل)</button>
+                <button type="button" class="custom-pill-btn" data-font="mono" onclick="window._setAppFontFamily('mono')">Code Mono</button>
+              </div>
+            </div>
+
+            <!-- Font Size Selector -->
+            <div>
+              <label style="font-size: 12px; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 5px;">حجم الخط (Font Size):</label>
+              <div class="custom-pill-selector-row">
+                <button type="button" class="custom-pill-btn" data-size="sm" onclick="window._setAppFontSize('sm')">صغير (13.5px)</button>
+                <button type="button" class="custom-pill-btn active" data-size="md" onclick="window._setAppFontSize('md')">افتراضي (15px)</button>
+                <button type="button" class="custom-pill-btn" data-size="lg" onclick="window._setAppFontSize('lg')">كبير (16.5px)</button>
+                <button type="button" class="custom-pill-btn" data-size="xl" onclick="window._setAppFontSize('xl')">عريض (18px)</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Storage & Cache Section -->
         <div class="settings-section" style="margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border-subtle);">
           <div class="settings-section-title">
