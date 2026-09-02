@@ -2176,6 +2176,33 @@
       pane.classList.toggle('hidden', pane.id !== `settings-tab-${tabName}`);
       pane.classList.toggle('active', pane.id === `settings-tab-${tabName}`);
     });
+    if (tabName === 'instructions' && window.InstructionManager) {
+      window.InstructionManager.renderList();
+    }
+  };
+
+  window._clearAppCache = async function() {
+    if (window.MessageRenderer) {
+      window.MessageRenderer.showToast('🧹 جاري مسح الكاش والتحديث الشامل...', 'info');
+    }
+    try {
+      if ('serviceWorker' in navigator) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        for (const r of regs) await r.unregister();
+      }
+      if (typeof caches !== 'undefined' && caches.keys) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map(k => caches.delete(k)));
+      }
+      localStorage.removeItem('instruction_files');
+      localStorage.removeItem('instruction_files_version');
+      localStorage.removeItem('XV1_APP_VERSION');
+    } catch (e) {
+      console.warn('[ClearCache]', e);
+    }
+    setTimeout(() => {
+      window.location.reload(true);
+    }, 350);
   };
 
   window._secretSyncAndClearGate = async function() {
