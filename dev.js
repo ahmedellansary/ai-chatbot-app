@@ -2011,6 +2011,31 @@
     $('see-more-files-dropdown')?.classList.add('hidden');
   };
 
+  window._copyActiveEditorCode = function() {
+    const editor = $('direct-code-editor');
+    const copyBtn = $('btn-copy-active-code');
+    const copyText = $('copy-active-btn-text');
+    const activeFile = state.currentEditingFile || 'index.html';
+
+    const content = editor ? editor.value : '';
+    if (!content) {
+      DevUIEngine.showToast('لا يوجد كود لنسخه حالياً', 'warning');
+      return;
+    }
+
+    navigator.clipboard.writeText(content).then(() => {
+      if (copyBtn) copyBtn.classList.add('copied');
+      if (copyText) copyText.textContent = 'Copied!';
+      DevUIEngine.showToast(`📋 تم نسخ كود ملف ${activeFile} بالكامل!`, 'success');
+      setTimeout(() => {
+        if (copyBtn) copyBtn.classList.remove('copied');
+        if (copyText) copyText.textContent = 'Copy';
+      }, 2000);
+    }).catch(err => {
+      DevUIEngine.showToast('فشل النسخ: ' + err.message, 'error');
+    });
+  };
+
   window._selectFileForEditing = async function(fileName, preloadedContent = null) {
     state.currentEditingFile = fileName;
     $('see-more-files-dropdown')?.classList.add('hidden');
