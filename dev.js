@@ -535,7 +535,7 @@
           if (err.name !== 'AbortError') {
             const errRow = document.querySelector(`[data-id="${aiMsgId}"] .msg-content`);
             if (errRow) {
-              errRow.innerHTML = `<span style="color:var(--accent-rose); font-size:13px;">⚠️ ${DevUIEngine.escapeHtml(err.message || 'حدث خطأ أثناء معالجة الطلب. يرجى المحاولة ثانية.')}</span>`;
+              errRow.innerHTML = `<span style="color:var(--accent-rose); font-size:13px;">⚠️ ${escapeHtml(err.message || 'حدث خطأ أثناء معالجة الطلب. يرجى المحاولة ثانية.')}</span>`;
             }
           }
         } finally {
@@ -557,13 +557,13 @@
           // Update model badge live in UI
           const tagElem = document.querySelector(`[data-id="${aiMsgId}"] .msg-model-tag`);
           if (tagElem) {
-            tagElem.innerHTML = `<span>${currentAgent.icon || '🧠'}</span> <span class="model-tag-name">${DevUIEngine.escapeHtml(currentAgent.name)}</span>`;
+            tagElem.innerHTML = `<span>${currentAgent.icon || '🧠'}</span> <span class="model-tag-name">${escapeHtml(currentAgent.name)}</span>`;
           }
 
           if (i > 0) {
             const msgElem = document.querySelector(`[data-id="${aiMsgId}"] .msg-content`);
             if (msgElem && !fullContent) {
-              msgElem.innerHTML = `<span style="color:#fbbf24; font-size:12.5px;">🔄 جاري التبديل التلقائي إلى <strong>${DevUIEngine.escapeHtml(currentAgent.name)}</strong>...</span>`;
+              msgElem.innerHTML = `<span style="color:#fbbf24; font-size:12.5px;">🔄 جاري التبديل التلقائي إلى <strong>${escapeHtml(currentAgent.name)}</strong>...</span>`;
             }
           }
 
@@ -600,7 +600,7 @@
               if (currentAgent.provider === 'groq') DevConfigVault.rotateGroqKey();
               fullContent = '';
               const retryMsg = document.querySelector(`[data-id="${aiMsgId}"] .msg-content`);
-              if (retryMsg) retryMsg.innerHTML = `<span style="color:#fbbf24; font-size:12.5px;">🔄 إعادة محاولة مع <strong>${DevUIEngine.escapeHtml(currentAgent.name)}</strong>...</span>`;
+              if (retryMsg) retryMsg.innerHTML = `<span style="color:#fbbf24; font-size:12.5px;">🔄 إعادة محاولة مع <strong>${escapeHtml(currentAgent.name)}</strong>...</span>`;
               await new Promise(r => setTimeout(r, 700));
               await this.callSingleAgentStream(currentAgent, apiMessages, state.abortController.signal, (delta) => {
                 fullContent += delta;
@@ -668,10 +668,10 @@
         const stepsHtml = steps.map(s => `
           <div class="agent-step-item">
             <div class="agent-step-header">
-              <span class="agent-step-name">${s.icon} ${DevUIEngine.escapeHtml(s.title)}</span>
-              <span class="agent-step-badge">${DevUIEngine.escapeHtml(s.status)}</span>
+              <span class="agent-step-name">${s.icon} ${escapeHtml(s.title)}</span>
+              <span class="agent-step-badge">${escapeHtml(s.status)}</span>
             </div>
-            <div class="agent-step-body">${DevUIEngine.escapeHtml(s.summary || 'Analyzing...')}</div>
+            <div class="agent-step-body">${escapeHtml(s.summary || 'Analyzing...')}</div>
           </div>
         `).join('');
 
@@ -683,7 +683,7 @@
             <div class="multi-agent-header" onclick="window._toggleThinkingBox('${aiMsgId}')">
               <div class="multi-agent-title">
                 <span>👥</span>
-                <span>Multi-Agent Consensus: <span style="color:#fbbf24; font-weight:600;">${DevUIEngine.escapeHtml(statusBadgeText)}</span></span>
+                <span>Multi-Agent Consensus: <span style="color:#fbbf24; font-weight:600;">${escapeHtml(statusBadgeText)}</span></span>
               </div>
               <div class="multi-agent-toggle-indicator">
                 <span id="indicator-${aiMsgId}">[Details ▾]</span>
@@ -817,9 +817,9 @@
           card.innerHTML = `
             <div class="dev-proposal-title">
               <span>🛠️</span>
-              <span>Ready to Patch: <code>${DevUIEngine.escapeHtml(data.file)}</code></span>
+              <span>Ready to Patch: <code>${escapeHtml(data.file)}</code></span>
             </div>
-            <div class="dev-proposal-desc">📝 <strong>Summary:</strong> ${DevUIEngine.escapeHtml(data.message || 'Ready to commit & deploy to GitHub')}</div>
+            <div class="dev-proposal-desc">📝 <strong>Summary:</strong> ${escapeHtml(data.message || 'Ready to commit & deploy to GitHub')}</div>
             <div class="dev-proposal-btns">
               <button class="dev-btn-action preview" onclick="window._previewProposal('${propId}')">
                 <span>👁️</span>
@@ -841,10 +841,10 @@
             <!-- Collapsible Mini Code Drawer inside Proposal Card -->
             <div class="dev-patch-drawer hidden" id="drawer-${propId}">
               <div class="patch-drawer-header">
-                <span>📄 Modified Code (${DevUIEngine.escapeHtml(data.file)})</span>
+                <span>📄 Modified Code (${escapeHtml(data.file)})</span>
                 <button class="btn-copy-patch" onclick="window._copyPatchContent('${propId}')">📋 Copy Code</button>
               </div>
-              <pre class="patch-drawer-code"><code>${DevUIEngine.escapeHtml(data.content)}</code></pre>
+              <pre class="patch-drawer-code"><code>${escapeHtml(data.content)}</code></pre>
             </div>
           `;
           msgRow.appendChild(card);
@@ -1904,9 +1904,9 @@
             </style>
           </head>
           <body>
-            <h2><span>📄</span> <span>معاينة محتوى الملف: ${DevUIEngine.escapeHtml(proposal.file)}</span></h2>
+            <h2><span>📄</span> <span>معاينة محتوى الملف: ${escapeHtml(proposal.file)}</span></h2>
             <div class="info-card">💡 هذا الملف تم إعداده وسيتم تحديثه في المستودع عند الضغط على زر النشر أعلاه.</div>
-            <pre>${DevUIEngine.escapeHtml(proposal.content)}</pre>
+            <pre>${escapeHtml(proposal.content)}</pre>
           </body>
           </html>
         `;
@@ -1973,7 +1973,7 @@
             <span>تم نشر التعديل بنجاح على GitHub وتحديث الموقع!</span>
           </div>
           <p style="font-size:13px; color:var(--text-muted); margin-top:4px;">
-            الملف <code>${DevUIEngine.escapeHtml(data.file)}</code> تم تحديثه ونشره بنجاح في المستودع.
+            الملف <code>${escapeHtml(data.file)}</code> تم تحديثه ونشره بنجاح في المستودع.
           </p>
           <div style="margin-top:8px; display:flex; justify-content:center; gap:8px;">
             <a href="./index.html" target="_blank" class="dev-btn-action deploy" style="text-decoration:none;">
@@ -2226,7 +2226,7 @@
           <div class="agent-card-header">
             <span class="agent-card-icon">${agent.icon || '👨‍💻'}</span>
             <div class="agent-card-title-wrap">
-              <div class="agent-card-name">${DevUIEngine.escapeHtml(agent.name)}</div>
+              <div class="agent-card-name">${escapeHtml(agent.name)}</div>
               <div class="agent-card-meta">
                 <span class="agent-badge ${agent.provider}">${agent.provider.toUpperCase()}</span>
                 <span class="agent-badge">${agent.params || ''}</span>
@@ -2234,7 +2234,7 @@
             </div>
             ${isSelected ? '<span class="agent-selected-check">✓</span>' : ''}
           </div>
-          <div class="agent-card-desc">${DevUIEngine.escapeHtml(agent.desc || '')}</div>
+          <div class="agent-card-desc">${escapeHtml(agent.desc || '')}</div>
         </div>
       `;
     }).join('');
@@ -2283,7 +2283,7 @@
         container.innerHTML = commits.map(c => `
           <div style="background:#181820; border:1px solid var(--border-subtle); border-radius:10px; padding:10px 14px; display:flex; justify-content:space-between; align-items:center;">
             <div>
-              <div style="font-weight:600; font-size:13px; color:#fff;">${DevUIEngine.escapeHtml(c.commit?.message || 'Update')}</div>
+              <div style="font-weight:600; font-size:13px; color:#fff;">${escapeHtml(c.commit?.message || 'Update')}</div>
               <div style="font-size:11px; color:var(--text-dim); margin-top:2px; font-family:var(--font-mono);">
                 SHA: ${c.sha?.slice(0, 7)} · ${new Date(c.commit?.author?.date).toLocaleString('ar')}
               </div>
