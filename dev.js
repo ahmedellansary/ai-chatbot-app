@@ -1045,69 +1045,17 @@
       let startY = 0;
       let currentPull = 0;
       let isTracking = false;
-      let isAtTop = false;
-      let isAtBottom = false;
-      let pullDirection = null;
-      const TOP_THRESHOLD = 45;
-      const BOTTOM_THRESHOLD = 90; // Significantly less sensitive for bottom pull
-
-      const promptBottomRefreshConfirm = () => {
-        let modal = $('bottom-refresh-modal');
-        if (!modal) {
-          modal = document.createElement('div');
-          modal.id = 'bottom-refresh-modal';
-          modal.className = 'bottom-refresh-modal';
-          modal.innerHTML = `
-            <div class="bottom-refresh-card">
-              <div class="bottom-refresh-header">
-                <span>🔄</span>
-                <span>تأكيد تحديث الصفحة</span>
-              </div>
-              <div class="bottom-refresh-desc">هل ترغب في إعادة تحميل ومزامنة الصفحة الآن؟</div>
-              <div class="bottom-refresh-actions">
-                <button id="btn-cancel-bottom-refresh" class="btn-refresh-cancel">إلغاء</button>
-                <button id="btn-confirm-bottom-refresh" class="btn-refresh-confirm">تحديث الآن</button>
-              </div>
-            </div>
-          `;
-          document.body.appendChild(modal);
-        }
-
-        modal.classList.add('show');
-
-        $('btn-cancel-bottom-refresh').onclick = () => {
-          modal.classList.remove('show');
-          indicator.classList.remove('visible', 'refreshing');
-          indicator.style.opacity = '0';
-          indicator.style.transform = 'translate3d(-50%, 80px, 0) scale(0.85)';
-        };
-
-        $('btn-confirm-bottom-refresh').onclick = async () => {
-          modal.classList.remove('show');
-          if ('serviceWorker' in navigator) {
-            try {
-              const regs = await navigator.serviceWorker.getRegistrations();
-              for (const r of regs) await r.update();
-            } catch {}
-          }
-          window.location.reload();
-        };
-      };
+      const TOP_THRESHOLD = 50;
 
       const onTouchStart = (e) => {
         if (e.touches.length !== 1) return;
         const chatArea = $('chat-area');
         if (!chatArea) return;
-        const scrollTop = chatArea.scrollTop;
-        const scrollHeight = chatArea.scrollHeight;
-        const clientHeight = chatArea.clientHeight;
-
-        startY = e.touches[0].clientY;
-        isAtTop = (scrollTop <= 4);
-        isAtBottom = (scrollTop + clientHeight >= scrollHeight - 6);
-        isTracking = (isAtTop || isAtBottom);
-        pullDirection = null;
-        currentPull = 0;
+        if (chatArea.scrollTop <= 4) {
+          startY = e.touches[0].clientY;
+          isTracking = true;
+          currentPull = 0;
+        }
       };
 
       const onTouchMove = (e) => {
@@ -1115,27 +1063,14 @@
         const y = e.touches[0].clientY;
         const diff = y - startY;
 
-        if (isAtTop && diff > 6 && (!pullDirection || pullDirection === 'top')) {
-          pullDirection = 'top';
+        if (diff > 8) {
           if (e.cancelable) e.preventDefault();
           currentPull = diff;
           const visualPull = Math.min(diff * 0.45, 75);
-          indicator.classList.remove('pull-bottom');
           indicator.classList.add('visible');
           indicator.style.opacity = '1';
           indicator.style.transform = `translate3d(-50%, ${visualPull - 25}px, 0) scale(1)`;
           if (spinner) spinner.style.transform = `rotate(${diff * 2.8}deg)`;
-        } else if (isAtBottom && diff < -24 && (!pullDirection || pullDirection === 'bottom')) {
-          pullDirection = 'bottom';
-          if (e.cancelable) e.preventDefault();
-          const effectivePull = Math.abs(diff) - 15;
-          currentPull = Math.max(0, effectivePull);
-          const visualPull = Math.min(effectivePull * 0.30, 70);
-          indicator.classList.add('pull-bottom');
-          indicator.classList.add('visible');
-          indicator.style.opacity = '1';
-          indicator.style.transform = `translate3d(-50%, ${25 - visualPull}px, 0) scale(1)`;
-          if (spinner) spinner.style.transform = `rotate(${-diff * 2.0}deg)`;
         } else {
           indicator.classList.remove('visible');
           indicator.style.opacity = '0';
@@ -1146,11 +1081,7 @@
         if (!isTracking) return;
         isTracking = false;
 
-        if (pullDirection === 'bottom' && currentPull >= BOTTOM_THRESHOLD) {
-          indicator.classList.add('refreshing');
-          indicator.style.transform = 'translate3d(-50%, -18px, 0) scale(1)';
-          promptBottomRefreshConfirm();
-        } else if (pullDirection === 'top' && currentPull >= TOP_THRESHOLD) {
+        if (currentPull >= TOP_THRESHOLD) {
           indicator.classList.add('refreshing');
           indicator.style.transform = 'translate3d(-50%, 18px, 0) scale(1)';
 
@@ -1164,13 +1095,10 @@
         } else {
           indicator.classList.remove('visible', 'refreshing');
           indicator.style.opacity = '0';
-          indicator.style.transform = pullDirection === 'bottom'
-            ? 'translate3d(-50%, 80px, 0) scale(0.85)'
-            : 'translate3d(-50%, -80px, 0) scale(0.85)';
+          indicator.style.transform = 'translate3d(-50%, -80px, 0) scale(0.85)';
           if (spinner) spinner.style.transform = '';
         }
         currentPull = 0;
-        pullDirection = null;
       };
 
       document.addEventListener('touchstart', onTouchStart, { passive: true });
@@ -2146,6 +2074,16 @@
     window.visualViewport.addEventListener('scroll', lockViewportHeight);
   }
   lockViewportHeight();
+
+  window._refreshApp = async function() {
+    if ('serviceWorker' in navigator) {
+      try {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        for (const r of regs) await r.update();
+      } catch {}
+    }
+    window.location.reload();
+  };
 
   // Auto-init on DOM ready
   if (document.readyState === 'loading') {
