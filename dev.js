@@ -1064,6 +1064,7 @@
   // ─────────────────────────────────────────────────────────────────
   // 7. UI ENGINE & MODALS (DevUIEngine)
   // ─────────────────────────────────────────────────────────────────
+  const DevUIEngine = {
     setupSmoothKineticScroll() {
       const chatArea = $('chat-area');
       if (!chatArea) return;
