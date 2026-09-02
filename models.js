@@ -228,13 +228,60 @@ async function* chatWithFallback(tier, messages, signal, onModelChange) {
   throw new Error(`كل موديلز ${tier} توقفت مؤقتاً. جرب مرة أخرى أو غيّر الـ Mode.`);
 }
 
+function normalizeCatalog(data) {
+  if (!data) return [];
+  const source = Array.isArray(data) ? data : Object.values(data).flat();
+  const seen = new Set();
+  return source.filter(item => {
+    if (!item || !item.id || !item.name) return false;
+    const key = `${item.provider || 'unknown'}:${item.id}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function getAvailableModels() {
+  const catalog = (typeof window !== 'undefined' && window.state && window.state.modelCatalog && window.state.modelCatalog.length)
+    ? window.state.modelCatalog
+    : normalizeCatalog(MODELS);
+  const seen = new Set();
+  return catalog.filter(m => {
+    const key = `${m.provider}:${m.id}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function getSelectedDevModel() {
+  const models = getAvailableModels();
+  if (!models.length) return null;
+  const devKey = (typeof window !== 'undefined' && window.state && window.state.devModelKey) || `${models[0].provider}:${models[0].id}`;
+  const selected = models.find(m => `${m.provider}:${m.id}` === devKey) || models[0];
+  if (typeof window !== 'undefined' && window.state) window.state.devModelKey = `${selected.provider}:${selected.id}`;
+  return selected;
+}
+
 // export { chatWithFallback, readStream, MODELS, DEV_MODELS }; // ESM — disabled for IIFE load (use window.*)
 
 // ── Global exposure for IIFE apps (Phase 2 Refactor) ──
 if (typeof window !== 'undefined') {
   window.MODELS = MODELS;
   window.DEV_MODELS = DEV_MODELS;
-  window.ModelEngine = { callOpenRouter, callGroq, readStream, chatWithFallback, getOpenRouterKey, getGroqKeys, getGroqKey, rotateGroqKey };
+  window.ModelEngine = {
+    callOpenRouter,
+    callGroq,
+    readStream,
+    chatWithFallback,
+    getOpenRouterKey,
+    getGroqKeys,
+    getGroqKey,
+    rotateGroqKey,
+    normalizeCatalog,
+    getAvailableModels,
+    getSelectedDevModel
+  };
   window.getOpenRouterKey = getOpenRouterKey;
   window.getGroqKeys = getGroqKeys;
   window.getGroqKey = getGroqKey;
