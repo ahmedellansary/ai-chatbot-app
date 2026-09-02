@@ -240,21 +240,33 @@
       };
     },
 
+    updateAgentPillDisplay: function () {
+      var d = getDeps();
+      var state = d.state || window._devState;
+      var label = _get$('selected-agent-label');
+      var icon = _get$('selected-agent-icon');
+      var mode = (state && state.currentMode) ? state.currentMode : 'MID';
+      if (label) label.textContent = mode;
+      if (icon) {
+        if (mode === 'HIGH') icon.textContent = '🚀';
+        else if (mode === 'FAST') icon.textContent = '⚡';
+        else icon.textContent = '⚖️';
+      }
+    },
+
     setupModelDropdown: function () {
       var d = getDeps();
-      var AGENTS = d.DEV_AGENTS || window.DEV_AGENTS || [];
       var pill = _get$('model-pill-trigger');
       var menu = _get$('model-dropdown-menu');
       var self = this;
       if (!pill || !menu) return;
+      var TIERS = ['HIGH', 'MID', 'FAST'];
       var renderMenu = function () {
-        var DevState = window.DevState || d.DevState;
-        var activeAgent = DevState ? DevState.getSelectedAgent() : AGENTS[0];
-        menu.innerHTML = '\n          <div style="padding:6px 8px; font-size:11px; font-weight:700; color:var(--text-dim); display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.08); margin-bottom:4px;">\n            <span>🤖 اختر النموذج / الوكيل</span>\n            <button type="button" onclick="event.stopPropagation(); window._openAgentModal();" style="background:transparent; border:none; color:#fbbf24; cursor:pointer; font-size:11px; font-weight:600;">🔍 التفاصيل</button>\n          </div>' + AGENTS.map(function (agent) {
-          var isActive = activeAgent && agent.id === activeAgent.id;
-          var providerText = agent.provider === 'groq' ? '⚡ Groq' : '🌐 OpenRouter';
-          var shortName = agent.name.replace(' Lead Architect', '').replace(' Fast Coder', '').replace(' Rapid Coder', '');
-          return '\n            <button type="button" class="dropdown-opt ' + (isActive ? 'active' : '') + '" onclick="window._selectAgentFromDropdown(\'' + agent.id + '\')">\n              <div class="opt-title">\n                <span>' + (agent.icon || '🧠') + ' ' + self.escapeHtml(shortName) + '</span>\n                ' + (isActive ? '<span style="color:#fbbf24; font-size:12px; font-weight:bold;">✓</span>' : '') + '\n              </div>\n              <div class="opt-meta">\n                <span class="opt-tag">' + (agent.params || '') + '</span>\n                <span class="opt-tag ' + agent.provider + '">' + providerText + '</span>\n              </div>\n            </button>';
+        var state = d.state || window._devState;
+        var current = (state && state.currentMode) ? state.currentMode : 'MID';
+        menu.innerHTML = TIERS.map(function (tier) {
+          var isActive = tier === current;
+          return '\n            <button type="button" class="dropdown-opt ' + (isActive ? 'active' : '') + '" onclick="window._selectDevTier(\'' + tier + '\')">\n              <div class="opt-title">\n                <span>' + tier + '</span>\n                ' + (isActive ? '<span style="color:#fbbf24; font-size:12px; font-weight:bold;">✓</span>' : '') + '\n              </div>\n            </button>';
         }).join('');
       };
       pill.onclick = function (e) { e.preventDefault(); e.stopPropagation(); renderMenu(); menu.classList.toggle('show'); };
@@ -279,8 +291,19 @@
     },
 
     handleSend: function () {
-      var input = _get$('user-input');
       var d = getDeps();
+      var state = d.state || window._devState;
+      if (state && state.isStreaming) {
+        if (state.abortController) {
+          state.abortController.abort();
+        }
+        state.isStreaming = false;
+        var eng = window.DevChatEngine || d.DevChatEngine;
+        if (eng && eng.hideTyping) eng.hideTyping();
+        this.updateSendBtn();
+        return;
+      }
+      var input = _get$('user-input');
       var eng = window.DevChatEngine || d.DevChatEngine;
       if (!input) return;
       var text = input.value;
@@ -295,10 +318,22 @@
       var state = d.state || window._devState;
       var input = _get$('user-input');
       var sendBtn = _get$('send-btn');
-      if (!input || !sendBtn || !state) return;
+      if (!sendBtn) return;
+      if (state && state.isStreaming) {
+        sendBtn.classList.add('streaming-stop');
+        sendBtn.classList.add('active');
+        sendBtn.removeAttribute('disabled');
+        sendBtn.title = 'إيقاف التوليد';
+        sendBtn.innerHTML = '<span style="font-size: 14px; line-height: 1; display: flex; align-items: center; justify-content: center;">⏹️</span>';
+        return;
+      }
+      sendBtn.classList.remove('streaming-stop');
+      sendBtn.title = 'Send request';
+      sendBtn.innerHTML = '<span style="font-size: 17px; line-height: 1; display: flex; align-items: center; justify-content: center;">⚡</span>';
+      if (!input || !state) return;
       var hasAtt = state.attachments && state.attachments.length > 0;
       var hasText = input.value.trim().length > 0;
-      var canSend = (hasText || hasAtt) && !state.isStreaming;
+      var canSend = (hasText || hasAtt);
       sendBtn.disabled = !canSend;
       sendBtn.classList.toggle('active', canSend);
     },
