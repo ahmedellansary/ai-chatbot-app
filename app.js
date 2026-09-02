@@ -377,36 +377,47 @@
 
       for (let i = 0; i < models.length; i++) {
         const model = models[i];
-        if (i > 0) {
+        const isFallback = i > 0;
+        if (isFallback) {
           usedFallback = true;
           onModelChange?.(model, true);
         } else {
           onModelChange?.(model, false);
         }
 
-        try {
-          const response = model.provider === 'groq'
-            ? await this.callGroq(model, messages, signal)
-            : await this.callOpenRouter(model, messages, signal);
+        const keyCount = model.provider === 'groq'
+          ? Math.max(1, ConfigVault.getGroqKeys ? ConfigVault.getGroqKeys().length : 1)
+          : Math.max(1, ConfigVault.getOpenRouterKeys ? ConfigVault.getOpenRouterKeys().length : 1);
 
-          for await (const chunk of this.readStream(response)) {
-            yield { chunk, model, usedFallback };
-          }
-          return;
-        } catch (err) {
-          if (err.name === 'AbortError') throw err;
-          console.warn(`[Model Fallback] ${model.name} failed:`, err.message);
+        let succeeded = false;
 
-          if (err.message === 'RATE_LIMIT' && model.provider === 'groq') {
-            try {
-              const response = await this.callGroq(model, messages, signal);
-              for await (const chunk of this.readStream(response)) {
-                yield { chunk, model, usedFallback };
-              }
-              return;
-            } catch {}
+        // Try ALL available keys for the strongest model first before falling back to next model
+        for (let attempt = 0; attempt < keyCount; attempt++) {
+          try {
+            const response = model.provider === 'groq'
+              ? await this.callGroq(model, messages, signal)
+              : await this.callOpenRouter(model, messages, signal);
+
+            for await (const chunk of this.readStream(response)) {
+              yield { chunk, model, usedFallback };
+            }
+            succeeded = true;
+            return;
+          } catch (err) {
+            if (err.name === 'AbortError') throw err;
+            console.warn(`[Model Fallback] ${model.name} (Key ${attempt + 1}/${keyCount}) failed:`, err.message);
+
+            if (err.message === 'RATE_LIMIT' || /429|rate limit|tpm|rpm/i.test(err.message)) {
+              if (model.provider === 'groq') ConfigVault.rotateGroqKey();
+              else ConfigVault.rotateOpenRouterKey?.();
+              continue; // Retry with next key of SAME strong model
+            } else {
+              break; // Switch to next model in tier
+            }
           }
         }
+
+        if (succeeded) return;
       }
 
       throw new Error(`تعذر الاتصال بموديلز ${tier}. يرجى المحاولة مرة أخرى أو اختيار وضع آخر.`);
