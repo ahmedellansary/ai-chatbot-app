@@ -11,13 +11,13 @@
   <meta name="apple-mobile-web-app-title" content="X.v1">
 
   <title>X.v1</title>
-  <link rel="manifest" href="./manifest.json?v=174">
+  <link rel="manifest" href="./manifest.json?v=175">
   <!-- Modular CSS (load before fallback) -->
-  <link rel="stylesheet" href="./css/base.css?v=174">
-  <link rel="stylesheet" href="./css/chat.css?v=174">
-  <link rel="stylesheet" href="./css/input.css?v=174">
-  <link rel="stylesheet" href="./css/modal.css?v=174">
-  <link rel="stylesheet" href="./style.css?v=174">
+  <link rel="stylesheet" href="./css/base.css?v=175">
+  <link rel="stylesheet" href="./css/chat.css?v=175">
+  <link rel="stylesheet" href="./css/input.css?v=175">
+  <link rel="stylesheet" href="./css/modal.css?v=175">
+  <link rel="stylesheet" href="./style.css?v=175">
   <link rel="icon" type="image/png" href="./icons/icon-192.png?v=49">
   <link rel="apple-touch-icon" href="./icons/icon-192.png?v=49">
   <link rel="apple-touch-icon" sizes="512x512" href="./icons/icon-512.png?v=49">
@@ -69,7 +69,7 @@
         <span>Settings</span>
       </button>
       <div id="app-version-badge" style="font-size:10.5px; color:var(--text-dim); font-family:var(--font-mono); text-align:center; padding:8px 0 2px; border-top:1px solid var(--border-subtle); margin-top:8px; letter-spacing:0.02em;">
-        <span id="app-version-text">v174</span> • <span id="app-last-update">جاري...</span>
+        <span id="app-version-text">v175</span> • <span id="app-last-update">جاري...</span>
       </div>
     </div>
   </aside>
@@ -87,7 +87,7 @@
       </button>
       <div id="chat-top-badge" class="repo-status-badge" style="position:absolute; left:50%; transform:translateX(-50%);">
         <span class="status-dot"></span>
-        <span class="repo-badge-text" id="chat-status-text" style="font-weight:700; letter-spacing:0.02em;">X (V174) —</span>
+        <span class="repo-badge-text" id="chat-status-text" style="font-weight:700; letter-spacing:0.02em;">X (V175) —</span>
       </div>
       <script>
         (function() {
@@ -323,6 +323,10 @@
             <span>⚙️</span>
             <span>System</span>
           </button>
+          <button type="button" class="settings-tab-btn settings-tab-clear-btn" onclick="window._clearAppCache()" title="Clear Cache & Reload">
+            <span>🧹</span>
+            <span>Clear Cache</span>
+          </button>
         </div>
 
         <!-- ═══ Tab 1: Themes ═══ -->
@@ -413,16 +417,16 @@
               </div>
             </div>
 
-            <div class="inst-editor-meta">
-              <input type="text" id="inst-editor-desc" class="inst-editor-meta-input" placeholder="Domain / Purpose description...">
+            <div class="inst-editor-meta" style="margin-bottom:6px;">
               <input type="text" id="inst-editor-keywords" class="inst-editor-meta-input" placeholder="Trigger keywords (comma separated)...">
             </div>
 
             <textarea
               id="inst-editor-content"
               class="settings-textarea inst-content-textarea"
-              rows="9"
-              placeholder="Write domain rules and guidelines here..."
+              style="font-family: var(--font-mono); font-size: 12px; line-height: 1.45;"
+              rows="8"
+              placeholder='{ "key": "value" }'
             ></textarea>
 
             <div class="inst-editor-footer">
@@ -493,14 +497,6 @@
             </div>
           </div>
 
-          <!-- Storage & Cache Section -->
-          <div class="settings-section" style="margin-top: 8px; padding-top: 10px; border-top: 1px solid var(--border-subtle);">
-            <button class="footer-btn settings-clear-btn" onclick="window._clearAppCache()" style="width:100%;">
-              <span>🧹</span>
-              <span>Clear Cache & Reload</span>
-            </button>
-          </div>
-
           <!-- Developer Studio Portal Link -->
           <div class="settings-section" style="margin-top: 8px; padding-top: 10px; border-top: 1px solid var(--border-subtle);">
             <a href="./dev.html" target="_blank" class="footer-btn" style="color: #fbbf24; text-decoration: none; border: 1px solid rgba(251, 191, 36, 0.3); border-radius: 8px; padding: 9px 12px; display: flex; align-items: center; justify-content: space-between; font-size:12.5px;">
@@ -554,17 +550,17 @@
 </div>
 
 <!-- Unified Application Script Bundle (Phase 3 Refactor) -->
-<script src="./config.js?v=174"></script>
-<script src="./auth.js?v=174"></script>
-<script src="./github.js?v=174"></script>
-<script src="./models.js?v=174"></script>
-<script src="./ui-helpers.js?v=174"></script>
-<script src="./modules/usage-tracker.js?v=174"></script>
-<script src="./modules/message-renderer.js?v=174"></script>
-<script src="./modules/instruction-manager.js?v=174"></script>
-<script src="./modules/state-controller.js?v=174"></script>
-<script src="./modules/chat-engine.js?v=174"></script>
-<script src="./modules/ui-engine.js?v=174"></script>
-<script src="./app.js?v=174"></script>
+<script src="./config.js?v=175"></script>
+<script src="./auth.js?v=175"></script>
+<script src="./github.js?v=175"></script>
+<script src="./models.js?v=175"></script>
+<script src="./ui-helpers.js?v=175"></script>
+<script src="./modules/usage-tracker.js?v=175"></script>
+<script src="./modules/message-renderer.js?v=175"></script>
+<script src="./modules/instruction-manager.js?v=175"></script>
+<script src="./modules/state-controller.js?v=175"></script>
+<script src="./modules/chat-engine.js?v=175"></script>
+<script src="./modules/ui-engine.js?v=175"></script>
+<script src="./app.js?v=175"></script>
 </body>
 </html>
