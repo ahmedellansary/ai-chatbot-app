@@ -2530,6 +2530,34 @@
     });
   };
 
+  window._secretSyncAndClearGate = async function() {
+    const pinInput = $('gate-pin-input');
+    const syncBtn = $('gate-sync-btn');
+    if (pinInput) {
+      pinInput.value = '';
+      pinInput.focus();
+    }
+    if (syncBtn) syncBtn.classList.add('spinning');
+    try {
+      if ('serviceWorker' in navigator) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        for (const r of regs) await r.update();
+      }
+      if (typeof caches !== 'undefined' && caches.keys) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map(k => caches.delete(k)));
+      }
+      await fetch('./version.json?t=' + Date.now()).catch(()=>{});
+      await fetch('./app.js?t=' + Date.now()).catch(()=>{});
+    } catch (e) {
+      console.warn('[SecretSync]', e);
+    } finally {
+      setTimeout(() => {
+        if (syncBtn) syncBtn.classList.remove('spinning');
+      }, 500);
+    }
+  };
+
   window._setAppTheme = function(themeName) {
     document.documentElement.setAttribute('data-theme', themeName);
     localStorage.setItem('xv1_theme', themeName);
