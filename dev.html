@@ -9,13 +9,13 @@
   <meta name="apple-mobile-web-app-title" content="X.v1 Dev">
 
   <title>X.v1 — Developer Portal & Codebase Studio</title>
-  <link rel="manifest" href="./dev-manifest.json?v=190">
+  <link rel="manifest" href="./dev-manifest.json?v=191">
   <!-- Modular Dev CSS (load before fallback) -->
-  <link rel="stylesheet" href="./css/dev-base.css?v=190">
-  <link rel="stylesheet" href="./css/dev-chat.css?v=190">
-  <link rel="stylesheet" href="./css/dev-input.css?v=190">
-  <link rel="stylesheet" href="./css/dev-modal.css?v=190">
-  <link rel="stylesheet" href="./dev_style.css?v=190">
+  <link rel="stylesheet" href="./css/dev-base.css?v=191">
+  <link rel="stylesheet" href="./css/dev-chat.css?v=191">
+  <link rel="stylesheet" href="./css/dev-input.css?v=191">
+  <link rel="stylesheet" href="./css/dev-modal.css?v=191">
+  <link rel="stylesheet" href="./dev_style.css?v=191">
   <link rel="icon" type="image/png" href="./icons/dev-icon-192.png?v=52">
   <link rel="apple-touch-icon" href="./icons/dev-icon-192.png?v=52">
   <link rel="apple-touch-icon" sizes="512x512" href="./icons/dev-icon-512.png?v=52">
@@ -29,6 +29,28 @@
         document.documentElement.setAttribute('data-font', f);
         document.documentElement.setAttribute('data-size', s);
       } catch(e) {}
+
+      // Auto-bust stale PWA cache on mobile app startup
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.addEventListener('controllerchange', function() {
+          window.location.reload();
+        });
+      }
+      fetch('./version.json?t=' + Date.now()).then(function(r){ return r.json(); }).then(function(d){
+        if (d && d.version) {
+          var localVer = localStorage.getItem('XV1_DEV_VERSION');
+          if (localVer !== d.version) {
+            localStorage.setItem('XV1_DEV_VERSION', d.version);
+            if (typeof caches !== 'undefined' && caches.keys) {
+              caches.keys().then(function(keys){
+                return Promise.all(keys.map(function(k){ return caches.delete(k); }));
+              }).then(function(){
+                window.location.reload(true);
+              });
+            }
+          }
+        }
+      }).catch(function(){});
     })();
   </script>
 </head>
@@ -116,7 +138,7 @@
       <div class="header-right">
         <div class="repo-status-badge">
           <span class="status-dot"></span>
-          <span class="repo-badge-text" id="dev-status-badge-text">Dev (V190) 02-09-2026 10:02AM</span>
+          <span class="repo-badge-text" id="dev-status-badge-text">Dev (V191) 02-09-2026 10:12AM</span>
         </div>
         <script>
           (function() {
@@ -479,13 +501,10 @@
   <div id="toast-container"></div>
 </div>
 
-<!-- Developer Studio Engine Bundle -->
-<script src="./config.js?v=190"></script>
-<script src="./auth.js?v=190"></script>
-<script src="./models.js?v=190"></script>
-<script src="./modules/dev-state.js?v=190"></script>
-<script src="./modules/dev-chat-engine.js?v=190"></script>
-<script src="./modules/dev-ui-engine.js?v=190"></script>
-<script src="./dev.js?v=190"></script>
+<!-- Consolidated High-Performance Developer Studio Engine Bundle -->
+<script src="./config.js?v=191"></script>
+<script src="./auth.js?v=191"></script>
+<script src="./models.js?v=191"></script>
+<script src="./dev.js?v=191"></script>
 </body>
 </html>
