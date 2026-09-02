@@ -71,7 +71,7 @@
   // 3. STATE & PERSISTENCE CONTROLLER (StateController)
   // ─────────────────────────────────────────────────────────────────
   const state = {
-    currentMode: 'MID',
+    currentMode: (function(){ try{ return localStorage.getItem('xv1_current_mode') || 'MID'; }catch{ return 'MID'; }})(),
     currentModel: null,
     devModelKey: null,
     modelCatalog: [],
@@ -1325,6 +1325,7 @@
         if (optBtn) {
           e.preventDefault();
           state.currentMode = optBtn.dataset.mode || 'MID';
+          try{ localStorage.setItem('xv1_current_mode', state.currentMode); }catch{}
           $('model-dropdown-menu')?.classList.remove('show');
           this.updateHeaderUI();
           const conv = StateController.getActiveConv();
