@@ -43,16 +43,15 @@
     },
 
     buildFallbackCascade: function (primaryAgent, estimatedTokens) {
-      if (estimatedTokens === void 0) estimatedTokens = 0;
       var d = getDeps();
-      var AGENTS = (d.DEV_AGENTS && d.DEV_AGENTS.length) ? d.DEV_AGENTS : (window.DEV_AGENTS || []);
-      var remaining = AGENTS.filter(function (a) { return a.id !== primaryAgent.id; });
-      if (estimatedTokens > 5000) {
-        var largeOpen = remaining.filter(function (a) { return a.provider === 'openrouter'; });
-        var groqRest = remaining.filter(function (a) { return a.provider === 'groq'; });
-        return [primaryAgent].concat(largeOpen).concat(groqRest);
+      var state = d.state || window._devState;
+      var tier = (state && state.currentMode) ? state.currentMode : 'MID';
+      var tierList = (window.DEV_TIER_MODELS && window.DEV_TIER_MODELS[tier]) ? window.DEV_TIER_MODELS[tier] : null;
+      if (tierList && tierList.length) {
+        return tierList;
       }
-      return [primaryAgent].concat(remaining);
+      var AGENTS = (d.DEV_AGENTS && d.DEV_AGENTS.length) ? d.DEV_AGENTS : (window.DEV_AGENTS || []);
+      return AGENTS;
     },
 
     callSingleAgentStream: async function (agent, messages, signal, onChunk) {
