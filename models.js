@@ -199,44 +199,52 @@ async function* chatWithFallback(tier, messages, signal, onModelChange) {
 
   for (let i = 0; i < models.length; i++) {
     const model = models[i];
-    if (i > 0) {
+    const isFallback = i > 0;
+    if (isFallback) {
       usedFallback = true;
       onModelChange?.(model, true);
     } else {
       onModelChange?.(model, false);
     }
 
-    try {
-      const response = model.provider === 'groq'
-        ? await callGroq(model, messages, signal)
-        : await callOpenRouter(model, messages, signal);
+    const keyCount = model.provider === 'groq'
+      ? Math.max(1, getGroqKeys().length)
+      : Math.max(1, getOpenRouterKeys().length);
 
-      for await (const chunk of readStream(response)) {
-        yield { chunk, model, usedFallback };
-      }
-      return;
-    } catch (err) {
-      if (err.name === 'AbortError') throw err;
-      console.warn(`[Model Router] ${model.name} failed:`, err.message);
+    let succeeded = false;
 
-      if (err.message === 'RATE_LIMIT') {
-        try {
-          const response = model.provider === 'groq'
-            ? await callGroq(model, messages, signal)
-            : await callOpenRouter(model, messages, signal);
-          for await (const chunk of readStream(response)) {
-            yield { chunk, model, usedFallback };
-          }
-          return;
-        } catch (retryErr) {
-          if (retryErr.name === 'AbortError') throw retryErr;
-          console.warn(`[Model Router] Retry failed:`, retryErr.message);
+    // Try ALL available keys for the strongest model first before falling back to next model
+    for (let attempt = 0; attempt < keyCount; attempt++) {
+      try {
+        const response = model.provider === 'groq'
+          ? await callGroq(model, messages, signal)
+          : await callOpenRouter(model, messages, signal);
+
+        for await (const chunk of readStream(response)) {
+          yield { chunk, model, usedFallback };
+        }
+        succeeded = true;
+        return;
+      } catch (err) {
+        if (err.name === 'AbortError') throw err;
+        console.warn(`[Model Router] ${model.name} (Key ${attempt + 1}/${keyCount}) failed:`, err.message);
+
+        // If rate limit / quota, rotate to next key of the SAME strong model
+        if (err.message === 'RATE_LIMIT' || /429|rate limit|tpm|rpm/i.test(err.message)) {
+          if (model.provider === 'groq') rotateGroqKey();
+          else rotateOpenRouterKey();
+          continue; // Next key on the same strong model
+        } else {
+          // If offline / bad request / server error, switch to next model in tier
+          break;
         }
       }
     }
+
+    if (succeeded) return;
   }
 
-  throw new Error(`كل موديلز ${tier} توقفت مؤقتاً. جرب مرة أخرى أو غيّر الـ Mode.`);
+  throw new Error(`كل موديلز ومفاتيح مستوى ${tier} توقفت مؤقتاً. جرب مرة أخرى.`);
 }
 
 function normalizeCatalog(data) {
