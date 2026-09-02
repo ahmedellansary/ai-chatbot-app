@@ -510,6 +510,26 @@
   // 6. DEV CHAT & SMART FALLBACK CASCADE ENGINE (DevChatEngine)
   // ─────────────────────────────────────────────────────────────────
   const DevChatEngine = {
+    getAdaptiveConfigForDev(agent, estimatedTokens = 0) {
+      if (estimatedTokens > 5000) return { recentCount: 10, maxBriefingChars: 1200 };
+      if (!agent) return { recentCount: 10, maxBriefingChars: 1200 };
+      if (agent.category === 'fast' || agent.id.includes('20b') || agent.id.includes('compound-mini')) return { recentCount: 6, maxBriefingChars: 600 };
+      if (agent.provider === 'openrouter') return { recentCount: 10, maxBriefingChars: 1200 };
+      return { recentCount: 10, maxBriefingChars: 1200 };
+    },
+
+    generateDevBriefing(conv, agent, estimatedTokens = 0) {
+      if (!conv || !Array.isArray(conv.messages) || conv.messages.length <= 10) return '';
+      const cfg = this.getAdaptiveConfigForDev(agent, estimatedTokens);
+      const firstUser = (conv.messages.find(m => m.role === 'user')?.content || '').slice(0, 220).replace(/\n/g, ' ').trim();
+      const recentAi = conv.messages.filter(m => m.role === 'ai').slice(-3).map(m => (m.content || '').slice(0, 200).replace(/\n/g, ' ').trim()).filter(Boolean).join(' | ');
+      const turns = conv.messages.length;
+      const title = conv.title || 'جلسة تطوير';
+      let briefing = `📋 بريفنج جلسة المطور (${title}):\n- طلب التطوير الأساسي: ${firstUser.slice(0, 200)}\n- عدد التبادلات: ${turns}\n- آخر مخرجات: ${recentAi.slice(0, 380)}`;
+      if (briefing.length > cfg.maxBriefingChars) briefing = briefing.slice(0, cfg.maxBriefingChars) + '...';
+      return briefing;
+    },
+
     // Dynamic Context-Aware Cascade:
     // If payload is large (> 5000 tokens), prioritizes 128k-200k OpenRouter models so no code is ever truncated.
     // If payload is normal (<= 5000 tokens), uses lightning-fast Groq models (120B / 27B) first.
@@ -639,10 +659,15 @@
       state.isStreaming = true;
       state.abortController = new AbortController();
 
-      const systemPrompt = state.devPrompt || 'أنت مهندس برمجيات محترف ومطور تطبيق الشات ومستودع GitHub.';
+      const _devTierCfg = this.getAdaptiveConfigForDev(DevState.getSelectedAgent(), Math.ceil(((textForPayload?.length || 0) + (state.devPrompt?.length || 0)) / 3.5));
+      const _devBriefing = this.generateDevBriefing(conv, DevState.getSelectedAgent(), Math.ceil(((textForPayload?.length || 0) + (state.devPrompt?.length || 0)) / 3.5));
+      let systemPrompt = state.devPrompt || 'أنت مهندس برمجيات محترف ومطور تطبيق الشات ومستودع GitHub.';
+      if (_devBriefing) {
+        systemPrompt = `${systemPrompt}\n\n═══════════════════════════════════════════════════════════════\n${_devBriefing}\n═══════════════════════════════════════════════════════════════\n(خلاصة ذكية للجلسة الكاملة — استخدمها كسياق كأنك حاضر من البداية. آخر ${_devTierCfg.recentCount} رسائل هي النص الحرفي الأحدث)`;
+      }
       const recentMessages = conv.messages
         .filter(m => m.id !== userMsg.id)
-        .slice(-8)
+        .slice(-_devTierCfg.recentCount)
         .map(m => ({ role: m.role === 'ai' ? 'assistant' : m.role, content: m.content }));
 
       const apiMessages = [
