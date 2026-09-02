@@ -2000,66 +2000,21 @@
 
   function renderRepositoryFilesExplorer() {
     const activeLabel = $('active-file-name-display');
-    const dropdown = $('see-more-files-dropdown');
     const syncText = $('files-sync-text');
-
-    const allFiles = repoFilesCache.length > 0 
-      ? repoFilesCache 
-      : ['index.html', 'style.css', 'app.js', 'dev.html', 'dev_style.css', 'dev.js', 'system_prompt.txt', 'sw.js', 'manifest.json', 'ops.html', 'ops_style.css', 'ops.js'];
 
     const activeFile = state.currentEditingFile || 'index.html';
 
-    // 1. Update Active File Name on Left
     if (activeLabel) {
       activeLabel.textContent = activeFile;
     }
 
-    // 2. Update Last Sync Timestamp
     if (syncText) {
       const savedSync = localStorage.getItem('FILES_LAST_SYNC_TIME');
       syncText.textContent = savedSync || 'Synced';
     }
-
-    // 3. Render See More Dropdown List
-    if (dropdown) {
-      dropdown.innerHTML = allFiles.map(file => `
-        <button type="button" class="see-more-file-item ${file === activeFile ? 'active' : ''}" onclick="window._selectFileForEditing('${file.replace(/'/g, "\\'")}')">
-          <span>${file}</span>
-          ${file === activeFile ? '<span style="color:#fbbf24; font-size:11px;">Active</span>' : ''}
-        </button>
-      `).join('');
-    }
   }
 
-  window._toggleSeeMoreFiles = function(e) {
-    if (e) {
-      e.stopPropagation();
-      e.preventDefault();
-    }
-    const dropdown = $('see-more-files-dropdown');
-    const chevron = $('see-more-chevron');
-    if (!dropdown) return;
-    const isHidden = dropdown.classList.contains('hidden');
-    if (isHidden) {
-      dropdown.classList.remove('hidden');
-      if (chevron) chevron.textContent = '▴';
-    } else {
-      dropdown.classList.add('hidden');
-      if (chevron) chevron.textContent = '▾';
-    }
-  };
 
-  document.addEventListener('click', (e) => {
-    const dropdown = $('see-more-files-dropdown');
-    const btn = $('btn-see-more-files');
-    if (dropdown && !dropdown.classList.contains('hidden')) {
-      if (!dropdown.contains(e.target) && !btn?.contains(e.target)) {
-        dropdown.classList.add('hidden');
-        const chevron = $('see-more-chevron');
-        if (chevron) chevron.textContent = '▾';
-      }
-    }
-  });
 
   window._syncFilesManual = async function() {
     const syncBtn = $('btn-sync-files-manual');
