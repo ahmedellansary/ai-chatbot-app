@@ -211,21 +211,21 @@
 }
 
 .message-row.ai {
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
+  align-items: stretch;
   gap: 8px;
   width: 100%;
 }
 
 .message-row.ai.is-rtl,
 .message-row.ai:not(.is-ltr) {
-  align-self: flex-end;
-  align-items: flex-end;
   text-align: right;
   direction: rtl;
 }
 
 .message-row.ai.is-ltr {
-  align-self: flex-start;
-  align-items: flex-start;
   text-align: left;
   direction: ltr;
 }
@@ -234,10 +234,12 @@
   color: var(--text-main);
   font-family: var(--font-sans);
   font-size: var(--chat-font-size, 16px);
-  line-height: 1.7;
+  line-height: 1.75;
+  width: 100%;
   max-width: 100%;
   overflow-wrap: break-word;
   word-break: break-word;
+  display: block;
 }
 
 .message-row.ai.is-rtl .msg-content,
@@ -247,6 +249,26 @@
 }
 
 .message-row.ai.is-ltr .msg-content {
+  text-align: left;
+  direction: ltr;
+}
+
+.message-row.ai.is-rtl .msg-content h1,
+.message-row.ai.is-rtl .msg-content h2,
+.message-row.ai.is-rtl .msg-content h3,
+.message-row.ai.is-rtl .msg-content p,
+.message-row.ai:not(.is-ltr) .msg-content h1,
+.message-row.ai:not(.is-ltr) .msg-content h2,
+.message-row.ai:not(.is-ltr) .msg-content h3,
+.message-row.ai:not(.is-ltr) .msg-content p {
+  text-align: right;
+  direction: rtl;
+}
+
+.message-row.ai.is-ltr .msg-content h1,
+.message-row.ai.is-ltr .msg-content h2,
+.message-row.ai.is-ltr .msg-content h3,
+.message-row.ai.is-ltr .msg-content p {
   text-align: left;
   direction: ltr;
 }
