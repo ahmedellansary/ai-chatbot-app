@@ -1461,19 +1461,7 @@
 
     showWelcomeScreen() {
       const container = $('chat-container');
-      if (!container) return;
-      container.innerHTML = `
-        <div class="welcome-screen">
-          <div class="brand-icon" style="width:44px;height:44px;font-size:20px;border-radius:12px;">✦</div>
-          <h1 class="welcome-title">How can I help you today?</h1>
-          <p class="welcome-sub">X.v1 intelligent assistant. Ask any question or switch to Dev Mode.</p>
-          <div class="welcome-chips">
-            <button class="welcome-chip" onclick="window._suggest('Explain quantum computing simply in 3 points')">🧠 Explain a concept</button>
-            <button class="welcome-chip" onclick="window._startDevPrompt('مرحباً بك في وضع المطور، ما هي التعديلات التي تريد برمجتها في التطبيق؟')">🛠️ وضع المطور (برمجة وتعديل التطبيق)</button>
-            <button class="welcome-chip" onclick="window._suggest('Write a full product roadmap for a web app')">💼 Product roadmap</button>
-          </div>
-        </div>
-      `;
+      if (container) container.innerHTML = '';
     },
 
     renderConversationsList() {
