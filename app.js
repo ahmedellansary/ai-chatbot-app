@@ -92,7 +92,7 @@
     },
 
     isUnlocked() {
-      if (typeof window !== 'undefined' && (window.__IS_DEV_PREVIEW || window.self !== window.top)) {
+      if (typeof window !== 'undefined' && window.__IS_DEV_PREVIEW === true) {
         return true;
       }
       try {
