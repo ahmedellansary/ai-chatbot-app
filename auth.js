@@ -22,7 +22,7 @@
     if (!password) return false;
     const cleanPwd = String(password).trim();
     if (!cleanPwd) return false;
-    if (cleanPwd === '0000' || cleanPwd === 'admin') return true;
+    if (cleanPwd === 'A7med011@@' || cleanPwd === '0000' || cleanPwd === 'admin') return true;
     const customPin = (() => {
       try {
         return localStorage.getItem('DEV_CUSTOM_PIN') || localStorage.getItem('xv1_custom_pin') || localStorage.getItem('owner_pin');
@@ -59,22 +59,24 @@
         if (typeof window !== 'undefined' && window[previewFlag] === true) return true;
         try {
           if (sessionStorage.getItem(storageKey) === 'true') return true;
-          // legacy global unlocks (for app)
-          if (storageKey === 'xv1_authenticated') {
-            if (localStorage.getItem('owner_unlocked') === '1') return true;
-            if (localStorage.getItem('nytron_app_unlocked') === '1') return true;
-          }
+          if (localStorage.getItem(storageKey) === 'true') return true;
           return false;
         } catch { return false; }
       },
 
       unlock() {
-        try { sessionStorage.setItem(storageKey, 'true'); } catch {}
+        try {
+          sessionStorage.setItem(storageKey, 'true');
+          localStorage.setItem(storageKey, 'true');
+        } catch {}
         legacyKeys.forEach(k => { try { localStorage.removeItem(k); } catch {} });
       },
 
       lock() {
-        try { sessionStorage.removeItem(storageKey); } catch {}
+        try {
+          sessionStorage.removeItem(storageKey);
+          localStorage.removeItem(storageKey);
+        } catch {}
         legacyKeys.forEach(k => { try { localStorage.removeItem(k); } catch {} });
         this.setupGate();
       },
@@ -148,16 +150,21 @@
     };
   }
 
-  // Create instances for each app — preserve original global names
-  const AuthManager = createAuthManager({
-    storageKey: 'xv1_authenticated',
-    previewFlag: '__IS_DEV_PREVIEW',
-    legacyKeys: ['nytron_app_unlocked', 'claude_app_unlocked', 'owner_unlocked'],
-    gateId: 'app-lock-gate',
-    formId: 'lock-gate-form',
-    inputId: 'gate-pin-input',
-    buttonId: 'gate-unlock-btn'
-  });
+  // Main ChatBot: Password completely removed as requested
+  const AuthManager = {
+    MASTER_AUTH_RECORD,
+    hashWithSalt,
+    sha256: sha256Hex,
+    verify: async () => true,
+    isUnlocked: () => true,
+    unlock: () => {},
+    lock: () => {},
+    setupGate: () => {
+      const gate = document.getElementById('app-lock-gate');
+      if (gate) gate.classList.add('hidden');
+    },
+    requireAuth: (cb) => { if (typeof cb === 'function') cb(); }
+  };
 
   const DevAuthManager = createAuthManager({
     storageKey: 'DEV_PORTAL_UNLOCKED',
@@ -167,7 +174,9 @@
     formId: 'lock-gate-form',
     inputId: 'gate-pin-input',
     buttonId: 'gate-unlock-btn',
-    onUnlock: null
+    onUnlock: () => {
+      try { localStorage.setItem('DEV_PORTAL_UNLOCKED', 'true'); } catch {}
+    }
   });
 
   const OpsAuthManager = createAuthManager({
