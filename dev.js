@@ -1037,6 +1037,7 @@
       } else {
         DevState.newConversation();
       }
+      updateDevVersionBadge().catch(()=>{});
     },
 
     async loadDevPrompt() {
@@ -2137,6 +2138,35 @@
     }
     window.location.reload();
   };
+
+  async function updateDevVersionBadge() {
+    const vEl = document.getElementById('dev-version-text');
+    const dEl = document.getElementById('dev-last-update');
+    const vEl2 = document.getElementById('dev-version');
+    if (vEl || vEl2) {
+      try {
+        const r = await fetch('./sw.js?t='+Date.now());
+        const t = await r.text();
+        const m = t.match(/xv1-chat-v(\d+)/);
+        if (m) {
+          const v = 'v'+m[1];
+          if (vEl) vEl.textContent = v;
+          if (vEl2) vEl2.textContent = v;
+        }
+      } catch {}
+    }
+    if (dEl) {
+      try {
+        const r = await fetch('https://api.github.com/repos/ahmedellansary/ai-chatbot-app/commits?per_page=1&t='+Date.now());
+        if (r.ok) {
+          const j = await r.json();
+          const date = j[0]?.commit?.committer?.date || j[0]?.commit?.author?.date;
+          if (date) { dEl.textContent = new Date(date).toLocaleDateString('ar-EG', {year:'numeric', month:'short', day:'numeric'}); return; }
+        }
+      } catch {}
+      dEl.textContent = new Date().toLocaleDateString('ar-EG', {year:'numeric', month:'short', day:'numeric'});
+    }
+  }
 
   window._clearDevCache = async function() {
     try {
