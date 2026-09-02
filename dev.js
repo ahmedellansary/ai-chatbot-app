@@ -1384,37 +1384,17 @@
       if (!container) return;
       container.innerHTML = '';
 
-      if (!messages || !messages.length || (messages.length === 1 && messages[0].isWelcome)) {
-        this.renderWelcomeHero();
-        return;
-      }
+      if (!messages || !messages.length) return;
 
       messages.forEach(msg => {
-        if (msg.isWelcome) {
-          this.renderWelcomeHero();
-        } else {
+        if (!msg.isWelcome) {
           this.appendMessage(msg);
         }
       });
     },
 
     renderWelcomeHero() {
-      const container = $('chat-container');
-      if (!container) return;
-      const hero = document.createElement('div');
-      hero.className = 'dev-welcome-hero';
-      hero.innerHTML = `
-        <div class="dev-welcome-star">🛠️</div>
-        <h1 class="dev-welcome-title">مرحباً بك في استوديو المطور (X.v1 Dev)</h1>
-        <p class="dev-welcome-sub">أنا مهندس البرمجيات المسؤول عن تطوير وصيانة تطبيق الشات ومستودع المشروع.</p>
-        <div class="dev-welcome-chips">
-          <button class="welcome-chip" onclick="window._sendQuickDevPrompt('🎨 قم بفحص واجهة وتصميم الشات style.css واقترح تحسينات بصرية عصرية وفخمة.')">🎨 تحسين التصميم والواجهة</button>
-          <button class="welcome-chip" onclick="window._sendQuickDevPrompt('⚡ افحص أداء التطبيق app.js وتدفق التوكنز والذاكرة واقترح تحسينات سرعة.')">⚡ فحص السرعة والأداء</button>
-          <button class="welcome-chip" onclick="window._sendQuickDevPrompt('🛡️ قم بعمل مراجعة أمنية شاملة لملفات التطبيق والتأكد من حماية الـ DOM والمفاتيح.')">🛡️ فحص الأمان والحماية</button>
-          <button class="welcome-chip" onclick="window._openFilesModal()">📁 فتح محرر الملفات</button>
-        </div>
-      `;
-      container.appendChild(hero);
+      // Clean direct workspace without welcome cards
     },
 
     appendMessage(msg) {
