@@ -26,7 +26,10 @@
         <span>X.v1 Dev Studio</span>
         <span class="dev-badge">Portal</span>
       </div>
-      <button class="icon-btn" id="close-sidebar-btn" style="display:none;" aria-label="Close">✕</button>
+      <div style="display:flex; align-items:center; gap:6px;">
+        <button class="icon-btn" onclick="window._refreshApp()" title="تحديث ومزامنة التطبيق" aria-label="Refresh">🔄</button>
+        <button class="icon-btn" id="close-sidebar-btn" style="display:none;" aria-label="Close">✕</button>
+      </div>
     </div>
 
     <div class="sidebar-nav">
@@ -73,6 +76,10 @@
       <button class="sidebar-link-btn" onclick="window._lockDevWorkspace()">
         <span>🔒</span>
         <span>قفل بيئة المطور (Lock)</span>
+      </button>
+      <button class="sidebar-link-btn" onclick="window._clearDevCache()" style="color:#fca5a5; border-color:rgba(244,63,94,0.3);">
+        <span>🧹</span>
+        <span>مسح الكاش وتحديث</span>
       </button>
     </div>
   </aside>
