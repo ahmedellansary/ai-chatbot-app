@@ -241,7 +241,16 @@
     },
 
     async callOpenRouter(model, messages, signal) {
-      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      const bodyPayload = {
+        model: model.id,
+        messages,
+        stream: true,
+        temperature: 0.7,
+        max_tokens: 8192,
+        plugins: [{ id: 'web', max_results: 5 }]
+      };
+
+      let response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${ConfigVault.getOpenRouterKey()}`,
@@ -249,15 +258,24 @@
           'HTTP-Referer': window.location.origin,
           'X-Title': 'X.v1 AI Chat'
         },
-        body: JSON.stringify({
-          model: model.id,
-          messages,
-          stream: true,
-          temperature: 0.7,
-          max_tokens: 8192
-        }),
+        body: JSON.stringify(bodyPayload),
         signal
       });
+
+      if (!response.ok && response.status === 400) {
+        delete bodyPayload.plugins;
+        response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${ConfigVault.getOpenRouterKey()}`,
+            'Content-Type': 'application/json',
+            'HTTP-Referer': window.location.origin,
+            'X-Title': 'X.v1 AI Chat'
+          },
+          body: JSON.stringify(bodyPayload),
+          signal
+        });
+      }
 
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));
