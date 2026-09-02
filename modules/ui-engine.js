@@ -31,10 +31,35 @@
       const inputEl = $('user-input');
       const btn = $('send-btn');
       if (!btn) return;
+
+      if (state && state.isStreaming) {
+        btn.classList.add('streaming-stop');
+        btn.classList.add('active');
+        btn.removeAttribute('disabled');
+        btn.setAttribute('title', 'إيقاف التوليد');
+        btn.setAttribute('aria-label', 'Stop');
+        btn.innerHTML = `
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor">
+            <rect x="5.5" y="5.5" width="13" height="13" rx="3" ry="3"></rect>
+          </svg>
+        `;
+        return;
+      }
+
+      btn.classList.remove('streaming-stop');
+      btn.setAttribute('title', 'Send message');
+      btn.setAttribute('aria-label', 'Send');
+      btn.innerHTML = `
+        <svg viewBox="0 0 24 24" width="17" height="17" stroke="currentColor" stroke-width="2.8" fill="none" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="19" x2="12" y2="5"></line>
+          <polyline points="5 12 12 5 19 12"></polyline>
+        </svg>
+      `;
+
       const textVal = inputEl ? inputEl.value : '';
       const hasText = textVal.trim().length > 0;
-      const hasAtt = Array.isArray(state.attachments) && state.attachments.length > 0;
-      const canSend = (hasText || hasAtt) && !state.isStreaming;
+      const hasAtt = Array.isArray(state?.attachments) && state.attachments.length > 0;
+      const canSend = (hasText || hasAtt);
 
       if (canSend) {
         btn.classList.add('active');
@@ -336,10 +361,22 @@
         const _dd2 = getDeps();
         const _state2 = _dd2.state || window.state;
         const _ChatEngine = _dd2.ChatEngine || window.ChatEngine;
+        const _MessageRenderer = _dd2.MessageRenderer || window.MessageRenderer;
         const ce = _ChatEngine || window.ChatEngine;
+
+        if (_state2 && _state2.isStreaming) {
+          if (_state2.abortController) {
+            _state2.abortController.abort();
+          }
+          _state2.isStreaming = false;
+          if (_MessageRenderer && _MessageRenderer.hideTyping) _MessageRenderer.hideTyping();
+          this.updateSendBtnState();
+          return;
+        }
+
         const text = input ? input.value.trim() : '';
-        const hasAtt = _state2.attachments && _state2.attachments.length > 0;
-        if ((!text && !hasAtt) || _state2.isStreaming) return;
+        const hasAtt = _state2 && _state2.attachments && _state2.attachments.length > 0;
+        if (!text && !hasAtt) return;
         if (input) input.value = '';
         this.adjustTextareaHeight();
         this.updateSendBtnState();
