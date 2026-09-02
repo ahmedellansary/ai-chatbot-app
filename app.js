@@ -674,9 +674,9 @@
   };
 
   // ─────────────────────────────────────────────────────────────────
-  // 7. CHAT CONTROLLER & STREAM ORCHESTRATOR (ChatEngine)
+  // 7. CHAT CONTROLLER & STREAM ORCHESTRATOR — Extracted to modules/chat-engine.js
   // ─────────────────────────────────────────────────────────────────
-  const ChatEngine = {
+  const ChatEngine = window.ChatEngine || {
     preparePayload(userText) {
       let textForPayload = userText.trim();
       const currentAttachments = [...state.attachments];
@@ -870,9 +870,9 @@
   };
 
   // ─────────────────────────────────────────────────────────────────
-  // 8. MULTI-AGENT COLLABORATIVE CONSENSUS ENGINE (MultiAgentEngine)
+  // 8. MULTI-AGENT COLLABORATIVE CONSENSUS ENGINE — Extracted to modules/chat-engine.js
   // ─────────────────────────────────────────────────────────────────
-  const MultiAgentEngine = {
+  const MultiAgentEngine = window.MultiAgentEngine || {
     async runConsensus(userText, textForPayload, apiMessages, aiMsgId, aiMsgObj, conv) {
       MessageRenderer.showTyping('جاري بدء تشاور الوكلاء...');
 
