@@ -9,13 +9,13 @@
   <meta name="apple-mobile-web-app-title" content="X.v1 Dev">
 
   <title>X.v1 — Developer Portal & Codebase Studio</title>
-  <link rel="manifest" href="./dev-manifest.json?v=195">
+  <link rel="manifest" href="./dev-manifest.json?v=197">
   <!-- Modular Dev CSS (load before fallback) -->
-  <link rel="stylesheet" href="./css/dev-base.css?v=195">
-  <link rel="stylesheet" href="./css/dev-chat.css?v=195">
-  <link rel="stylesheet" href="./css/dev-input.css?v=195">
-  <link rel="stylesheet" href="./css/dev-modal.css?v=195">
-  <link rel="stylesheet" href="./dev_style.css?v=195">
+  <link rel="stylesheet" href="./css/dev-base.css?v=197">
+  <link rel="stylesheet" href="./css/dev-chat.css?v=197">
+  <link rel="stylesheet" href="./css/dev-input.css?v=197">
+  <link rel="stylesheet" href="./css/dev-modal.css?v=197">
+  <link rel="stylesheet" href="./dev_style.css?v=197">
   <link rel="icon" type="image/png" href="./icons/dev-icon-192.png?v=52">
   <link rel="apple-touch-icon" href="./icons/dev-icon-192.png?v=52">
   <link rel="apple-touch-icon" sizes="512x512" href="./icons/dev-icon-512.png?v=52">
@@ -30,10 +30,10 @@
         document.documentElement.setAttribute('data-size', s);
       } catch(e) {}
 
-      // Auto-bust stale PWA cache on mobile app startup
+      // Safe background cache cleanup without disruptive reload loops
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.addEventListener('controllerchange', function() {
-          window.location.reload();
+          // Service worker updated in background
         });
       }
       fetch('./version.json?t=' + Date.now()).then(function(r){ return r.json(); }).then(function(d){
@@ -44,8 +44,6 @@
             if (typeof caches !== 'undefined' && caches.keys) {
               caches.keys().then(function(keys){
                 return Promise.all(keys.map(function(k){ return caches.delete(k); }));
-              }).then(function(){
-                window.location.reload(true);
               });
             }
           }
@@ -138,7 +136,7 @@
       <div class="header-right">
         <div class="repo-status-badge">
           <span class="status-dot"></span>
-          <span class="repo-badge-text" id="dev-status-badge-text">Dev (V195) 02-09-2026 12:16PM</span>
+          <span class="repo-badge-text" id="dev-status-badge-text">Dev (V197) 02-09-2026 4:41PM</span>
         </div>
         <script>
           (function() {
@@ -502,9 +500,9 @@
 </div>
 
 <!-- Consolidated High-Performance Developer Studio Engine Bundle -->
-<script src="./config.js?v=195"></script>
-<script src="./auth.js?v=195"></script>
-<script src="./models.js?v=195"></script>
-<script src="./dev.js?v=195"></script>
+<script src="./config.js?v=197"></script>
+<script src="./auth.js?v=197"></script>
+<script src="./models.js?v=197"></script>
+<script src="./dev.js?v=197"></script>
 </body>
 </html>
