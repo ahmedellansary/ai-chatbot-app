@@ -436,9 +436,72 @@
       var out = text;
       out = out.replace(/```json\s*\{[\s\S]*?"file"[\s\S]*?"content"[\s\S]*?\}\s*```/g, '');
       out = out.replace(/\{[\s\S]*?"file"\s*:\s*["'][^"']+["'][\s\S]*?"content"\s*:[\s\S]*?\}/g, '');
+
       out = out.replace(/```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g, function (m, lang, code) {
-        var self2 = DevUIEngine;
-        return '<pre><code>' + self2.escapeHtml(code.trim()) + '</code></pre>';
+        var trimmed = code.trim();
+        var escaped = DevUIEngine.escapeHtml(trimmed);
+        var rawLang = (lang || '').trim().toLowerCase();
+        var langTitle = 'Code';
+        var icon = '>_';
+
+        if (rawLang === 'bash' || rawLang === 'sh' || rawLang === 'shell' || rawLang === 'cmd' || rawLang === 'powershell') {
+          langTitle = 'Bash Command';
+          icon = '>_';
+        } else if (rawLang === 'js' || rawLang === 'javascript') {
+          langTitle = 'JavaScript';
+          icon = '⚡';
+        } else if (rawLang === 'python' || rawLang === 'py') {
+          langTitle = 'Python';
+          icon = '🐍';
+        } else if (rawLang === 'html') {
+          langTitle = 'HTML';
+          icon = '🌐';
+        } else if (rawLang === 'css') {
+          langTitle = 'CSS';
+          icon = '🎨';
+        } else if (rawLang === 'json') {
+          langTitle = 'JSON';
+          icon = '📦';
+        } else if (rawLang === 'sql') {
+          langTitle = 'SQL';
+          icon = '🗄️';
+        } else if (rawLang) {
+          langTitle = rawLang.toUpperCase();
+          icon = '📄';
+        }
+
+        var firstLine = trimmed.split('\n')[0] || '';
+        var preview = firstLine.length > 55 ? firstLine.slice(0, 52) + '...' : firstLine;
+        var linesCount = trimmed.split('\n').length;
+        var shouldCollapse = linesCount > 18;
+
+        return '\n<div class="dev-terminal-card">\n' +
+          '  <div class="terminal-card-header">\n' +
+          '    <div class="terminal-header-left">\n' +
+          '      <span class="terminal-icon-badge">' + icon + '</span>\n' +
+          '      <span class="terminal-lang-title">' + DevUIEngine.escapeHtml(langTitle) + '</span>\n' +
+          '      <span class="terminal-cmd-preview">' + DevUIEngine.escapeHtml(preview) + '</span>\n' +
+          '    </div>\n' +
+          '    <div class="terminal-header-right">\n' +
+          (shouldCollapse ? '      <button type="button" class="terminal-action-btn view-btn" onclick="window._toggleCodeView(this)">Expand</button>\n' : '') +
+          '      <button type="button" class="terminal-action-btn copy-btn" onclick="window._copyDevCode(this)">\n' +
+          '        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>\n' +
+          '        <span>Copy</span>\n' +
+          '      </button>\n' +
+          '    </div>\n' +
+          '  </div>\n' +
+          '  <div class="terminal-card-body ' + (shouldCollapse ? 'collapsed' : '') + '">\n' +
+          '    <pre><code class="language-' + DevUIEngine.escapeHtml(rawLang) + '">' + escaped + '</code></pre>\n' +
+          '  </div>\n' +
+          '  <div class="terminal-card-footer">\n' +
+          '    <div class="terminal-footer-status">\n' +
+          '      <span class="terminal-status-pill">Exit Code: 0</span>\n' +
+          '    </div>\n' +
+          '    <div class="terminal-footer-meta">\n' +
+          '      <span>' + linesCount + ' lines</span>\n' +
+          '    </div>\n' +
+          '  </div>\n' +
+          '</div>\n';
       });
       out = out.replace(/`([^`]+)`/g, function (m, code) { return '<code>' + DevUIEngine.escapeHtml(code) + '</code>'; });
       out = out.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
