@@ -83,16 +83,16 @@
     <!-- Top Header -->
     <header id="header">
       <div class="header-left">
-        <button class="icon-btn" onclick="window._refreshApp()" title="تحديث ومزامنة استوديو المطور">
+        <button class="icon-btn" onclick="window._refreshApp()" title="Refresh Dev Studio">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path><polyline points="21 3 21 9 15 9"></polyline></svg>
         </button>
-        <button class="icon-btn" onclick="window._openFilesModal()" title="محرر الملفات">
+        <button class="icon-btn" onclick="window._openFilesModal()" title="File Editor">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-          <span class="header-btn-label">محرر الملفات</span>
+          <span class="header-btn-label">File Editor</span>
         </button>
-        <a href="./ops.html" class="icon-btn" style="text-decoration:none;" title="مركز العمليات وسجل الاسترجاع الزمني">
+        <a href="./ops.html" class="icon-btn" style="text-decoration:none;" title="Operations & Rollback Center">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-          <span class="header-btn-label">الاسترجاع والعمليات</span>
+          <span class="header-btn-label">Ops & Rollback</span>
         </a>
         <button class="icon-btn" onclick="window._openDevSettingsModal()" title="Settings">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v1M12 21v1M4.22 4.22l1 1M18.36 18.36l1 1M1 12h1M21 12h1M4.22 19.78l1-1M18.36 5.64l1-1"/></svg>
@@ -117,7 +117,7 @@
       </div>
     </header>
 
-    <!-- Modern Circular Pull to Refresh Indicator (سحب للتحديث في استوديو المطور) -->
+    <!-- Modern Circular Pull to Refresh Indicator -->
     <div id="pull-refresh-indicator" class="pull-refresh-indicator" aria-hidden="true">
       <svg class="pull-refresh-spinner" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round">
         <path d="M21 12a9 9 0 1 1-6.219-8.56"></path>
@@ -130,13 +130,13 @@
       <div class="chat-container" id="chat-container"></div>
     </div>
 
-    <!-- Floating Input Bar (مطابق 100% للشات بوت) -->
+    <!-- Floating Input Bar -->
     <div id="input-section">
       <div class="input-container">
-        <!-- Attachment Previews (مطابق للشات بوت) -->
+        <!-- Attachment Previews -->
         <div id="attachment-preview-container" class="attachment-previews hidden"></div>
 
-        <!-- Textarea (مطابق للشات بوت) -->
+        <!-- Textarea -->
         <textarea
           id="user-input"
           class="chat-textarea"
@@ -157,7 +157,7 @@
               </svg>
             </button>
 
-            <!-- Model Selector Pill & Popup Dropdown (في الشات بوكس فقط) -->
+            <!-- Model Selector Pill & Popup Dropdown -->
             <div style="position: relative;">
               <button class="claude-model-pill" id="model-pill-trigger" title="Select Model">
                 <span id="selected-agent-icon" style="font-size: 13px;">👨‍💻</span>
@@ -171,9 +171,9 @@
             </div>
 
             <!-- Multi-Agent Consensus Independent Toggle Pill -->
-            <button class="claude-model-pill multi-agent-toggle-pill" id="dev-multi-agent-toggle-btn" onclick="window._toggleDevMultiAgentMode()" title="تفعيل / تعطيل تشاور الوكلاء المتعددين">
+            <button class="claude-model-pill multi-agent-toggle-pill" id="dev-multi-agent-toggle-btn" onclick="window._toggleDevMultiAgentMode()" title="Toggle Multi-Agent Consensus">
               <span>👥</span>
-              <span id="dev-multi-agent-label-text">تشاور الوكلاء</span>
+              <span id="dev-multi-agent-label-text">Multi-Agent</span>
             </button>
           </div>
 
@@ -192,27 +192,27 @@
 
   </main>
 
-  <!-- ═══ Simple & Modern Agent / Model Selection Modal ═══ -->
+  <!-- ═══ Agent / Model Selection Modal ═══ -->
   <div id="agent-modal" class="custom-modal hidden">
     <div class="custom-modal-card" style="max-width: 650px;">
       <div class="custom-modal-header">
         <div class="modal-header-title">
           <span>🧠</span>
-          <span>اختيار مهندس البرمجيات / نموذج الذكاء الاصطناعي</span>
+          <span>Select AI Architect & Engine</span>
         </div>
         <button class="icon-btn" onclick="window._closeAgentModal()">✕</button>
       </div>
       <div class="modal-body" style="gap: 12px;">
         <div class="agent-modal-hint">
-          <span>🛡️ <strong>نظام الحماية التلقائي (Smart Fallback):</strong> مرتبين من المتخصصين بالبرمجة والأعلى معالم إلى الأقل، مع تحويل تلقائي فوري في حال انشغال أي موديل.</span>
+          <span>🛡️ <strong>Smart Fallback System:</strong> Ranked by engineering specialty with instant automatic cascade if a provider is busy.</span>
         </div>
 
         <!-- Filter tabs -->
         <div class="agent-filter-tabs">
-          <button class="agent-tab active" data-filter="all" onclick="window._filterAgents('all')">الكل</button>
-          <button class="agent-tab" data-filter="code" onclick="window._filterAgents('code')">👨‍💻 كود وبرمجة</button>
-          <button class="agent-tab" data-filter="reasoning" onclick="window._filterAgents('reasoning')">🧠 ذكاء عالي</button>
-          <button class="agent-tab" data-filter="fast" onclick="window._filterAgents('fast')">⚡ سرعة فائقة</button>
+          <button class="agent-tab active" data-filter="all" onclick="window._filterAgents('all')">All</button>
+          <button class="agent-tab" data-filter="code" onclick="window._filterAgents('code')">👨‍💻 Coding & IDE</button>
+          <button class="agent-tab" data-filter="reasoning" onclick="window._filterAgents('reasoning')">🧠 Deep Reasoning</button>
+          <button class="agent-tab" data-filter="fast" onclick="window._filterAgents('fast')">⚡ Rapid Stream</button>
         </div>
 
         <!-- Agent List Container -->
@@ -227,7 +227,7 @@
       <div class="custom-modal-header">
         <div class="modal-header-title">
           <span>📁</span>
-          <span>محرر الملفات (Code Editor)</span>
+          <span>Repository File Editor</span>
         </div>
         <button class="icon-btn" onclick="window._closeFilesModal()">✕</button>
       </div>
@@ -240,14 +240,14 @@
           <button class="icon-btn" id="btn-file-sw" onclick="window._selectFileForEditing('sw.js')">⚡ sw.js</button>
         </div>
         <div id="all-files-grid" style="display:flex; gap:6px; flex-wrap:wrap; max-height:110px; overflow-y:auto; padding:6px; background:rgba(255,255,255,0.03); border:1px solid var(--border-subtle); border-radius:10px;">
-          <span style="font-size:11px; color:var(--text-dim);">جاري جلب كل ملفات المشروع...</span>
+          <span style="font-size:11px; color:var(--text-dim);">Fetching repository files...</span>
         </div>
         
         <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
-          <span id="current-editing-filename" style="font-weight:700; color:#fbbf24; font-size:13px; font-family:var(--font-mono);">الملف الحالي: index.html</span>
+          <span id="current-editing-filename" style="font-weight:700; color:#fbbf24; font-size:13px; font-family:var(--font-mono);">Active: index.html</span>
           <button class="dev-btn-action deploy" onclick="window._commitCurrentEditorFile()">
             <span>💾</span>
-            <span>حفظ ونشر التعديل على GitHub فوراً</span>
+            <span>Commit & Push to GitHub</span>
           </button>
         </div>
 
@@ -255,7 +255,7 @@
           id="direct-code-editor"
           class="dev-textarea"
           style="flex:1; width:100%; min-height:360px; background:#08080b; border:1px solid var(--border-subtle); border-radius:10px; padding:12px; font-family:var(--font-mono); font-size:12.5px; line-height:1.5; color:#f3f4f6; resize:none;"
-          placeholder="اختر ملفاً لعرضه وتعديله هنا..."
+          placeholder="Select a file to inspect and edit..."
         ></textarea>
       </div>
     </div>
@@ -267,42 +267,23 @@
       <div class="custom-modal-header preview-header">
         <div class="modal-header-title">
           <span>👁️</span>
-          <span>معاينة حية افتراضية للتعديل</span>
+          <span>Live Sandbox Preview</span>
           <span id="preview-file-badge" class="preview-target-badge">index.html</span>
         </div>
         <div class="preview-header-actions">
           <button class="dev-btn-action deploy preview-deploy-btn" id="preview-deploy-btn">
             <span>🚀</span>
-            <span>نشر التعديل الآن على GitHub</span>
+            <span>Deploy to GitHub</span>
           </button>
-          <button class="icon-btn" onclick="window._closePreviewModal()" title="إغلاق المعاينة">✕</button>
+          <button class="icon-btn" onclick="window._closePreviewModal()" title="Close Preview">✕</button>
         </div>
       </div>
       <div class="preview-modal-body">
         <div id="preview-notice-bar" class="preview-notice-bar">
           <span class="pulse-dot"></span>
-          <span>وضع المعاينة الافتراضية النشط: تم تطبيق التعديل المقترح مؤقتاً داخل بيئة معزولة لتجربته حياً قبل النشر.</span>
+          <span>Virtual Sandbox Active: Changes applied temporarily in an isolated container for live testing before deployment.</span>
         </div>
         <iframe id="preview-sandbox-frame" class="preview-sandbox-frame" sandbox="allow-scripts allow-same-origin allow-forms allow-modals"></iframe>
-      </div>
-    </div>
-  </div>
-
-  <!-- ═══ Rollback History Modal ═══ -->
-  <div id="rollback-modal" class="custom-modal hidden">
-    <div class="custom-modal-card">
-      <div class="custom-modal-header">
-        <div class="modal-header-title">
-          <span>⏪</span>
-          <span>سجل النسخ والاسترجاع الطارئ (Git Rollback History)</span>
-        </div>
-        <button class="icon-btn" onclick="window._closeRollbackModal()">✕</button>
-      </div>
-      <div class="modal-body">
-        <p style="font-size:13px; color:var(--text-muted);">اختر أي نسخة سابقة للتراجع الفوري واسترجاع ملفات التطبيق كما كانت:</p>
-        <div id="commits-list-container" style="display:flex; flex-direction:column; gap:8px; margin-top:8px;">
-          <div style="padding:16px; text-align:center; color:var(--text-dim);">جاري جلب سجل الـ Commits من GitHub...</div>
-        </div>
       </div>
     </div>
   </div>
@@ -313,20 +294,20 @@
       <div class="custom-modal-header">
         <div class="modal-header-title">
           <span>⚙️</span>
-          <span>Settings</span>
+          <span>Dev Studio Settings</span>
         </div>
         <button class="icon-btn" onclick="window._closeDevSettingsModal()">✕</button>
       </div>
       <div class="modal-body">
         <div style="display:flex; justify-content:space-between; align-items:center;">
-          <span style="font-weight:600; font-size:13.5px; color:#fff;">تعليمات المطور (Developer System Prompt):</span>
-          <button class="icon-btn" onclick="window._resetDefaultDevPrompt()" style="font-size:11.5px;">استعادة الافتراضي</button>
+          <span style="font-weight:600; font-size:13.5px; color:#fff;">Developer System Prompt:</span>
+          <button class="icon-btn" onclick="window._resetDefaultDevPrompt()" style="font-size:11.5px;">Reset Default</button>
         </div>
-        <p style="font-size:12.5px; color:var(--text-muted);">هذه التعليمات توجه ذكاء المهندس المطور لكيفية فحص وتعديل ملفات مشروع الشات.</p>
+        <p style="font-size:12.5px; color:var(--text-muted);">Direct instructions governing the AI Codebase Engineer's behavior and patching rules.</p>
         <textarea id="dev-prompt-textarea" class="dev-textarea" style="background:#0d0d10; border:1px solid var(--border-subtle); border-radius:10px; padding:12px; min-height:220px;" rows="9"></textarea>
         <button class="dev-btn-primary" onclick="window._saveDevPrompt()" style="align-self:flex-start; margin-top:6px;">
           <span>💾</span>
-          <span>حفظ تعليمات المطور</span>
+          <span>Save Prompt</span>
         </button>
       </div>
     </div>
@@ -337,24 +318,24 @@
     <div class="lock-gate-card">
       <div class="lock-gate-star">🛠️</div>
       <h2 class="lock-gate-title">X.v1 Developer Portal</h2>
-      <p class="lock-gate-sub">أدخل كلمة سر المطور لفتح بيئة التحكم وتعديل الملفات.</p>
+      <p class="lock-gate-sub">Enter master password to access codebase engine and tools.</p>
 
       <form id="lock-gate-form" style="width:100%; display:flex; flex-direction:column; gap:10px;">
         <input
           type="password"
           id="gate-pin-input"
           class="lock-gate-input"
-          placeholder="أدخل كلمة السر..."
+          placeholder="Enter password..."
           maxlength="32"
           autocomplete="current-password"
         >
         <button type="button" id="gate-unlock-btn" class="lock-gate-btn">
-          <span>فتح بيئة المطور</span>
+          <span>Unlock Dev Studio</span>
           <span>🔓</span>
         </button>
       </form>
 
-      <div style="font-size:11px; color:var(--text-dim); margin-top:6px;">🔐 محمية بتشفير Salted SHA-256</div>
+      <div style="font-size:11px; color:var(--text-dim); margin-top:6px;">🔐 Protected with Salted SHA-256</div>
     </div>
   </div>
 
