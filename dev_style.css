@@ -1803,14 +1803,14 @@ pre code {
   }
 }
 
-/* ─── App Lock Gate ─── */
+/* ─── App Lock Gate (Theme Adaptive) ─── */
 .app-lock-gate {
   position: fixed;
   inset: 0;
   z-index: 999999;
-  background: rgba(7, 9, 15, 0.96);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background: var(--bg-main, #0c0c0e);
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1823,23 +1823,25 @@ pre code {
 
 .lock-gate-card {
   width: 100%;
-  max-width: 380px;
-  background: rgba(18, 24, 38, 0.95);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 20px;
-  padding: 30px 24px;
+  max-width: 390px;
+  background: var(--bg-card, #17171d);
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.1));
+  border-radius: 22px;
+  padding: 32px 24px;
   text-align: center;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), 0 0 30px rgba(99, 102, 241, 0.15);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.75), 0 0 35px var(--accent-glow, rgba(245, 158, 11, 0.15));
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 12px;
+  transition: all 0.3s ease;
 }
 
 .lock-gate-star {
-  font-size: 36px;
+  font-size: 38px;
   line-height: 1;
   margin-bottom: 4px;
+  filter: drop-shadow(0 0 12px var(--accent-glow, rgba(245, 158, 11, 0.3)));
 }
 
 .lock-gate-title {
@@ -1859,8 +1861,8 @@ pre code {
 .lock-gate-input {
   width: 100%;
   padding: 13px 16px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--bg-input, rgba(255, 255, 255, 0.05));
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.12));
   border-radius: 12px;
   color: #fff;
   font-size: 15px;
@@ -1872,19 +1874,31 @@ pre code {
 
 .lock-gate-input:focus {
   outline: none;
-  border-color: #6366f1;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
+  border-color: var(--accent-dev);
+  box-shadow: 0 0 0 3px var(--accent-dev-glow, rgba(245, 158, 11, 0.25));
   background: rgba(255, 255, 255, 0.08);
 }
 
-.lock-gate-btn {
+.lock-gate-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   width: 100%;
+}
+
+.lock-gate-actions-row .lock-gate-btn {
+  flex: 1;
+  width: auto;
+  margin: 0;
+}
+
+.lock-gate-btn {
   padding: 13px 16px;
-  background: linear-gradient(135deg, #6366f1, #4f46e5);
+  background: var(--accent-dev);
   border: none;
   border-radius: 12px;
   color: #fff;
-  font-size: 15px;
+  font-size: 14.5px;
   font-weight: 600;
   cursor: pointer;
   display: flex;
@@ -1892,16 +1906,47 @@ pre code {
   justify-content: center;
   gap: 8px;
   transition: all 0.2s ease;
-  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.35);
+  box-shadow: 0 4px 15px var(--accent-dev-glow, rgba(245, 158, 11, 0.35));
 }
 
 .lock-gate-btn:hover {
   transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
+  filter: brightness(1.1);
+  box-shadow: 0 6px 20px var(--accent-dev-glow, rgba(245, 158, 11, 0.5));
 }
 
 .lock-gate-btn:active {
   transform: translateY(1px);
+}
+
+.lock-gate-icon-btn {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-input, rgba(255, 255, 255, 0.06));
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.lock-gate-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #fff;
+  transform: rotate(45deg);
+}
+
+.lock-gate-icon-btn:active {
+  transform: rotate(180deg) scale(0.92);
+}
+
+.lock-gate-icon-btn.spinning .gate-sync-svg {
+  animation: spin 0.8s linear infinite;
 }
 
 /* ─── Modals ─── */
