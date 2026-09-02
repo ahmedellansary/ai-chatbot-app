@@ -2053,7 +2053,7 @@
     await UsageTracker.fetchRealOpenRouter();
   };
 
-  // Global window bridges for Modular Instruction Files Manager
+  // Global window bridges for Modular Instruction Files Manager & Settings
   window._openSettingsModal = async function() {
     const modal = $('settings-modal');
     if (!modal) return;
@@ -2064,6 +2064,67 @@
     UIEngine.closeSidebar();
     UsageTracker.render();
     UsageTracker.fetchRealOpenRouter();
+    
+    // Populate API keys input
+    const orInput = $('input-openrouter-keys');
+    const groqInput = $('input-groq-keys');
+    if (orInput) {
+      orInput.value = localStorage.getItem('OPENROUTER_API_KEYS') || localStorage.getItem('OPENROUTER_API_KEY') || '';
+    }
+    if (groqInput) {
+      groqInput.value = localStorage.getItem('GROQ_API_KEYS') || localStorage.getItem('GROQ_API_KEY') || '';
+    }
+  };
+
+  window._saveApiKeys = function() {
+    const orInput = $('input-openrouter-keys');
+    const groqInput = $('input-groq-keys');
+    const status = $('api-keys-status');
+    const orVal = orInput ? orInput.value.trim() : '';
+    const groqVal = groqInput ? groqInput.value.trim() : '';
+    
+    if (orVal) {
+      localStorage.setItem('OPENROUTER_API_KEYS', orVal);
+      localStorage.setItem('OPENROUTER_API_KEY', orVal);
+    } else {
+      localStorage.removeItem('OPENROUTER_API_KEYS');
+      localStorage.removeItem('OPENROUTER_API_KEY');
+    }
+
+    if (groqVal) {
+      localStorage.setItem('GROQ_API_KEYS', groqVal);
+      localStorage.setItem('GROQ_API_KEY', groqVal);
+    } else {
+      localStorage.removeItem('GROQ_API_KEYS');
+      localStorage.removeItem('GROQ_API_KEY');
+    }
+
+    if (status) {
+      const orCount = orVal ? orVal.split(/[\n,]+/).filter(Boolean).length : 0;
+      const groqCount = groqVal ? groqVal.split(/[\n,]+/).filter(Boolean).length : 0;
+      status.textContent = `✅ تم حفظ المفاتيح (${orCount} OpenRouter, ${groqCount} Groq) والمزامنة نشطة!`;
+      status.style.color = '#10b981';
+      setTimeout(() => { if (status) status.textContent = ''; }, 4000);
+    }
+    MessageRenderer.showToast('✅ تم حفظ وتحديث المفاتيح والمزامنة التلقائية!', 'success');
+  };
+
+  window._clearApiKeys = function() {
+    localStorage.removeItem('OPENROUTER_API_KEYS');
+    localStorage.removeItem('OPENROUTER_API_KEY');
+    localStorage.removeItem('GROQ_API_KEYS');
+    localStorage.removeItem('GROQ_API_KEY');
+    const orInput = $('input-openrouter-keys');
+    const groqInput = $('input-groq-keys');
+    if (orInput) orInput.value = '';
+    if (groqInput) groqInput.value = '';
+    const status = $('api-keys-status');
+    if (status) {
+      status.textContent = '🔄 تم مسح المفاتيح المخصصة واستعادة المفاتيح الافتراضية.';
+      status.style.color = '#fbbf24';
+      setTimeout(() => { if (status) status.textContent = ''; }, 4000);
+    }
+    MessageRenderer.showToast('🔄 تم مسح المفاتيح المخصصة', 'info');
   };
 
   window._closeSettingsModal = function() {
@@ -2203,12 +2264,12 @@
           const verStr = `v${data.version}`;
           if (vEl) vEl.textContent = verStr;
           if (dEl && data.updated_at) dEl.textContent = data.updated_at;
-          if (topEl) topEl.textContent = `X (V${data.version}) —`;
+          if (topEl) topEl.textContent = `X (V${data.version}) ${data.updated_at || ''}`;
           return;
         }
       }
     } catch {}
-    if (topEl && !topEl.textContent) topEl.textContent = 'X.v1';
+    if (topEl && !topEl.textContent) topEl.textContent = 'X (V170)';
   }
 
   window._refreshApp = async function() {
