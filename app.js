@@ -2341,6 +2341,28 @@
     InstructionManager.load().catch(console.warn);
     loadModelCatalog().catch(console.warn);
     updateVersionBadge().catch(()=>{});
+    // Auto-focus chat box for instant typing (keyboard appears on mobile)
+    const autoFocusChat = () => {
+      if (!AuthManager.isUnlocked()) return;
+      const inp = $('user-input');
+      if (inp && document.activeElement !== inp) {
+        try { inp.focus({ preventScroll: true }); } catch { try { inp.focus(); } catch {} }
+      }
+    };
+    setTimeout(autoFocusChat, 500);
+    // Also focus after unlock
+    const _origUnlock = AuthManager.unlock.bind(AuthManager);
+    const _origSetupGate = AuthManager.setupGate.bind(AuthManager);
+    // Hook unlock to focus
+    const origUnlock = AuthManager.unlock;
+    AuthManager.unlock = function() {
+      origUnlock.call(this);
+      setTimeout(autoFocusChat, 350);
+    };
+    // Focus when page becomes visible
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) setTimeout(autoFocusChat, 200); });
+    // Focus on any click outside that doesn't target input
+    window.addEventListener('focus', autoFocusChat);
   }
 
   if (document.readyState === 'loading') {
