@@ -155,6 +155,19 @@ async function callOpenRouter(model, messages, signal) {
   }
 }
 
+function adaptMessagesForGroqTPM(messages) {
+  if (!Array.isArray(messages)) return messages;
+  return messages.map(m => {
+    if (m.role === 'system' && m.content && m.content.length > 16000) {
+      return {
+        role: 'system',
+        content: m.content.slice(0, 16000) + '\n\n[Core instructions applied fully]'
+      };
+    }
+    return m;
+  });
+}
+
 async function callGroq(model, messages, signal) {
   const groqKey = getGroqKey();
   const headers = {
@@ -172,7 +185,7 @@ async function callGroq(model, messages, signal) {
       headers,
       body: JSON.stringify({
         model: model.id,
-        messages,
+        messages: adaptMessagesForGroqTPM(messages),
         stream: true,
         temperature: 0.7,
         max_tokens: 4096
@@ -253,7 +266,7 @@ async function* chatWithFallback(tier, messages, signal, onModelChange) {
 
     let succeeded = false;
 
-    // Try ALL available keys for the strongest model first before falling back to next model
+    // Try available keys for the strongest model first before falling back to next model
     for (let attempt = 0; attempt < keyCount; attempt++) {
       try {
         const response = model.provider === 'groq'
@@ -269,8 +282,13 @@ async function* chatWithFallback(tier, messages, signal, onModelChange) {
         if (err.name === 'AbortError') throw err;
         console.warn(`[Model Router] ${model.name} (Key ${attempt + 1}/${keyCount}) failed:`, err.message);
 
+        // If request is too large for this specific model, immediately fall back to the next model in cascade
+        if (/413|too large|content too large|limit \d+/i.test(err.message)) {
+          break;
+        }
+
         // If rate limit / quota, rotate to next key of the SAME strong model
-        if (err.message === 'RATE_LIMIT' || /429|rate limit|tpm|rpm/i.test(err.message)) {
+        if (err.message === 'RATE_LIMIT' || /429|rate limit|rpm/i.test(err.message)) {
           if (model.provider === 'groq') rotateGroqKey();
           else rotateOpenRouterKey();
           continue; // Next key on the same strong model
