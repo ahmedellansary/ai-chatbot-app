@@ -60,33 +60,31 @@ const rotateGroqKey = () => {
 // ─── Model Tiers — Unified active model set (Strictly Isolated, Strongest to Weakest) ───
 const MODELS = {
   HIGH: [
-    { id: 'nvidia/nemotron-3-ultra-550b-a55b:free', name: 'Nemotron 3 Ultra 550B', provider: 'openrouter' },
-    { id: 'minimax/minimax-m3:free', name: 'MiniMax M3', provider: 'openrouter' },
-    { id: 'openai/gpt-oss-120b', name: 'GPT OSS 120B', provider: 'groq' },
-    { id: 'nvidia/nemotron-3-super-120b-a12b:free', name: 'Nemotron 3 Super 120B', provider: 'openrouter' }
+    { id: 'openai/gpt-oss-120b', name: 'GPT OSS 120B (Ultra Fast)', provider: 'groq' },
+    { id: 'nvidia/nemotron-3-super-120b-a12b:free', name: 'Nemotron 3 Super 120B', provider: 'openrouter' },
+    { id: 'qwen/qwen3.8-27b', name: 'Qwen 3.8 27B', provider: 'groq' },
+    { id: 'minimax/minimax-m3:free', name: 'MiniMax M3', provider: 'openrouter' }
   ],
   MID: [
-    { id: 'nvidia/nemotron-3-super-120b-a12b:free', name: 'Nemotron 3 Super 120B', provider: 'openrouter' },
-    { id: 'openai/gpt-oss-120b', name: 'GPT OSS 120B', provider: 'groq' },
-    { id: 'minimax/minimax-m2.7:free', name: 'MiniMax M2.7', provider: 'openrouter' },
+    { id: 'openai/gpt-oss-120b', name: 'GPT OSS 120B (Ultra Fast)', provider: 'groq' },
     { id: 'qwen/qwen3.8-27b', name: 'Qwen 3.8 27B', provider: 'groq' },
-    { id: 'openai/gpt-oss-20b', name: 'GPT OSS 20B', provider: 'groq' }
+    { id: 'nvidia/nemotron-3-super-120b-a12b:free', name: 'Nemotron 3 Super 120B', provider: 'openrouter' },
+    { id: 'groq/compound', name: 'Groq Compound', provider: 'groq' }
   ],
   FAST: [
-    { id: 'qwen/qwen3.8-27b', name: 'Qwen 3.8 27B', provider: 'groq' },
+    { id: 'qwen/qwen3.8-27b', name: 'Qwen 3.8 27B (Instant)', provider: 'groq' },
     { id: 'groq/compound', name: 'Groq Compound', provider: 'groq' },
-    { id: 'openai/gpt-oss-20b', name: 'GPT OSS 20B', provider: 'groq' },
-    { id: 'groq/compound-mini', name: 'Groq Compound Mini', provider: 'groq' }
+    { id: 'openai/gpt-oss-120b', name: 'GPT OSS 120B', provider: 'groq' },
+    { id: 'openai/gpt-oss-20b', name: 'GPT OSS 20B', provider: 'groq' }
   ]
 };
 
 const DEV_MODELS = [
   { id: 'openai/gpt-oss-120b', name: 'GPT OSS 120B Lead Architect', provider: 'groq' },
-  { id: 'nvidia/nemotron-3-ultra-550b-a55b:free', name: 'Nemotron 3 Ultra 550B', provider: 'openrouter' },
-  { id: 'minimax/minimax-m3:free', name: 'MiniMax M3 Architect', provider: 'openrouter' },
   { id: 'qwen/qwen3.8-27b', name: 'Qwen 3.8 27B Fast Coder', provider: 'groq' },
   { id: 'groq/compound', name: 'Groq Compound', provider: 'groq' },
-  { id: 'minimax/minimax-m2.7:free', name: 'MiniMax M2.7 Reasoning', provider: 'openrouter' }
+  { id: 'nvidia/nemotron-3-super-120b-a12b:free', name: 'Nemotron 3 Super 120B', provider: 'openrouter' },
+  { id: 'minimax/minimax-m3:free', name: 'MiniMax M3 Architect', provider: 'openrouter' }
 ];
 
 async function callOpenRouter(model, messages, signal) {
@@ -103,27 +101,15 @@ async function callOpenRouter(model, messages, signal) {
     messages,
     stream: true,
     temperature: 0.7,
-    max_tokens: 8192,
-    plugins: [{ id: 'web', max_results: 5 }]
+    max_tokens: 8192
   };
 
-  let response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
     headers,
     body: JSON.stringify(bodyPayload),
     signal
   });
-
-  // Safe fallback if model endpoint does not accept web plugin
-  if (!response.ok && response.status === 400) {
-    delete bodyPayload.plugins;
-    response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(bodyPayload),
-      signal
-    });
-  }
 
   if (response.status === 429) {
     rotateOpenRouterKey();
