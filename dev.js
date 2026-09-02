@@ -974,21 +974,21 @@
           card.innerHTML = `
             <div class="dev-proposal-title">
               <span>🛠️</span>
-              <span>تم تجهيز تعديل الملف: <code>${DevUIEngine.escapeHtml(data.file)}</code></span>
+              <span>Ready to Patch: <code>${DevUIEngine.escapeHtml(data.file)}</code></span>
             </div>
-            <div class="dev-proposal-desc">📝 <strong>التغيير:</strong> ${DevUIEngine.escapeHtml(data.message || 'جاهز للنشر على GitHub')}</div>
+            <div class="dev-proposal-desc">📝 <strong>Summary:</strong> ${DevUIEngine.escapeHtml(data.message || 'Ready to commit & deploy to GitHub')}</div>
             <div class="dev-proposal-btns">
               <button class="dev-btn-action preview" onclick="window._previewProposal('${propId}')">
                 <span>👁️</span>
-                <span>معاينة حية للتطبيق</span>
+                <span>Live Preview</span>
               </button>
               <button class="dev-btn-action deploy" onclick="window._deployProposal('${propId}')">
                 <span>🚀</span>
-                <span>نشر التعديل على GitHub</span>
+                <span>Deploy to GitHub</span>
               </button>
               <button class="dev-btn-action review-fix" onclick="window._togglePatchDrawer('${propId}')">
                 <span>🔍</span>
-                <span>فحص الكود المعدل ▾</span>
+                <span>Inspect Patch ▾</span>
               </button>
               <button class="dev-btn-action cancel" onclick="window._cancelProposal('${propId}')">
                 <span>✕</span>
@@ -998,8 +998,8 @@
             <!-- Collapsible Mini Code Drawer inside Proposal Card -->
             <div class="dev-patch-drawer hidden" id="drawer-${propId}">
               <div class="patch-drawer-header">
-                <span>📄 كود الملف المعدل (${DevUIEngine.escapeHtml(data.file)})</span>
-                <button class="btn-copy-patch" onclick="window._copyPatchContent('${propId}')">📋 نسخ الكود</button>
+                <span>📄 Modified Code (${DevUIEngine.escapeHtml(data.file)})</span>
+                <button class="btn-copy-patch" onclick="window._copyPatchContent('${propId}')">📋 Copy Code</button>
               </div>
               <pre class="patch-drawer-code"><code>${DevUIEngine.escapeHtml(data.content)}</code></pre>
             </div>
