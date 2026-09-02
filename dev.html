@@ -103,7 +103,7 @@
       <div class="header-right">
         <div class="repo-status-badge">
           <span class="status-dot"></span>
-          <span class="repo-badge-text" id="dev-status-badge-text">Dev (V139) 02-09-2026 5:38AM</span>
+          <span class="repo-badge-text" id="dev-status-badge-text">Dev (V140) 02-09-2026 5:39AM</span>
         </div>
         <script>
           (function() {
@@ -259,13 +259,22 @@
       
       <div class="modal-body" style="flex:1; display:flex; flex-direction:column; gap:10px;">
         
-        <!-- Active File Badge + Push to GitHub Action -->
+        <!-- Active File Badge + Copy Button + Push to GitHub Action -->
         <div class="active-file-editor-bar">
-          <div class="active-file-left-group">
+          <div class="active-file-left-group" style="display:flex; align-items:center; gap:8px;">
             <div class="active-file-badge-pill">
               <span style="font-size:14px;">📁</span>
               <span id="active-file-name-display" class="active-file-name">index.html</span>
             </div>
+
+            <!-- Small Copy Active Code Button -->
+            <button type="button" class="active-file-copy-btn" id="btn-copy-active-code" onclick="window._copyActiveEditorCode()" title="Copy active file code to clipboard">
+              <svg id="copy-active-icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+              <span id="copy-active-btn-text">Copy</span>
+            </button>
           </div>
 
           <button class="dev-btn-action deploy" onclick="window._commitCurrentEditorFile()">
