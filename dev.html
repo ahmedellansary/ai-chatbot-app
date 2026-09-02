@@ -99,7 +99,7 @@
       <div class="header-right">
         <div class="repo-status-badge">
           <span class="status-dot"></span>
-          <span class="repo-badge-text" id="dev-status-badge-text">Dev (V143) 02-09-2026 5:45AM</span>
+          <span class="repo-badge-text" id="dev-status-badge-text">Dev (V144) 02-09-2026 5:49AM</span>
         </div>
         <script>
           (function() {
@@ -318,7 +318,7 @@
 
   <!-- ═══ Dev Settings Modal ═══ -->
   <div id="dev-settings-modal" class="custom-modal hidden">
-    <div class="custom-modal-card">
+    <div class="custom-modal-card" style="max-width: 650px;">
       <div class="custom-modal-header">
         <div class="modal-header-title">
           <span>⚙️</span>
@@ -326,17 +326,94 @@
         </div>
         <button class="icon-btn" onclick="window._closeDevSettingsModal()">✕</button>
       </div>
-      <div class="modal-body">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-          <span style="font-weight:600; font-size:13.5px; color:#fff;">Developer System Prompt:</span>
-          <button class="icon-btn" onclick="window._resetDefaultDevPrompt()" style="font-size:11.5px;">Reset Default</button>
+      <div class="modal-body" style="gap: 16px;">
+
+        <!-- 🎨 Appearance & Themes Customization Section -->
+        <div class="settings-section" style="padding-bottom: 12px; border-bottom: 1px solid var(--border-subtle);">
+          <div style="font-weight: 600; font-size: 13.5px; color: #fff; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+            <span>🎨</span>
+            <span>الثيم والمظهر (Theme & Colors)</span>
+          </div>
+          <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px;">اختر ثيم ألوان الاستوديو المفضل لك للتطبيق فورياً.</p>
+          
+          <div class="theme-selector-grid">
+            <button type="button" class="theme-card-btn active" data-theme="obsidian" onclick="window._setAppTheme('obsidian')">
+              <div class="theme-preview-dot obsidian"></div>
+              <div class="theme-card-info">
+                <span class="theme-title">Midnight Obsidian</span>
+                <span class="theme-sub">الداكن الكلاسيكي (الحالي)</span>
+              </div>
+            </button>
+            <button type="button" class="theme-card-btn" data-theme="emerald" onclick="window._setAppTheme('emerald')">
+              <div class="theme-preview-dot emerald"></div>
+              <div class="theme-card-info">
+                <span class="theme-title">Emerald Matrix</span>
+                <span class="theme-sub">الزمردي النيون (Cyber)</span>
+              </div>
+            </button>
+            <button type="button" class="theme-card-btn" data-theme="amethyst" onclick="window._setAppTheme('amethyst')">
+              <div class="theme-preview-dot amethyst"></div>
+              <div class="theme-card-info">
+                <span class="theme-title">Velvet Amethyst</span>
+                <span class="theme-sub">الأرجواني الملكي (Royal)</span>
+              </div>
+            </button>
+            <button type="button" class="theme-card-btn" data-theme="sapphire" onclick="window._setAppTheme('sapphire')">
+              <div class="theme-preview-dot sapphire"></div>
+              <div class="theme-card-info">
+                <span class="theme-title">Oceanic Sapphire</span>
+                <span class="theme-sub">الأزرق الكوني (Ocean)</span>
+              </div>
+            </button>
+          </div>
         </div>
-        <p style="font-size:12.5px; color:var(--text-muted);">Direct instructions governing the AI Codebase Engineer's behavior and patching rules.</p>
-        <textarea id="dev-prompt-textarea" class="dev-textarea" style="background:#0d0d10; border:1px solid var(--border-subtle); border-radius:10px; padding:12px; min-height:220px;" rows="9"></textarea>
-        <button class="dev-btn-primary" onclick="window._saveDevPrompt()" style="align-self:flex-start; margin-top:6px;">
-          <span>💾</span>
-          <span>Save Prompt</span>
-        </button>
+
+        <!-- 🔤 Typography & Font Family Section -->
+        <div class="settings-section" style="padding-bottom: 12px; border-bottom: 1px solid var(--border-subtle);">
+          <div style="font-weight: 600; font-size: 13.5px; color: #fff; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+            <span>🔤</span>
+            <span>نوع وحجم الخط (Typography & Size)</span>
+          </div>
+          <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px;">اضبط نوع الخط وحجمه لتجربة قراءة مريحة.</p>
+
+          <div style="display: flex; flex-direction: column; gap: 12px;">
+            <!-- Font Family Selector -->
+            <div>
+              <label style="font-size: 12px; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 5px;">نوع الخط (Font Family):</label>
+              <div class="custom-pill-selector-row">
+                <button type="button" class="custom-pill-btn active" data-font="inter" onclick="window._setAppFontFamily('inter')">Modern Inter</button>
+                <button type="button" class="custom-pill-btn" data-font="cairo" onclick="window._setAppFontFamily('cairo')">Cairo (عربي أنيق)</button>
+                <button type="button" class="custom-pill-btn" data-font="tajawal" onclick="window._setAppFontFamily('tajawal')">Tajawal (تجوّل)</button>
+                <button type="button" class="custom-pill-btn" data-font="mono" onclick="window._setAppFontFamily('mono')">Code Mono</button>
+              </div>
+            </div>
+
+            <!-- Font Size Selector -->
+            <div>
+              <label style="font-size: 12px; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 5px;">حجم الخط (Font Size):</label>
+              <div class="custom-pill-selector-row">
+                <button type="button" class="custom-pill-btn" data-size="sm" onclick="window._setAppFontSize('sm')">صغير (13.5px)</button>
+                <button type="button" class="custom-pill-btn active" data-size="md" onclick="window._setAppFontSize('md')">افتراضي (15px)</button>
+                <button type="button" class="custom-pill-btn" data-size="lg" onclick="window._setAppFontSize('lg')">كبير (16.5px)</button>
+                <button type="button" class="custom-pill-btn" data-size="xl" onclick="window._setAppFontSize('xl')">عريض (18px)</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-weight:600; font-size:13.5px; color:#fff;">Developer System Prompt:</span>
+            <button class="icon-btn" onclick="window._resetDefaultDevPrompt()" style="font-size:11.5px;">Reset Default</button>
+          </div>
+          <p style="font-size:12.5px; color:var(--text-muted); margin-top:2px;">Direct instructions governing the AI Codebase Engineer's behavior and patching rules.</p>
+          <textarea id="dev-prompt-textarea" class="dev-textarea" style="background:#0d0d10; border:1px solid var(--border-subtle); border-radius:10px; padding:12px; min-height:180px; width:100%; margin-top:8px;" rows="7"></textarea>
+          <button class="dev-btn-primary" onclick="window._saveDevPrompt()" style="align-self:flex-start; margin-top:8px;">
+            <span>💾</span>
+            <span>Save Prompt</span>
+          </button>
+        </div>
+
       </div>
     </div>
   </div>
