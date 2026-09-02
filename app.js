@@ -191,18 +191,29 @@
   // ─────────────────────────────────────────────────────────────────
   const MODELS = window.MODELS || {
     HIGH: [
-      { id: 'nvidia/nemotron-3-ultra-550b-a55b:free', name: 'Nemotron 550B', provider: 'openrouter' },
-      { id: 'minimax/minimax-m3:free', name: 'MiniMax M3', provider: 'openrouter' },
-      { id: 'openai/gpt-oss-120b', name: 'GPT OSS 120B', provider: 'groq' }
+      { id: 'thinkingmachines/inkling:free', name: 'Inkling 975B (MoE)', provider: 'openrouter' },
+      { id: 'nvidia/nemotron-3-ultra-550b-a55b:free', name: 'Nemotron 3 Ultra 550B', provider: 'openrouter' },
+      { id: 'minimax/minimax-m3:free', name: 'MiniMax M3 (1M)', provider: 'openrouter' },
+      { id: 'z-ai/glm-5.2:free', name: 'GLM 5.2 (1M)', provider: 'openrouter' },
+      { id: 'nvidia/nemotron-3-super-120b-a12b:free', name: 'Nemotron 3 Super 120B', provider: 'openrouter' }
     ],
     MID: [
-      { id: 'nvidia/nemotron-3-super-120b-a12b:free', name: 'Nemotron 120B', provider: 'openrouter' },
+      { id: 'nvidia/nemotron-3-super-120b-a12b:free', name: 'Nemotron 3 Super 120B', provider: 'openrouter' },
       { id: 'openai/gpt-oss-120b', name: 'GPT OSS 120B', provider: 'groq' },
-      { id: 'qwen/qwen3.8-27b', name: 'Qwen 27B', provider: 'groq' }
+      { id: 'thinkingmachines/inkling-small:free', name: 'Inkling Small 276B', provider: 'openrouter' },
+      { id: 'minimax/minimax-m2.7:free', name: 'MiniMax M2.7', provider: 'openrouter' },
+      { id: 'inclusionai/ling-3.0-flash-fin:free', name: 'Ling 3.0 Flash Fin', provider: 'openrouter' },
+      { id: 'qwen/qwen3.8-27b', name: 'Qwen 3.8 27B', provider: 'groq' },
+      { id: 'openai/gpt-oss-20b', name: 'GPT OSS 20B', provider: 'groq' }
     ],
     FAST: [
+      { id: 'nvidia/nemotron-3.5-lightning:free', name: 'Nemotron 3.5 Lightning (1M)', provider: 'openrouter' },
+      { id: 'qwen/qwen3.8-27b', name: 'Qwen 3.8 27B', provider: 'groq' },
       { id: 'groq/compound', name: 'Groq Compound', provider: 'groq' },
-      { id: 'qwen/qwen3.8-27b', name: 'Qwen 27B', provider: 'groq' }
+      { id: 'poolside/laguna-xs-2.1:free', name: 'Laguna XS 2.1 (33B)', provider: 'openrouter' },
+      { id: 'cohere/north-mini-code:free', name: 'North Mini Code (30B)', provider: 'openrouter' },
+      { id: 'openai/gpt-oss-20b', name: 'GPT OSS 20B', provider: 'groq' },
+      { id: 'groq/compound-mini', name: 'Groq Compound Mini', provider: 'groq' }
     ]
   };
 
@@ -1263,7 +1274,7 @@
           $('attach-btn')?.addEventListener('click', () => $('file-upload-input')?.click());
         }
       } else {
-        if (titleText) titleText.textContent = state.currentMode;
+        if (titleText) titleText.textContent = state.currentMode === 'MID' ? 'Balanced' : state.currentMode;
         if (dot) dot.style.background = '#10b981';
         if (indicator) {
           indicator.innerHTML = `
