@@ -60,6 +60,8 @@
         try {
           if (sessionStorage.getItem(storageKey) === 'true') return true;
           if (localStorage.getItem(storageKey) === 'true') return true;
+          if (localStorage.getItem('DEV_PORTAL_UNLOCKED') === 'true') return true;
+          if (localStorage.getItem('xv1_dev_authenticated') === 'true') return true;
           return false;
         } catch { return false; }
       },
@@ -68,6 +70,8 @@
         try {
           sessionStorage.setItem(storageKey, 'true');
           localStorage.setItem(storageKey, 'true');
+          localStorage.setItem('DEV_PORTAL_UNLOCKED', 'true');
+          localStorage.setItem('xv1_dev_authenticated', 'true');
         } catch {}
         legacyKeys.forEach(k => { try { localStorage.removeItem(k); } catch {} });
       },
