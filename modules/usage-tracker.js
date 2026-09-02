@@ -29,7 +29,14 @@
       try {
         const cfg = window.ConfigVault;
         const key = cfg ? cfg.getOpenRouterKey() : (localStorage.getItem('OPENROUTER_API_KEY') || '');
-        const r = await fetch('https://openrouter.ai/api/v1/credits', { headers: { 'Authorization': `Bearer ${key}` } });
+        if (!key) return;
+        const ctrl = new AbortController();
+        const tm = setTimeout(() => ctrl.abort(), 2000);
+        const r = await fetch('https://openrouter.ai/api/v1/credits', {
+          headers: { 'Authorization': `Bearer ${key}` },
+          signal: ctrl.signal
+        });
+        clearTimeout(tm);
         if (!r.ok) throw new Error();
         const j = await r.json();
         const data = j.data || j;
