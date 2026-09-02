@@ -924,20 +924,22 @@
     },
 
     updateAgentPillDisplay() {
-      const agent = DevState.getSelectedAgent();
-      if (!agent) return;
-
+      const mode = state.currentMode || 'MID';
+      const labelText = (mode === 'MID') ? 'Balanced' : mode;
       const pillLabel = $('selected-agent-label');
       const pillIcon = $('selected-agent-icon');
-      const shortName = agent.name.replace(' Lead Architect', '').replace(' Fast Coder', '').replace(' Rapid Coder', '');
-      if (pillLabel) pillLabel.textContent = shortName;
-      if (pillIcon) pillIcon.textContent = agent.icon || '👨‍💻';
+      if (pillLabel) pillLabel.textContent = labelText;
+      if (pillIcon) {
+        if (mode === 'HIGH') pillIcon.textContent = '🚀';
+        else if (mode === 'FAST') pillIcon.textContent = '⚡';
+        else pillIcon.textContent = '⚖️';
+      }
     },
 
     setupPullToRefresh() {
       if (window.setupUnifiedPullToRefresh) return window.setupUnifiedPullToRefresh({ indicatorId: 'pull-refresh-indicator', chatAreaId: 'chat-area', threshold: 50 });
       const indicator = $('pull-refresh-indicator');
-      if (!indicator) return;
+      if (!indicator || !indicator.querySelector) return;
 
       const spinner = indicator.querySelector('.pull-refresh-spinner');
       let startY = 0;
@@ -1124,26 +1126,21 @@
       const menu = $('model-dropdown-menu');
       if (!pill || !menu) return;
 
+      const TIERS = [
+        { id: 'HIGH', label: 'HIGH' },
+        { id: 'MID', label: 'Balanced' },
+        { id: 'FAST', label: 'FAST' }
+      ];
+
       const renderMenu = () => {
-        const activeAgent = DevState.getSelectedAgent();
-        menu.innerHTML = `
-          <div style="padding:6px 8px; font-size:11px; font-weight:700; color:var(--text-dim); display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.08); margin-bottom:4px;">
-            <span>🤖 اختر النموذج / الوكيل</span>
-            <button type="button" onclick="event.stopPropagation(); window._openAgentModal();" style="background:transparent; border:none; color:#fbbf24; cursor:pointer; font-size:11px; font-weight:600;">🔍 التفاصيل</button>
-          </div>
-        ` + DEV_AGENTS.map(agent => {
-          const isActive = agent.id === activeAgent.id;
-          const providerText = agent.provider === 'groq' ? '⚡ Groq' : '🌐 OpenRouter';
-          const shortName = agent.name.replace(' Lead Architect', '').replace(' Fast Coder', '').replace(' Rapid Coder', '');
+        const current = state.currentMode || 'MID';
+        menu.innerHTML = TIERS.map(item => {
+          const isActive = item.id === current;
           return `
-            <button type="button" class="dropdown-opt ${isActive ? 'active' : ''}" onclick="window._selectAgentFromDropdown('${agent.id}')">
+            <button type="button" class="dropdown-opt ${isActive ? 'active' : ''}" onclick="window._setDevTier('${item.id}')">
               <div class="opt-title">
-                <span>${agent.icon || '🧠'} ${this.escapeHtml(shortName)}</span>
+                <span>${item.label}</span>
                 ${isActive ? '<span style="color:#fbbf24; font-size:12px; font-weight:bold;">✓</span>' : ''}
-              </div>
-              <div class="opt-meta">
-                <span class="opt-tag">${agent.params || ''}</span>
-                <span class="opt-tag ${agent.provider}">${providerText}</span>
               </div>
             </button>
           `;
