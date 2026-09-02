@@ -2517,8 +2517,39 @@
         for (const r of regs) await r.update();
       } catch {}
     }
-    window.location.reload();
+  window._setAppTheme = function(themeName) {
+    document.documentElement.setAttribute('data-theme', themeName);
+    localStorage.setItem('xv1_theme', themeName);
+    $$('.theme-card-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.getAttribute('data-theme') === themeName);
+    });
   };
+
+  window._setAppFontFamily = function(fontName) {
+    document.documentElement.setAttribute('data-font', fontName);
+    localStorage.setItem('xv1_font_family', fontName);
+    $$('.custom-pill-btn[data-font]').forEach(btn => {
+      btn.classList.toggle('active', btn.getAttribute('data-font') === fontName);
+    });
+  };
+
+  window._setAppFontSize = function(sizeName) {
+    document.documentElement.setAttribute('data-size', sizeName);
+    localStorage.setItem('xv1_font_size', sizeName);
+    $$('.custom-pill-btn[data-size]').forEach(btn => {
+      btn.classList.toggle('active', btn.getAttribute('data-size') === sizeName);
+    });
+  };
+
+  function initAppCustomization() {
+    const savedTheme = localStorage.getItem('xv1_theme') || 'obsidian';
+    const savedFont = localStorage.getItem('xv1_font_family') || 'inter';
+    const savedSize = localStorage.getItem('xv1_font_size') || 'md';
+
+    window._setAppTheme(savedTheme);
+    window._setAppFontFamily(savedFont);
+    window._setAppFontSize(savedSize);
+  }
 
   function setupSmoothKineticScroll() {
     // Native hardware-accelerated touch scrolling enabled via CSS
@@ -2532,6 +2563,7 @@
       window.visualViewport.addEventListener('resize', lockViewportHeight);
     }
 
+    initAppCustomization();
     UIEngine.setupEventListeners();
     AuthManager.setupGate();
     StateController.load();
