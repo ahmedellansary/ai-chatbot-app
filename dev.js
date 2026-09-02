@@ -11,7 +11,16 @@
   function generateId() {
     return 'dev_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 8);
   }
-  try { window.generateId = generateId; } catch(e) {}
+  function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+  try { window.generateId = generateId; window.escapeHtml = escapeHtml; } catch(e) {}
 
   // ─────────────────────────────────────────────────────────────────
   // 1. CONFIGURATION & CREDENTIALS VAULT — Unified (config.js)
