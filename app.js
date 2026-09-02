@@ -1513,7 +1513,7 @@
       input?.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
           e.preventDefault();
-          triggerSend();
+          setTimeout(triggerSend, 0);
           return;
         }
         if (e.key === 'Enter' && e.shiftKey) {
@@ -1523,7 +1523,7 @@
 
       sendBtn?.addEventListener('click', (e) => {
         e.preventDefault();
-        triggerSend();
+        setTimeout(triggerSend, 0);
       });
 
       this.setupPullToRefresh();
