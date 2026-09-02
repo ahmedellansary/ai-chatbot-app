@@ -220,17 +220,20 @@
 
   <!-- ═══ File Explorer & Live Code Editor Modal ═══ -->
   <div id="files-modal" class="custom-modal hidden">
-    <div class="custom-modal-card" style="max-width: 920px; height: 90vh;">
-      <div class="custom-modal-header">
-        <div class="modal-header-title">
+    <div class="custom-modal-card" style="max-width: 920px; height: 90vh; direction: ltr; text-align: left;">
+      <div class="custom-modal-header" style="display: flex; justify-content: space-between; align-items: center; direction: ltr;">
+        <!-- Left Side: Title with Folder Icon -->
+        <div class="modal-header-title" style="display: flex; align-items: center; gap: 8px;">
           <span>📁</span>
           <span>Repository File Explorer</span>
+        </div>
+
+        <!-- Right Side: Sync Badge, Sync Button & Close Button -->
+        <div class="modal-header-actions" style="display: flex; align-items: center; gap: 8px;">
           <span id="files-sync-badge" class="files-sync-badge">
             <span class="sync-dot"></span>
             <span id="files-sync-text">Synced</span>
           </span>
-        </div>
-        <div class="modal-header-actions" style="display:flex; align-items:center; gap:8px;">
           <button class="sync-btn" id="btn-sync-files-manual" onclick="window._syncFilesManual()" title="Manual GitHub Sync & Diff Compare">
             <svg class="sync-svg-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
