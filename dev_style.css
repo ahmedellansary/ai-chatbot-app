@@ -1864,15 +1864,19 @@ pre code {
 
 
 
-/* ─── Toast Container ─── */
+/* ─── Toast Container (above input bar) ─── */
 #toast-container {
   position: fixed;
-  bottom: 24px;
-  right: 24px;
+  bottom: calc(86px + env(safe-area-inset-bottom, 0px));
+  right: 50%;
+  transform: translateX(50%);
+  left: auto;
   display: flex;
   flex-direction: column;
   gap: 8px;
   z-index: 9999;
+  max-width: calc(100vw - 24px);
+  pointer-events: none;
 }
 
 .toast {
