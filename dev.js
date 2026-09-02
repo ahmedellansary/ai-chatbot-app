@@ -2269,7 +2269,6 @@
     if (btn) btn.classList.toggle('active', !!state.isMultiAgentMode);
     const label = $('dev-multi-agent-label-text');
     if (label) label.textContent = state.isMultiAgentMode ? 'تشاور الوكلاء (نشط)' : 'تشاور الوكلاء';
-    DevUIEngine.showToast(state.isMultiAgentMode ? '👥 تم تفعيل تشاور الوكلاء في استوديو المطور!' : '⚪ تم تعطيل تشاور الوكلاء', 'info');
   };
 
   window._toggleThinkingBox = function(msgId) {
