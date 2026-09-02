@@ -191,18 +191,21 @@
   // ─────────────────────────────────────────────────────────────────
   const MODELS = window.MODELS || {
     HIGH: [
-      { id: 'nvidia/nemotron-3-ultra-550b-a55b:free', name: 'Nemotron 550B', provider: 'openrouter' },
-      { id: 'minimax/minimax-m3:free', name: 'MiniMax M3', provider: 'openrouter' },
-      { id: 'openai/gpt-oss-120b', name: 'GPT OSS 120B', provider: 'groq' }
+      { id: 'openai/gpt-oss-120b', name: 'GPT OSS 120B (Ultra Fast)', provider: 'groq' },
+      { id: 'nvidia/nemotron-3-super-120b-a12b:free', name: 'Nemotron 3 Super 120B', provider: 'openrouter' },
+      { id: 'qwen/qwen3.8-27b', name: 'Qwen 3.8 27B', provider: 'groq' },
+      { id: 'minimax/minimax-m3:free', name: 'MiniMax M3', provider: 'openrouter' }
     ],
     MID: [
-      { id: 'nvidia/nemotron-3-super-120b-a12b:free', name: 'Nemotron 120B', provider: 'openrouter' },
-      { id: 'openai/gpt-oss-120b', name: 'GPT OSS 120B', provider: 'groq' },
-      { id: 'qwen/qwen3.8-27b', name: 'Qwen 27B', provider: 'groq' }
+      { id: 'openai/gpt-oss-120b', name: 'GPT OSS 120B (Ultra Fast)', provider: 'groq' },
+      { id: 'qwen/qwen3.8-27b', name: 'Qwen 3.8 27B', provider: 'groq' },
+      { id: 'nvidia/nemotron-3-super-120b-a12b:free', name: 'Nemotron 3 Super 120B', provider: 'openrouter' },
+      { id: 'groq/compound', name: 'Groq Compound', provider: 'groq' }
     ],
     FAST: [
+      { id: 'qwen/qwen3.8-27b', name: 'Qwen 3.8 27B (Instant)', provider: 'groq' },
       { id: 'groq/compound', name: 'Groq Compound', provider: 'groq' },
-      { id: 'qwen/qwen3.8-27b', name: 'Qwen 27B', provider: 'groq' }
+      { id: 'openai/gpt-oss-120b', name: 'GPT OSS 120B', provider: 'groq' }
     ]
   };
 
@@ -246,11 +249,10 @@
         messages,
         stream: true,
         temperature: 0.7,
-        max_tokens: 8192,
-        plugins: [{ id: 'web', max_results: 5 }]
+        max_tokens: 8192
       };
 
-      let response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${ConfigVault.getOpenRouterKey()}`,
@@ -261,21 +263,6 @@
         body: JSON.stringify(bodyPayload),
         signal
       });
-
-      if (!response.ok && response.status === 400) {
-        delete bodyPayload.plugins;
-        response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${ConfigVault.getOpenRouterKey()}`,
-            'Content-Type': 'application/json',
-            'HTTP-Referer': window.location.origin,
-            'X-Title': 'X.v1 AI Chat'
-          },
-          body: JSON.stringify(bodyPayload),
-          signal
-        });
-      }
 
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));
