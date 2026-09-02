@@ -85,7 +85,7 @@
     isMultiAgentMode: localStorage.getItem('is_multi_agent_mode') === '1'
   };
 
-  const StateController = {
+  const StateController = window.createStateController ? window.createStateController(state, { generateId, MessageRenderer: window.MessageRenderer || null, UIEngine: window.UIEngine || null, $ }) : {
     load() {
       try {
         const saved = localStorage.getItem('conversations');
