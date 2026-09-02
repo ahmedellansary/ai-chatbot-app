@@ -440,6 +440,7 @@
 
       state.isStreaming = true;
       state.abortController = new AbortController();
+      DevUIEngine.updateSendBtn();
 
       const _devTierCfg = this.getAdaptiveConfigForDev(DevState.getSelectedAgent(), Math.ceil(((textForPayload?.length || 0) + (state.devPrompt?.length || 0)) / 3.5));
       const _devBriefing = this.generateDevBriefing(conv, DevState.getSelectedAgent(), Math.ceil(((textForPayload?.length || 0) + (state.devPrompt?.length || 0)) / 3.5));
@@ -1194,6 +1195,10 @@
     updateSendBtn() {
       const input = $('user-input');
       const sendBtn = $('send-btn');
+      const inputContainer = document.querySelector('#input-section .input-container') || document.querySelector('.input-container');
+      if (inputContainer) {
+        inputContainer.classList.toggle('thinking', Boolean(state.isStreaming));
+      }
       if (!input || !sendBtn) return;
       const hasAtt = state.attachments && state.attachments.length > 0;
       const hasText = input.value.trim().length > 0;
@@ -2497,5 +2502,39 @@
     initAppCustomization();
     DevUIEngine.init();
   }
+
+  // Global safety handlers: clear streaming state on uncaught errors/promises
+  try {
+    window.addEventListener('unhandledrejection', function (evt) {
+      try {
+        console.warn('[Global] unhandledrejection', evt && evt.reason);
+        if (window.devState && window.devState.isStreaming) {
+          window.devState.isStreaming = false;
+          window.devState.abortController = null;
+        }
+        if (window.state && window.state.isStreaming) {
+          window.state.isStreaming = false;
+          window.state.abortController = null;
+        }
+        if (window.DevUIEngine && typeof window.DevUIEngine.updateSendBtn === 'function') window.DevUIEngine.updateSendBtn();
+        if (window.DevUIEngine && typeof window.DevUIEngine.showToast === 'function') window.DevUIEngine.showToast('حدث خطأ داخلي، تم إعادة تهيئة حالة الإرسال.', 'error');
+      } catch (e) { console.error('[Global] handler error', e); }
+    });
+
+    window.addEventListener('error', function (evt) {
+      try {
+        console.warn('[Global] error event', evt && evt.message);
+        if (window.devState && window.devState.isStreaming) {
+          window.devState.isStreaming = false;
+          window.devState.abortController = null;
+        }
+        if (window.state && window.state.isStreaming) {
+          window.state.isStreaming = false;
+          window.state.abortController = null;
+        }
+        if (window.DevUIEngine && typeof window.DevUIEngine.updateSendBtn === 'function') window.DevUIEngine.updateSendBtn();
+      } catch (e) { console.error('[Global] error handler', e); }
+    });
+  } catch (e) { /* ignore in constrained runtimes */ }
 
 })();
