@@ -194,4 +194,32 @@
   window.updateOwnerLockUI = () => {};
   window.promptOwnerAuth = (cb) => AuthManager.requireAuth(cb);
   window.setupAppLockGate = () => AuthManager.setupGate();
+
+  // Temporary secure helpers (no secrets stored in repo)
+  // Use these from the browser console only. They prompt for secret input
+  // at runtime and store it locally in localStorage. Do NOT commit secrets.
+  window.DevAuthHelpers = {
+    // Prompts for a new developer PIN and saves it to localStorage under DEV_CUSTOM_PIN.
+    // This does NOT write any secret into source files.
+    promptAndSetDevPin() {
+      try {
+        const p = window.prompt('أدخل كلمة سر المطور الجديدة (لن تُحفظ في الملفات، ستُخزن محلياً فقط في DEV_CUSTOM_PIN):');
+        if (!p) return;
+        try { localStorage.setItem('DEV_CUSTOM_PIN', String(p)); } catch (e) { console.warn('[DevAuthHelpers] Could not set DEV_CUSTOM_PIN', e); }
+        // Attempt to remove common chatbot credential keys from localStorage
+        const keysToRemove = ['CHATBOT_PASSWORD','BOT_PASSWORD','CLAUDE_API_KEY','OPENAI_API_KEY','OPENROUTER_API_KEY','CHAT_PASSWORD','xv1_chat_key'];
+        keysToRemove.forEach(k => { try { localStorage.removeItem(k); } catch {} });
+        try { window.MessageRenderer && window.MessageRenderer.showToast && window.MessageRenderer.showToast('🔒 تم تعيين كلمة سر المطور محلياً (DEV_CUSTOM_PIN). تم حذف المفاتيح الشائعة من التخزين المحلي.','success'); } catch {};
+      } catch (e) { console.error('[DevAuthHelpers] Error', e); }
+    },
+    // Removes a set of commonly-used keys that may hold chatbot secrets from localStorage.
+    clearChatbotSecrets() {
+      try {
+        const keys = ['CHATBOT_PASSWORD','BOT_PASSWORD','CLAUDE_API_KEY','OPENAI_API_KEY','OPENROUTER_API_KEY','CHAT_PASSWORD','xv1_chat_key','GITHUB_TOKEN'];
+        keys.forEach(k => { try { localStorage.removeItem(k); } catch {} });
+        try { window.MessageRenderer && window.MessageRenderer.showToast && window.MessageRenderer.showToast('🧹 مفاتيح الشات تم إزالتها من التخزين المحلي (إن وجدت).','info'); } catch {};
+      } catch (e) { console.error('[DevAuthHelpers] clear error', e); }
+    }
+  };
+
 })();
