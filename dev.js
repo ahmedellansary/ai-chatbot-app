@@ -43,11 +43,11 @@
   // ─────────────────────────────────────────────────────────────────
   const DEV_TIER_MODELS = (window.DEV_TIER_MODELS) || {
     HIGH: [
-      { id: 'openai/gpt-oss-120b', name: 'GPT OSS 120B Lead Architect', provider: 'groq' },
-      { id: 'qwen/qwen3.8-27b', name: 'Qwen 3.8 27B Fast Coder', provider: 'groq' },
       { id: 'poolside/laguna-s-2.1:free', name: 'Laguna S 2.1 (118B Coding Agent)', provider: 'openrouter' },
+      { id: 'minimax/minimax-m3:free', name: 'MiniMax M3 Architect (1M)', provider: 'openrouter' },
+      { id: 'nvidia/nemotron-3-super-120b-a12b:free', name: 'Nemotron 3 Super 120B', provider: 'openrouter' },
       { id: 'z-ai/glm-5.2:free', name: 'GLM 5.2 Reasoning (1M)', provider: 'openrouter' },
-      { id: 'thinkingmachines/inkling:free', name: 'Inkling 975B (MoE)', provider: 'openrouter' }
+      { id: 'minimax/minimax-m2.7:free', name: 'MiniMax M2.7 Reasoning', provider: 'openrouter' }
     ],
     MID: [
       { id: 'openai/gpt-oss-120b', name: 'GPT OSS 120B Lead Architect', provider: 'groq' },
