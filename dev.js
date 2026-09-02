@@ -2177,6 +2177,20 @@
     }
   };
 
+  window._selectDevTier = function(tier) {
+    const st = window._devState || devState;
+    if (st) {
+      st.currentMode = tier;
+      try { localStorage.setItem('xv1_dev_mode', tier); } catch(e) {}
+    }
+    const menu = document.getElementById('model-dropdown-menu');
+    if (menu) menu.classList.remove('show');
+    if (window.DevUIEngine && window.DevUIEngine.updateAgentPillDisplay) {
+      window.DevUIEngine.updateAgentPillDisplay();
+    }
+    showToast(`🚀 تم تعيين مستوى التطوير: ${tier}`, 'info');
+  };
+
   window._setAppTheme = function(themeName) {
     document.documentElement.setAttribute('data-theme', themeName);
     localStorage.setItem('xv1_theme', themeName);
