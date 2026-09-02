@@ -1208,7 +1208,7 @@ pre code {
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
   transition: border-color 0.25s ease, box-shadow 0.25s ease;
   position: relative;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .input-container:focus-within {
