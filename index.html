@@ -184,9 +184,9 @@
             </div>
 
             <!-- Multi-Agent Consensus Toggle Pill -->
-            <button class="claude-model-pill multi-agent-toggle-pill" id="multi-agent-toggle-btn" onclick="window._toggleMultiAgentMode()" title="تفعيل تشاور الوكلاء المتعددين (Multi-Agent Consensus)">
+            <button class="claude-model-pill multi-agent-toggle-pill" id="multi-agent-toggle-btn" onclick="window._toggleMultiAgentMode()" title="Enable Multi-Agent Consensus">
               <span>👥</span>
-              <span id="multi-agent-label-text">تشاور الوكلاء</span>
+              <span id="multi-agent-label-text">Multi-Agent</span>
             </button>
           </div>
 
@@ -268,7 +268,7 @@
       <div class="custom-modal-header">
         <div class="modal-header-title">
           <span>📁</span>
-          <span>مدير ملفات التعليمات التخصصية</span>
+          <span>Instruction Files Manager</span>
         </div>
         <div class="modal-header-actions">
           <button class="icon-btn" onclick="window._closeSettingsModal()" title="Close">✕</button>
@@ -278,10 +278,10 @@
         
         <!-- Instruction Files Header & Actions -->
         <div class="inst-manager-topbar">
-          <p class="settings-section-desc" style="margin:0;">ملفات تعليمات مستقلة يتم تفعيلها وتطبيقها تلقائياً حسب سياق المحادثة.</p>
+          <p class="settings-section-desc" style="margin:0;">Modular instruction files auto-triggered based on conversation context.</p>
           <div class="inst-topbar-actions">
-            <button class="settings-action-btn" onclick="window._addNewInstructionFile()"><span>+</span> إضافة ملف جديد</button>
-            <button class="settings-action-btn" onclick="window._resetDefaultInstructionFiles()">استعادة الافتراضي</button>
+            <button class="settings-action-btn" onclick="window._addNewInstructionFile()"><span>+</span> Add New File</button>
+            <button class="settings-action-btn" onclick="window._resetDefaultInstructionFiles()">Reset Default</button>
           </div>
         </div>
 
@@ -293,40 +293,40 @@
           <div class="inst-editor-header">
             <div class="inst-editor-title-wrap">
               <span id="inst-editor-icon" class="inst-editor-icon">📄</span>
-              <input type="text" id="inst-editor-name" class="inst-editor-name-input" placeholder="اسم ملف التعليمات...">
+              <input type="text" id="inst-editor-name" class="inst-editor-name-input" placeholder="Instruction file name...">
             </div>
             <div class="inst-editor-tools">
               <label class="inst-toggle-label">
                 <input type="checkbox" id="inst-editor-enabled" class="inst-checkbox">
-                <span>تفعيل الملف</span>
+                <span>Enabled</span>
               </label>
             </div>
           </div>
 
           <div class="inst-editor-meta">
-            <input type="text" id="inst-editor-desc" class="inst-editor-meta-input" placeholder="وصف تخصص هذا الملف (مثال: كتابة سيناريو وفلاش باك)...">
-            <input type="text" id="inst-editor-keywords" class="inst-editor-meta-input" placeholder="كلمات مفتاحية لتفعيل الملف تلقائياً (مفصولة بفواصل: فلاش باك, سيناريو, مشهد)...">
+            <input type="text" id="inst-editor-desc" class="inst-editor-meta-input" placeholder="Domain / Purpose description...">
+            <input type="text" id="inst-editor-keywords" class="inst-editor-meta-input" placeholder="Trigger keywords (comma separated)...">
           </div>
 
           <textarea
             id="inst-editor-content"
             class="settings-textarea inst-content-textarea"
             rows="9"
-            placeholder="اكتب بنود وقواعد هذا الملف التخصصي هنا..."
+            placeholder="Write domain rules and guidelines here..."
           ></textarea>
 
           <div class="inst-editor-footer">
             <div class="inst-footer-left">
               <button id="inst-delete-btn" class="inst-delete-btn hidden" onclick="window._deleteActiveInstructionFile()">
                 <span>🗑️</span>
-                <span>حذف الملف</span>
+                <span>Delete File</span>
               </button>
             </div>
             <div class="inst-footer-right">
-              <button class="btn-refresh-cancel" onclick="window._closeInstructionEditor()">إغلاق المحرر</button>
+              <button class="btn-refresh-cancel" onclick="window._closeInstructionEditor()">Close Editor</button>
               <button class="settings-save-btn" onclick="window._saveActiveInstructionFile()">
                 <span>💾</span>
-                <span>حفظ التعديلات</span>
+                <span>Save Changes</span>
               </button>
             </div>
           </div>
@@ -336,8 +336,8 @@
         <div class="settings-section usage-section" id="usage-section" style="margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border-subtle);">
           <div class="settings-section-title">
             <span>📊</span>
-            <span>الاستهلاك</span>
-            <span id="usage-live-dot" class="usage-live-dot" title="تحديث تلقائي"></span>
+            <span>API Usage & Metrics</span>
+            <span id="usage-live-dot" class="usage-live-dot" title="Auto-synced"></span>
           </div>
           <div class="usage-grid">
             <div class="usage-card openrouter">
@@ -346,7 +346,7 @@
                 <div class="usage-stat"><span class="usage-num" id="or-tokens">—</span><span class="usage-label">Tokens</span></div>
                 <div class="usage-stat"><span class="usage-num" id="or-reqs">—</span><span class="usage-label">Reqs</span></div>
               </div>
-              <div class="usage-sub" id="or-sub">جاري الجلب...</div>
+              <div class="usage-sub" id="or-sub">Fetching metrics...</div>
             </div>
             <div class="usage-card groq">
               <div class="usage-card-head"><span>Groq</span><span class="usage-badge local">Tracked</span></div>
@@ -354,12 +354,12 @@
                 <div class="usage-stat"><span class="usage-num" id="groq-tokens">—</span><span class="usage-label">Tokens</span></div>
                 <div class="usage-stat"><span class="usage-num" id="groq-reqs">—</span><span class="usage-label">Reqs</span></div>
               </div>
-              <div class="usage-sub" id="groq-sub">آخر موديل: —</div>
+              <div class="usage-sub" id="groq-sub">Last Model: —</div>
             </div>
           </div>
           <div class="usage-footer">
             <span id="usage-last-model" class="usage-last">—</span>
-            <button class="settings-action-btn" onclick="window._refreshUsage()">تحديث</button>
+            <button class="settings-action-btn" onclick="window._refreshUsage()">Refresh</button>
           </div>
         </div>
 
@@ -367,12 +367,12 @@
         <div class="settings-section" style="margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border-subtle);">
           <div class="settings-section-title">
             <span>🧹</span>
-            <span>إدارة الذاكرة والتخزين المؤقت</span>
+            <span>Storage & Cache Management</span>
           </div>
-          <p class="settings-section-desc">تنظيف ملفات الكاش والـ Service Worker مع الحفاظ التام على سجل محادثاتك.</p>
+          <p class="settings-section-desc">Clear Service Worker cache and refresh runtime assets while preserving conversations.</p>
           <button class="footer-btn settings-clear-btn" onclick="window._clearAppCache()">
             <span>🧹</span>
-            <span>مسح الكاش وتحديث التطبيق</span>
+            <span>Clear Cache & Reload</span>
           </button>
         </div>
 
@@ -380,11 +380,11 @@
         <div class="settings-section" style="margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border-subtle);">
           <div class="settings-section-title">
             <span>🛠️</span>
-            <span>بيئة المطور المستقلة (Developer Studio)</span>
+            <span>Developer Studio</span>
           </div>
-          <p class="settings-section-desc">الانتقال إلى تطبيق استوديو المطور لتعديل ملفات التطبيق ومستودع GitHub مباشرة.</p>
+          <p class="settings-section-desc">Access standalone Developer Studio to inspect and edit repository files directly.</p>
           <a href="./dev.html" target="_blank" class="footer-btn" style="color: #fbbf24; text-decoration: none; border: 1px solid rgba(251, 191, 36, 0.3); border-radius: 8px; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between;">
-            <span>🛠️ فتح استوديو المطور (X.v1 Dev)</span>
+            <span>🛠️ Open Developer Studio (X.v1 Dev)</span>
             <span>↗</span>
           </a>
         </div>
