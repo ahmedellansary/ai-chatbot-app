@@ -1930,29 +1930,16 @@
   };
 
   let repoFilesCache = [];
-  let isMoreFilesExpanded = false;
 
   function renderRepositoryFilesExplorer() {
-    const topPillsContainer = $('top-files-pills');
-    const extendedGrid = $('extended-files-grid');
+    const fileSelect = $('repo-file-select');
     const syncText = $('files-sync-text');
-    const moreBtnText = $('more-files-text');
-    const moreChevron = $('more-files-chevron');
-    const toggleBtn = $('toggle-more-files-btn');
-    if (!topPillsContainer || !extendedGrid) return;
 
     const allFiles = repoFilesCache.length > 0 
       ? repoFilesCache 
       : ['index.html', 'style.css', 'app.js', 'dev.html', 'dev_style.css', 'dev.js', 'system_prompt.txt', 'sw.js', 'manifest.json', 'ops.html', 'ops_style.css', 'ops.js'];
 
     const activeFile = state.currentEditingFile || 'index.html';
-    
-    let top3 = allFiles.slice(0, 3);
-    if (!top3.includes(activeFile) && allFiles.includes(activeFile)) {
-      top3 = [activeFile, ...allFiles.filter(f => f !== activeFile).slice(0, 2)];
-    }
-
-    const remainingFiles = allFiles.filter(f => !top3.includes(f));
 
     // Update Last Sync Timestamp
     if (syncText) {
@@ -1960,40 +1947,13 @@
       syncText.textContent = savedSync || 'Synced';
     }
 
-    // Render Top 3 Pills without icons
-    topPillsContainer.innerHTML = top3.map(file => `
-      <button class="file-pill-btn ${file === activeFile ? 'active' : ''}" onclick="window._selectFileForEditing('${file.replace(/'/g, "\\'")}')">
-        ${file}
-      </button>
-    `).join('');
-
-    // Toggle Button
-    if (toggleBtn && moreBtnText && moreChevron) {
-      if (isMoreFilesExpanded) {
-        toggleBtn.classList.add('expanded');
-        moreBtnText.textContent = 'Collapse';
-        moreChevron.textContent = '▴';
-      } else {
-        toggleBtn.classList.remove('expanded');
-        moreBtnText.textContent = '+ More Files';
-        moreChevron.textContent = '▾';
-      }
+    // Populate Dropdown Select
+    if (fileSelect) {
+      fileSelect.innerHTML = allFiles.map(file => `
+        <option value="${file}" ${file === activeFile ? 'selected' : ''}>${file}</option>
+      `).join('');
     }
-
-    // Extended Grid without icons
-    extendedGrid.innerHTML = remainingFiles.map(file => `
-      <button class="file-pill-btn ${file === activeFile ? 'active' : ''}" onclick="window._selectFileForEditing('${file.replace(/'/g, "\\'")}')">
-        ${file}
-      </button>
-    `).join('');
-
-    extendedGrid.classList.toggle('hidden', !isMoreFilesExpanded);
   }
-
-  window._toggleMoreFiles = function() {
-    isMoreFilesExpanded = !isMoreFilesExpanded;
-    renderRepositoryFilesExplorer();
-  };
 
   window._syncFilesManual = async function() {
     const syncBtn = $('btn-sync-files-manual');
@@ -2030,7 +1990,21 @@
         editor.value = fileData.content;
       }
 
-      const syncTimestamp = `Synced: ${formatDateTime(new Date())}`;
+      // Get latest commit time for these files
+      let syncTimestamp = `Synced: ${formatDateTime(new Date())}`;
+      try {
+        const commitRes = await fetch(`https://api.github.com/repos/ahmedellansary/ai-chatbot-app/commits?per_page=1&t=${Date.now()}`, {
+          headers: { 'Accept': 'application/vnd.github.v3+json' }
+        });
+        if (commitRes.ok) {
+          const commits = await commitRes.json();
+          if (commits && commits.length) {
+            const rawDate = commits[0].commit.committer.date || commits[0].commit.author.date;
+            syncTimestamp = `Synced: ${formatDateTime(new Date(rawDate))}`;
+          }
+        }
+      } catch {}
+
       localStorage.setItem('FILES_LAST_SYNC_TIME', syncTimestamp);
       if (syncText) syncText.textContent = syncTimestamp;
 
@@ -2067,11 +2041,11 @@
 
   window._selectFileForEditing = async function(fileName, preloadedContent = null) {
     state.currentEditingFile = fileName;
-    const title = $('current-editing-filename');
+    const fileSelect = $('repo-file-select');
+    if (fileSelect && fileSelect.value !== fileName) {
+      fileSelect.value = fileName;
+    }
     const editor = $('direct-code-editor');
-
-    if (title) title.innerText = `Active: ${fileName}`;
-    renderRepositoryFilesExplorer();
 
     if (editor) {
       if (preloadedContent) {
