@@ -103,7 +103,7 @@
       <div class="header-right">
         <div class="repo-status-badge">
           <span class="status-dot"></span>
-          <span class="repo-badge-text" id="dev-status-badge-text">Dev (V138) 02-09-2026 5:36AM</span>
+          <span class="repo-badge-text" id="dev-status-badge-text">Dev (V139) 02-09-2026 5:38AM</span>
         </div>
         <script>
           (function() {
@@ -235,15 +235,18 @@
   <!-- ═══ File Explorer & Live Code Editor Modal ═══ -->
   <div id="files-modal" class="custom-modal hidden">
     <div class="custom-modal-card" style="max-width: 920px; height: 90vh; direction: ltr; text-align: left;">
-      <div class="custom-modal-header" style="display: flex; justify-content: space-between; align-items: center; direction: ltr;">
-        <!-- Left Side: Title with Folder Icon -->
-        <div class="modal-header-title" style="display: flex; align-items: center; gap: 8px;">
-          <span>📁</span>
-          <span>Repository File Explorer</span>
+      <div class="custom-modal-header">
+        <!-- Line 1: Repository Title on Left & Close Button on Right -->
+        <div class="modal-header-top-row">
+          <div class="modal-header-title">
+            <span>📁</span>
+            <span>Repository File Explorer</span>
+          </div>
+          <button class="icon-btn" onclick="window._closeFilesModal()" title="Close">✕</button>
         </div>
 
-        <!-- Right Side: Unified Glass Emerald Sync Button & Close Button -->
-        <div class="modal-header-actions" style="display: flex; align-items: center; gap: 8px;">
+        <!-- Line 2: Sync Button Directly Underneath -->
+        <div class="modal-header-actions">
           <button class="emerald-sync-pill-btn" id="btn-sync-files-manual" onclick="window._syncFilesManual()" title="Click to Sync & Compare with GitHub">
             <span class="emerald-sync-dot"></span>
             <svg class="sync-svg-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
@@ -251,7 +254,6 @@
             </svg>
             <span id="files-sync-text">Synced</span>
           </button>
-          <button class="icon-btn" onclick="window._closeFilesModal()">✕</button>
         </div>
       </div>
       
