@@ -11,13 +11,13 @@
   <meta name="apple-mobile-web-app-title" content="X.v1">
 
   <title>X.v1</title>
-  <link rel="manifest" href="./manifest.json?v=175">
+  <link rel="manifest" href="./manifest.json?v=176">
   <!-- Modular CSS (load before fallback) -->
-  <link rel="stylesheet" href="./css/base.css?v=175">
-  <link rel="stylesheet" href="./css/chat.css?v=175">
-  <link rel="stylesheet" href="./css/input.css?v=175">
-  <link rel="stylesheet" href="./css/modal.css?v=175">
-  <link rel="stylesheet" href="./style.css?v=175">
+  <link rel="stylesheet" href="./css/base.css?v=176">
+  <link rel="stylesheet" href="./css/chat.css?v=176">
+  <link rel="stylesheet" href="./css/input.css?v=176">
+  <link rel="stylesheet" href="./css/modal.css?v=176">
+  <link rel="stylesheet" href="./style.css?v=176">
   <link rel="icon" type="image/png" href="./icons/icon-192.png?v=49">
   <link rel="apple-touch-icon" href="./icons/icon-192.png?v=49">
   <link rel="apple-touch-icon" sizes="512x512" href="./icons/icon-512.png?v=49">
@@ -69,7 +69,7 @@
         <span>Settings</span>
       </button>
       <div id="app-version-badge" style="font-size:10.5px; color:var(--text-dim); font-family:var(--font-mono); text-align:center; padding:8px 0 2px; border-top:1px solid var(--border-subtle); margin-top:8px; letter-spacing:0.02em;">
-        <span id="app-version-text">v175</span> • <span id="app-last-update">جاري...</span>
+        <span id="app-version-text">v176</span> • <span id="app-last-update">جاري...</span>
       </div>
     </div>
   </aside>
@@ -87,7 +87,7 @@
       </button>
       <div id="chat-top-badge" class="repo-status-badge" style="position:absolute; left:50%; transform:translateX(-50%);">
         <span class="status-dot"></span>
-        <span class="repo-badge-text" id="chat-status-text" style="font-weight:700; letter-spacing:0.02em;">X (V175) —</span>
+        <span class="repo-badge-text" id="chat-status-text" style="font-weight:700; letter-spacing:0.02em;">X (V176) —</span>
       </div>
       <script>
         (function() {
@@ -307,13 +307,13 @@
         
         <!-- ═══ Settings Navigation Tabs (vertical) ═══ -->
         <div class="settings-modal-tabs-bar">
-          <button type="button" class="settings-tab-btn active" data-tab="themes" onclick="window._switchSettingsTab('themes')">
+          <button type="button" class="settings-tab-btn active" data-tab="usage" onclick="window._switchSettingsTab('usage')">
+            <span>📊</span>
+            <span>Usage</span>
+          </button>
+          <button type="button" class="settings-tab-btn" data-tab="themes" onclick="window._switchSettingsTab('themes')">
             <span>🎨</span>
             <span>Theme</span>
-          </button>
-          <button type="button" class="settings-tab-btn" data-tab="typography" onclick="window._switchSettingsTab('typography')">
-            <span>🔤</span>
-            <span>Fonts</span>
           </button>
           <button type="button" class="settings-tab-btn" data-tab="instructions" onclick="window._switchSettingsTab('instructions')">
             <span>📁</span>
@@ -329,45 +329,79 @@
           </button>
         </div>
 
-        <!-- ═══ Tab 1: Themes ═══ -->
-        <div id="settings-tab-themes" class="settings-tab-pane active">
-          <div class="theme-selector-grid">
-            <button type="button" class="theme-card-btn active" data-theme="obsidian" onclick="window._setAppTheme('obsidian')">
-              <div class="theme-preview-dot obsidian"></div>
-              <div class="theme-card-info">
-                <span class="theme-title">Midnight Obsidian</span>
-                <span class="theme-sub">الداكن الكلاسيكي (الحالي)</span>
+        <!-- ═══ Tab 0: Usage & Metrics (First tab!) ═══ -->
+        <div id="settings-tab-usage" class="settings-tab-pane active">
+          <div class="settings-section usage-section" id="usage-section" style="margin-top:0;">
+            <div class="settings-section-title">
+              <span>📊</span>
+              <span>API Usage & Live Metrics</span>
+              <span id="usage-live-dot" class="usage-live-dot" title="Auto-synced"></span>
+            </div>
+            <div class="usage-grid">
+              <div class="usage-card openrouter">
+                <div class="usage-card-head"><span>OpenRouter</span><span class="usage-badge real">Real</span></div>
+                <div class="usage-stats">
+                  <div class="usage-stat"><span class="usage-num" id="or-tokens">—</span><span class="usage-label">Tokens</span></div>
+                  <div class="usage-stat"><span class="usage-num" id="or-reqs">—</span><span class="usage-label">Reqs</span></div>
+                </div>
+                <div class="usage-sub" id="or-sub">Fetching...</div>
               </div>
-            </button>
-            <button type="button" class="theme-card-btn" data-theme="emerald" onclick="window._setAppTheme('emerald')">
-              <div class="theme-preview-dot emerald"></div>
-              <div class="theme-card-info">
-                <span class="theme-title">Emerald Matrix</span>
-                <span class="theme-sub">الزمردي النيون (Cyber)</span>
+              <div class="usage-card groq">
+                <div class="usage-card-head"><span>Groq</span><span class="usage-badge local">Tracked</span></div>
+                <div class="usage-stats">
+                  <div class="usage-stat"><span class="usage-num" id="groq-tokens">—</span><span class="usage-label">Tokens</span></div>
+                  <div class="usage-stat"><span class="usage-num" id="groq-reqs">—</span><span class="usage-label">Reqs</span></div>
+                </div>
+                <div class="usage-sub" id="groq-sub">Last Model: —</div>
               </div>
-            </button>
-            <button type="button" class="theme-card-btn" data-theme="amethyst" onclick="window._setAppTheme('amethyst')">
-              <div class="theme-preview-dot amethyst"></div>
-              <div class="theme-card-info">
-                <span class="theme-title">Velvet Amethyst</span>
-                <span class="theme-sub">الأرجواني الملكي (Royal)</span>
-              </div>
-            </button>
-            <button type="button" class="theme-card-btn" data-theme="sapphire" onclick="window._setAppTheme('sapphire')">
-              <div class="theme-preview-dot sapphire"></div>
-              <div class="theme-card-info">
-                <span class="theme-title">Oceanic Sapphire</span>
-                <span class="theme-sub">الأزرق الكوني (Ocean)</span>
-              </div>
-            </button>
+            </div>
+            <div class="usage-footer">
+              <span id="usage-last-model" class="usage-last">—</span>
+              <button class="settings-action-btn" onclick="window._refreshUsage()">Refresh</button>
+            </div>
           </div>
         </div>
 
-        <!-- ═══ Tab 2: Fonts ═══ -->
-        <div id="settings-tab-typography" class="settings-tab-pane hidden">
-          <div style="display: flex; flex-direction: column; gap: 14px;">
-            <!-- Font Family -->
+        <!-- ═══ Tab 1: Themes & Fonts ═══ -->
+        <div id="settings-tab-themes" class="settings-tab-pane hidden">
+          <div style="display:flex; flex-direction:column; gap:14px;">
+            <!-- Theme Selection -->
             <div>
+              <label style="font-size: 12px; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 6px;">Theme</label>
+              <div class="theme-selector-grid">
+                <button type="button" class="theme-card-btn active" data-theme="obsidian" onclick="window._setAppTheme('obsidian')">
+                  <div class="theme-preview-dot obsidian"></div>
+                  <div class="theme-card-info">
+                    <span class="theme-title">Midnight Obsidian</span>
+                    <span class="theme-sub">الداكن الكلاسيكي (الحالي)</span>
+                  </div>
+                </button>
+                <button type="button" class="theme-card-btn" data-theme="emerald" onclick="window._setAppTheme('emerald')">
+                  <div class="theme-preview-dot emerald"></div>
+                  <div class="theme-card-info">
+                    <span class="theme-title">Emerald Matrix</span>
+                    <span class="theme-sub">الزمردي النيون (Cyber)</span>
+                  </div>
+                </button>
+                <button type="button" class="theme-card-btn" data-theme="amethyst" onclick="window._setAppTheme('amethyst')">
+                  <div class="theme-preview-dot amethyst"></div>
+                  <div class="theme-card-info">
+                    <span class="theme-title">Velvet Amethyst</span>
+                    <span class="theme-sub">الأرجواني الملكي (Royal)</span>
+                  </div>
+                </button>
+                <button type="button" class="theme-card-btn" data-theme="sapphire" onclick="window._setAppTheme('sapphire')">
+                  <div class="theme-preview-dot sapphire"></div>
+                  <div class="theme-card-info">
+                    <span class="theme-title">Oceanic Sapphire</span>
+                    <span class="theme-sub">الأزرق الكوني (Ocean)</span>
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            <!-- Font Family -->
+            <div style="padding-top:10px; border-top:1px solid var(--border-subtle);">
               <label style="font-size: 12px; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 6px;">Font Family</label>
               <div class="custom-pill-selector-row">
                 <button type="button" class="custom-pill-btn active" data-font="inter" onclick="window._setAppFontFamily('inter')">Inter</button>
@@ -466,39 +500,8 @@
             </div>
           </div>
 
-          <!-- Usage Section -->
-          <div class="settings-section usage-section" id="usage-section" style="margin-top: 8px;">
-            <div class="settings-section-title">
-              <span>📊</span>
-              <span>Usage</span>
-              <span id="usage-live-dot" class="usage-live-dot" title="Auto-synced"></span>
-            </div>
-            <div class="usage-grid">
-              <div class="usage-card openrouter">
-                <div class="usage-card-head"><span>OpenRouter</span><span class="usage-badge real">Real</span></div>
-                <div class="usage-stats">
-                  <div class="usage-stat"><span class="usage-num" id="or-tokens">—</span><span class="usage-label">Tokens</span></div>
-                  <div class="usage-stat"><span class="usage-num" id="or-reqs">—</span><span class="usage-label">Reqs</span></div>
-                </div>
-                <div class="usage-sub" id="or-sub">Fetching...</div>
-              </div>
-              <div class="usage-card groq">
-                <div class="usage-card-head"><span>Groq</span><span class="usage-badge local">Tracked</span></div>
-                <div class="usage-stats">
-                  <div class="usage-stat"><span class="usage-num" id="groq-tokens">—</span><span class="usage-label">Tokens</span></div>
-                  <div class="usage-stat"><span class="usage-num" id="groq-reqs">—</span><span class="usage-label">Reqs</span></div>
-                </div>
-                <div class="usage-sub" id="groq-sub">Last Model: —</div>
-              </div>
-            </div>
-            <div class="usage-footer">
-              <span id="usage-last-model" class="usage-last">—</span>
-              <button class="settings-action-btn" onclick="window._refreshUsage()">Refresh</button>
-            </div>
-          </div>
-
           <!-- Developer Studio Portal Link -->
-          <div class="settings-section" style="margin-top: 8px; padding-top: 10px; border-top: 1px solid var(--border-subtle);">
+          <div class="settings-section" style="margin-top: 10px; padding-top: 12px; border-top: 1px solid var(--border-subtle);">
             <a href="./dev.html" target="_blank" class="footer-btn" style="color: #fbbf24; text-decoration: none; border: 1px solid rgba(251, 191, 36, 0.3); border-radius: 8px; padding: 9px 12px; display: flex; align-items: center; justify-content: space-between; font-size:12.5px;">
               <span>🛠️ Developer Studio (X.v1 Dev)</span>
               <span>↗</span>
@@ -550,17 +553,17 @@
 </div>
 
 <!-- Unified Application Script Bundle (Phase 3 Refactor) -->
-<script src="./config.js?v=175"></script>
-<script src="./auth.js?v=175"></script>
-<script src="./github.js?v=175"></script>
-<script src="./models.js?v=175"></script>
-<script src="./ui-helpers.js?v=175"></script>
-<script src="./modules/usage-tracker.js?v=175"></script>
-<script src="./modules/message-renderer.js?v=175"></script>
-<script src="./modules/instruction-manager.js?v=175"></script>
-<script src="./modules/state-controller.js?v=175"></script>
-<script src="./modules/chat-engine.js?v=175"></script>
-<script src="./modules/ui-engine.js?v=175"></script>
-<script src="./app.js?v=175"></script>
+<script src="./config.js?v=176"></script>
+<script src="./auth.js?v=176"></script>
+<script src="./github.js?v=176"></script>
+<script src="./models.js?v=176"></script>
+<script src="./ui-helpers.js?v=176"></script>
+<script src="./modules/usage-tracker.js?v=176"></script>
+<script src="./modules/message-renderer.js?v=176"></script>
+<script src="./modules/instruction-manager.js?v=176"></script>
+<script src="./modules/state-controller.js?v=176"></script>
+<script src="./modules/chat-engine.js?v=176"></script>
+<script src="./modules/ui-engine.js?v=176"></script>
+<script src="./app.js?v=176"></script>
 </body>
 </html>
