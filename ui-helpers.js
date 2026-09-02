@@ -12,12 +12,18 @@
     // Try ops container
     if (!container) container = document.getElementById('ops-toast-container');
     if (!container) return;
+
+    // Remove existing toasts to prevent stacking
+    while (container.firstChild) {
+      container.removeChild(container.firstChild);
+    }
+
     const toast = document.createElement('div');
     const isOps = container.id === 'ops-toast-container';
     toast.className = isOps ? `ops-toast ${type}` : `toast ${type}`;
     toast.textContent = message;
     container.appendChild(toast);
-    const duration = type === 'error' ? 4000 : 3200;
+    const duration = type === 'error' ? 3500 : 2500;
     setTimeout(() => {
       toast.style.opacity = '0';
       toast.style.transform = 'translateY(8px)';
