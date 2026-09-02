@@ -919,10 +919,9 @@
         MessageRenderer.hideTyping();
         if (err.name !== 'AbortError') {
           if (!fullContent.trim()) {
-            const idx = conv.messages.findIndex(m => m.id === aiMsgId);
-            if (idx !== -1) conv.messages.splice(idx, 1);
-            const emptyElem = document.querySelector(`[data-id="${aiMsgId}"]`);
-            if (emptyElem) emptyElem.remove();
+            aiMsgObj.content = `⚠️ تعذر استلام الرد من النموذج: ${err.message || 'خطأ في الاتصال'}. يمكنك إعادة المحاولة فوراً.`;
+            aiMsgObj.isError = true;
+            MessageRenderer.appendMessage(aiMsgObj);
           }
           MessageRenderer.showToast('❌ ' + err.message, 'error');
         }
@@ -1484,8 +1483,12 @@
       input?.addEventListener('cut', () => setTimeout(onInput, 10));
 
       input?.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-          // Enter creates a newline naturally without sending
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          sendBtn?.click();
+          return;
+        }
+        if (e.key === 'Enter' && e.shiftKey) {
           setTimeout(() => this.adjustTextareaHeight(), 10);
         }
       });
