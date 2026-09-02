@@ -67,9 +67,9 @@
         if (fromApp.includes(',')) return fromApp.split(',').map(s=>s.trim()).filter(Boolean);
         return [fromApp.trim()];
       }
-      const stored = _getStored('OPENROUTER_API_KEY');
+      const stored = _getStored('OPENROUTER_API_KEYS') || _getStored('OPENROUTER_API_KEY');
       if (stored) {
-        if (stored.includes(',')) return stored.split(',').map(s=>s.trim()).filter(Boolean);
+        if (stored.includes(',')) return stored.split(/[\n,]+/).map(s=>s.trim()).filter(Boolean);
         return [stored];
       }
       return [_k1];
@@ -87,9 +87,9 @@
       const fromApp = _getAppConfigKey('getGroqKeys');
       if (Array.isArray(fromApp) && fromApp.length) return fromApp;
       if (typeof fromApp === 'string' && fromApp.trim()) return fromApp.split(',').map(s => s.trim()).filter(Boolean);
-      const stored = _getStored('GROQ_API_KEY');
+      const stored = _getStored('GROQ_API_KEYS') || _getStored('GROQ_API_KEY');
       if (stored) {
-        if (stored.includes(',')) return stored.split(',').map(s => s.trim()).filter(Boolean);
+        if (stored.includes(',')) return stored.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
         return [stored];
       }
       return _k2.split(',').map(s => s.trim()).filter(Boolean);
