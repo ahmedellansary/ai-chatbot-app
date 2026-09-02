@@ -262,114 +262,47 @@
     </div>
   </div>
 
-  <!-- ═══ Modular Instruction Files Manager Modal ═══ -->
+  <!-- ═══ Settings Modal ═══ -->
   <div id="settings-modal" class="custom-modal hidden" aria-hidden="true">
-    <div class="custom-modal-card settings-card instructions-manager-card">
+    <div class="custom-modal-card settings-card" style="max-width: 680px;">
       <div class="custom-modal-header">
         <div class="modal-header-title">
-          <span>📁</span>
-          <span>Instruction Files Manager</span>
+          <span>⚙️</span>
+          <span>الإعدادات وتخصيص التطبيق</span>
         </div>
         <div class="modal-header-actions">
           <button class="icon-btn" onclick="window._closeSettingsModal()" title="Close">✕</button>
         </div>
       </div>
-      <div class="settings-modal-body instructions-manager-body">
+
+      <div class="settings-modal-body" style="padding: 16px; display: flex; flex-direction: column; gap: 12px;">
         
-        <!-- Instruction Files Header & Actions -->
-        <div class="inst-manager-topbar">
-          <p class="settings-section-desc" style="margin:0;">Modular instruction files auto-triggered based on conversation context.</p>
-          <div class="inst-topbar-actions">
-            <button class="settings-action-btn" onclick="window._addNewInstructionFile()"><span>+</span> Add New File</button>
-            <button class="settings-action-btn" onclick="window._resetDefaultInstructionFiles()">Reset Default</button>
-          </div>
-        </div>
-
-        <!-- Instruction Files Grid / List -->
-        <div id="instruction-files-list" class="instruction-files-list"></div>
-
-        <!-- Active Instruction Editor Sub-panel (When a file is selected) -->
-        <div id="instruction-editor-panel" class="instruction-editor-panel hidden">
-          <div class="inst-editor-header">
-            <div class="inst-editor-title-wrap">
-              <span id="inst-editor-icon" class="inst-editor-icon">📄</span>
-              <input type="text" id="inst-editor-name" class="inst-editor-name-input" placeholder="Instruction file name...">
-            </div>
-            <div class="inst-editor-tools">
-              <label class="inst-toggle-label">
-                <input type="checkbox" id="inst-editor-enabled" class="inst-checkbox">
-                <span>Enabled</span>
-              </label>
-            </div>
-          </div>
-
-          <div class="inst-editor-meta">
-            <input type="text" id="inst-editor-desc" class="inst-editor-meta-input" placeholder="Domain / Purpose description...">
-            <input type="text" id="inst-editor-keywords" class="inst-editor-meta-input" placeholder="Trigger keywords (comma separated)...">
-          </div>
-
-          <textarea
-            id="inst-editor-content"
-            class="settings-textarea inst-content-textarea"
-            rows="9"
-            placeholder="Write domain rules and guidelines here..."
-          ></textarea>
-
-          <div class="inst-editor-footer">
-            <div class="inst-footer-left">
-              <button id="inst-delete-btn" class="inst-delete-btn hidden" onclick="window._deleteActiveInstructionFile()">
-                <span>🗑️</span>
-                <span>Delete File</span>
-              </button>
-            </div>
-            <div class="inst-footer-right">
-              <button class="btn-refresh-cancel" onclick="window._closeInstructionEditor()">Close Editor</button>
-              <button class="settings-save-btn" onclick="window._saveActiveInstructionFile()">
-                <span>💾</span>
-                <span>Save Changes</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Usage Section (Auto — Real Data) -->
-        <div class="settings-section usage-section" id="usage-section" style="margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border-subtle);">
-          <div class="settings-section-title">
-            <span>📊</span>
-            <span>API Usage & Metrics</span>
-            <span id="usage-live-dot" class="usage-live-dot" title="Auto-synced"></span>
-          </div>
-          <div class="usage-grid">
-            <div class="usage-card openrouter">
-              <div class="usage-card-head"><span>OpenRouter</span><span class="usage-badge real">Real</span></div>
-              <div class="usage-stats">
-                <div class="usage-stat"><span class="usage-num" id="or-tokens">—</span><span class="usage-label">Tokens</span></div>
-                <div class="usage-stat"><span class="usage-num" id="or-reqs">—</span><span class="usage-label">Reqs</span></div>
-              </div>
-              <div class="usage-sub" id="or-sub">Fetching metrics...</div>
-            </div>
-            <div class="usage-card groq">
-              <div class="usage-card-head"><span>Groq</span><span class="usage-badge local">Tracked</span></div>
-              <div class="usage-stats">
-                <div class="usage-stat"><span class="usage-num" id="groq-tokens">—</span><span class="usage-label">Tokens</span></div>
-                <div class="usage-stat"><span class="usage-num" id="groq-reqs">—</span><span class="usage-label">Reqs</span></div>
-              </div>
-              <div class="usage-sub" id="groq-sub">Last Model: —</div>
-            </div>
-          </div>
-          <div class="usage-footer">
-            <span id="usage-last-model" class="usage-last">—</span>
-            <button class="settings-action-btn" onclick="window._refreshUsage()">Refresh</button>
-          </div>
-        </div>
-
-        <!-- 🎨 Appearance & Themes Customization Section -->
-        <div class="settings-section" style="margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border-subtle);">
-          <div class="settings-section-title">
+        <!-- ═══ Settings Navigation Tabs ═══ -->
+        <div class="settings-modal-tabs-bar">
+          <button type="button" class="settings-tab-btn active" data-tab="themes" onclick="window._switchSettingsTab('themes')">
             <span>🎨</span>
-            <span>الثيم والمظهر (Theme & Colors)</span>
+            <span>المظهر والثيم</span>
+          </button>
+          <button type="button" class="settings-tab-btn" data-tab="typography" onclick="window._switchSettingsTab('typography')">
+            <span>🔤</span>
+            <span>نوع وحجم الخط</span>
+          </button>
+          <button type="button" class="settings-tab-btn" data-tab="instructions" onclick="window._switchSettingsTab('instructions')">
+            <span>📁</span>
+            <span>ملفات التعليمات</span>
+          </button>
+          <button type="button" class="settings-tab-btn" data-tab="system" onclick="window._switchSettingsTab('system')">
+            <span>⚙️</span>
+            <span>النظام والكاش</span>
+          </button>
+        </div>
+
+        <!-- ═══ Tab 1: Themes & Appearance ═══ -->
+        <div id="settings-tab-themes" class="settings-tab-pane active">
+          <div style="font-weight: 600; font-size: 13.5px; color: #fff; margin-bottom: 2px;">
+            <span>🎨</span> <span>اختر الثيم اللوني المفضل للتطبيق:</span>
           </div>
-          <p class="settings-section-desc">اختر الثيم المفضل لك لتغيير المظهر بالكامل فورياً.</p>
+          <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">يتم تطبيق الثيم فورياً وحفظه تلقائياً في المتصفح.</p>
           
           <div class="theme-selector-grid">
             <button type="button" class="theme-card-btn active" data-theme="obsidian" onclick="window._setAppTheme('obsidian')">
@@ -403,18 +336,17 @@
           </div>
         </div>
 
-        <!-- 🔤 Typography & Font Family Section -->
-        <div class="settings-section" style="margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border-subtle);">
-          <div class="settings-section-title">
-            <span>🔤</span>
-            <span>نوع وحجم الخط (Typography & Size)</span>
+        <!-- ═══ Tab 2: Typography & Sizes ═══ -->
+        <div id="settings-tab-typography" class="settings-tab-pane hidden">
+          <div style="font-weight: 600; font-size: 13.5px; color: #fff; margin-bottom: 2px;">
+            <span>🔤</span> <span>تخصيص نوع الخط وحجم الرسائل:</span>
           </div>
-          <p class="settings-section-desc">اضبط نوع الخط وحجمه لتجربة قراءة مريحة.</p>
+          <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">اضبط الخط المناسب لتجربة قراءة سلسة ومريحة.</p>
 
-          <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 8px;">
-            <!-- Font Family Selector -->
+          <div style="display: flex; flex-direction: column; gap: 14px;">
+            <!-- Font Family -->
             <div>
-              <label style="font-size: 12px; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 5px;">نوع الخط (Font Family):</label>
+              <label style="font-size: 12.5px; font-weight: 600; color: #e5e7eb; display: block; margin-bottom: 6px;">نوع الخط (Font Family):</label>
               <div class="custom-pill-selector-row">
                 <button type="button" class="custom-pill-btn active" data-font="inter" onclick="window._setAppFontFamily('inter')">Modern Inter</button>
                 <button type="button" class="custom-pill-btn" data-font="cairo" onclick="window._setAppFontFamily('cairo')">Cairo (عربي أنيق)</button>
@@ -423,9 +355,9 @@
               </div>
             </div>
 
-            <!-- Font Size Selector -->
+            <!-- Font Size -->
             <div>
-              <label style="font-size: 12px; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 5px;">حجم الخط (Font Size):</label>
+              <label style="font-size: 12.5px; font-weight: 600; color: #e5e7eb; display: block; margin-bottom: 6px;">حجم الخط (Font Size):</label>
               <div class="custom-pill-selector-row">
                 <button type="button" class="custom-pill-btn" data-size="sm" onclick="window._setAppFontSize('sm')">صغير (13.5px)</button>
                 <button type="button" class="custom-pill-btn active" data-size="md" onclick="window._setAppFontSize('md')">افتراضي (15px)</button>
@@ -433,33 +365,133 @@
                 <button type="button" class="custom-pill-btn" data-size="xl" onclick="window._setAppFontSize('xl')">عريض (18px)</button>
               </div>
             </div>
+
+            <!-- Live Text Preview Box -->
+            <div class="typography-preview-box">
+              <div style="font-size: 11px; color: var(--text-dim); margin-bottom: 4px; font-weight: 600;">معاينة حية لرسائل المحادثة:</div>
+              <div class="typography-preview-text">
+                مرحباً بك! أنا المساعد الذكي X.v1، جاهز للإجابة على استفساراتك وتحليل البيانات باحترافية وسرعة فائقة.
+              </div>
+            </div>
           </div>
         </div>
 
-        <!-- Storage & Cache Section -->
-        <div class="settings-section" style="margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border-subtle);">
-          <div class="settings-section-title">
-            <span>🧹</span>
-            <span>Storage & Cache Management</span>
+        <!-- ═══ Tab 3: Instruction Files Manager ═══ -->
+        <div id="settings-tab-instructions" class="settings-tab-pane hidden">
+          <div class="inst-manager-topbar">
+            <p class="settings-section-desc" style="margin:0;">Modular instruction files auto-triggered based on conversation context.</p>
+            <div class="inst-topbar-actions">
+              <button class="settings-action-btn" onclick="window._addNewInstructionFile()"><span>+</span> Add New File</button>
+              <button class="settings-action-btn" onclick="window._resetDefaultInstructionFiles()">Reset Default</button>
+            </div>
           </div>
-          <p class="settings-section-desc">Clear Service Worker cache and refresh runtime assets while preserving conversations.</p>
-          <button class="footer-btn settings-clear-btn" onclick="window._clearAppCache()">
-            <span>🧹</span>
-            <span>Clear Cache & Reload</span>
-          </button>
+
+          <!-- Instruction Files Grid / List -->
+          <div id="instruction-files-list" class="instruction-files-list"></div>
+
+          <!-- Active Instruction Editor Sub-panel (When a file is selected) -->
+          <div id="instruction-editor-panel" class="instruction-editor-panel hidden">
+            <div class="inst-editor-header">
+              <div class="inst-editor-title-wrap">
+                <span id="inst-editor-icon" class="inst-editor-icon">📄</span>
+                <input type="text" id="inst-editor-name" class="inst-editor-name-input" placeholder="Instruction file name...">
+              </div>
+              <div class="inst-editor-tools">
+                <label class="inst-toggle-label">
+                  <input type="checkbox" id="inst-editor-enabled" class="inst-checkbox">
+                  <span>Enabled</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="inst-editor-meta">
+              <input type="text" id="inst-editor-desc" class="inst-editor-meta-input" placeholder="Domain / Purpose description...">
+              <input type="text" id="inst-editor-keywords" class="inst-editor-meta-input" placeholder="Trigger keywords (comma separated)...">
+            </div>
+
+            <textarea
+              id="inst-editor-content"
+              class="settings-textarea inst-content-textarea"
+              rows="9"
+              placeholder="Write domain rules and guidelines here..."
+            ></textarea>
+
+            <div class="inst-editor-footer">
+              <div class="inst-footer-left">
+                <button id="inst-delete-btn" class="inst-delete-btn hidden" onclick="window._deleteActiveInstructionFile()">
+                  <span>🗑️</span>
+                  <span>Delete File</span>
+                </button>
+              </div>
+              <div class="inst-footer-right">
+                <button class="btn-refresh-cancel" onclick="window._closeInstructionEditor()">Close Editor</button>
+                <button class="settings-save-btn" onclick="window._saveActiveInstructionFile()">
+                  <span>💾</span>
+                  <span>Save Changes</span>
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <!-- Developer Studio Portal Link -->
-        <div class="settings-section" style="margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border-subtle);">
-          <div class="settings-section-title">
-            <span>🛠️</span>
-            <span>Developer Studio</span>
+        <!-- ═══ Tab 4: System & Cache & Usage ═══ -->
+        <div id="settings-tab-system" class="settings-tab-pane hidden">
+          <!-- Usage Section (Auto — Real Data) -->
+          <div class="settings-section usage-section" id="usage-section">
+            <div class="settings-section-title">
+              <span>📊</span>
+              <span>API Usage & Metrics</span>
+              <span id="usage-live-dot" class="usage-live-dot" title="Auto-synced"></span>
+            </div>
+            <div class="usage-grid">
+              <div class="usage-card openrouter">
+                <div class="usage-card-head"><span>OpenRouter</span><span class="usage-badge real">Real</span></div>
+                <div class="usage-stats">
+                  <div class="usage-stat"><span class="usage-num" id="or-tokens">—</span><span class="usage-label">Tokens</span></div>
+                  <div class="usage-stat"><span class="usage-num" id="or-reqs">—</span><span class="usage-label">Reqs</span></div>
+                </div>
+                <div class="usage-sub" id="or-sub">Fetching metrics...</div>
+              </div>
+              <div class="usage-card groq">
+                <div class="usage-card-head"><span>Groq</span><span class="usage-badge local">Tracked</span></div>
+                <div class="usage-stats">
+                  <div class="usage-stat"><span class="usage-num" id="groq-tokens">—</span><span class="usage-label">Tokens</span></div>
+                  <div class="usage-stat"><span class="usage-num" id="groq-reqs">—</span><span class="usage-label">Reqs</span></div>
+                </div>
+                <div class="usage-sub" id="groq-sub">Last Model: —</div>
+              </div>
+            </div>
+            <div class="usage-footer">
+              <span id="usage-last-model" class="usage-last">—</span>
+              <button class="settings-action-btn" onclick="window._refreshUsage()">Refresh</button>
+            </div>
           </div>
-          <p class="settings-section-desc">Access standalone Developer Studio to inspect and edit repository files directly.</p>
-          <a href="./dev.html" target="_blank" class="footer-btn" style="color: #fbbf24; text-decoration: none; border: 1px solid rgba(251, 191, 36, 0.3); border-radius: 8px; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between;">
-            <span>🛠️ Open Developer Studio (X.v1 Dev)</span>
-            <span>↗</span>
-          </a>
+
+          <!-- Storage & Cache Section -->
+          <div class="settings-section" style="margin-top: 10px; padding-top: 12px; border-top: 1px solid var(--border-subtle);">
+            <div class="settings-section-title">
+              <span>🧹</span>
+              <span>Storage & Cache Management</span>
+            </div>
+            <p class="settings-section-desc">Clear Service Worker cache and refresh runtime assets while preserving conversations.</p>
+            <button class="footer-btn settings-clear-btn" onclick="window._clearAppCache()">
+              <span>🧹</span>
+              <span>Clear Cache & Reload</span>
+            </button>
+          </div>
+
+          <!-- Developer Studio Portal Link -->
+          <div class="settings-section" style="margin-top: 10px; padding-top: 12px; border-top: 1px solid var(--border-subtle);">
+            <div class="settings-section-title">
+              <span>🛠️</span>
+              <span>Developer Studio</span>
+            </div>
+            <p class="settings-section-desc">Access standalone Developer Studio to inspect and edit repository files directly.</p>
+            <a href="./dev.html" target="_blank" class="footer-btn" style="color: #fbbf24; text-decoration: none; border: 1px solid rgba(251, 191, 36, 0.3); border-radius: 8px; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between;">
+              <span>🛠️ Open Developer Studio (X.v1 Dev)</span>
+              <span>↗</span>
+            </a>
+          </div>
         </div>
 
       </div>
