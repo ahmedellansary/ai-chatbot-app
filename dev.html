@@ -9,13 +9,13 @@
   <meta name="apple-mobile-web-app-title" content="X.v1 Dev">
 
   <title>X.v1 — Developer Portal & Codebase Studio</title>
-  <link rel="manifest" href="./dev-manifest.json?v=175">
+  <link rel="manifest" href="./dev-manifest.json?v=176">
   <!-- Modular Dev CSS (load before fallback) -->
-  <link rel="stylesheet" href="./css/dev-base.css?v=175">
-  <link rel="stylesheet" href="./css/dev-chat.css?v=175">
-  <link rel="stylesheet" href="./css/dev-input.css?v=175">
-  <link rel="stylesheet" href="./css/dev-modal.css?v=175">
-  <link rel="stylesheet" href="./dev_style.css?v=175">
+  <link rel="stylesheet" href="./css/dev-base.css?v=176">
+  <link rel="stylesheet" href="./css/dev-chat.css?v=176">
+  <link rel="stylesheet" href="./css/dev-input.css?v=176">
+  <link rel="stylesheet" href="./css/dev-modal.css?v=176">
+  <link rel="stylesheet" href="./dev_style.css?v=176">
   <link rel="icon" type="image/png" href="./icons/dev-icon-192.png?v=52">
   <link rel="apple-touch-icon" href="./icons/dev-icon-192.png?v=52">
   <link rel="apple-touch-icon" sizes="512x512" href="./icons/dev-icon-512.png?v=52">
@@ -116,7 +116,7 @@
       <div class="header-right">
         <div class="repo-status-badge">
           <span class="status-dot"></span>
-          <span class="repo-badge-text" id="dev-status-badge-text">Dev (V175) 02-09-2026 9:08AM</span>
+          <span class="repo-badge-text" id="dev-status-badge-text">Dev (V176) 02-09-2026 9:10AM</span>
         </div>
         <script>
           (function() {
@@ -350,57 +350,54 @@
         <div class="settings-modal-tabs-bar">
           <button type="button" class="settings-tab-btn active" data-tab="themes" onclick="window._switchDevSettingsTab('themes')">
             <span>🎨</span>
-            <span>المظهر والثيم</span>
-          </button>
-          <button type="button" class="settings-tab-btn" data-tab="typography" onclick="window._switchDevSettingsTab('typography')">
-            <span>🔤</span>
-            <span>نوع وحجم الخط</span>
+            <span>Theme & Fonts</span>
           </button>
           <button type="button" class="settings-tab-btn" data-tab="prompt" onclick="window._switchDevSettingsTab('prompt')">
             <span>🧠</span>
-            <span>تعليمات المطور</span>
+            <span>System Prompt</span>
           </button>
         </div>
 
         <!-- ═══ Tab 1: Themes & Appearance ═══ -->
         <div id="dev-tab-themes" class="settings-tab-pane active">
-          <div class="theme-selector-grid">
-            <button type="button" class="theme-card-btn active" data-theme="obsidian" onclick="window._setAppTheme('obsidian')">
-              <div class="theme-preview-dot obsidian"></div>
-              <div class="theme-card-info">
-                <span class="theme-title">Midnight Obsidian</span>
-                <span class="theme-sub">الداكن الكلاسيكي (الحالي)</span>
-              </div>
-            </button>
-            <button type="button" class="theme-card-btn" data-theme="emerald" onclick="window._setAppTheme('emerald')">
-              <div class="theme-preview-dot emerald"></div>
-              <div class="theme-card-info">
-                <span class="theme-title">Emerald Matrix</span>
-                <span class="theme-sub">الزمردي النيون (Cyber)</span>
-              </div>
-            </button>
-            <button type="button" class="theme-card-btn" data-theme="amethyst" onclick="window._setAppTheme('amethyst')">
-              <div class="theme-preview-dot amethyst"></div>
-              <div class="theme-card-info">
-                <span class="theme-title">Velvet Amethyst</span>
-                <span class="theme-sub">الأرجواني الملكي (Royal)</span>
-              </div>
-            </button>
-            <button type="button" class="theme-card-btn" data-theme="sapphire" onclick="window._setAppTheme('sapphire')">
-              <div class="theme-preview-dot sapphire"></div>
-              <div class="theme-card-info">
-                <span class="theme-title">Oceanic Sapphire</span>
-                <span class="theme-sub">الأزرق الكوني (Ocean)</span>
-              </div>
-            </button>
-          </div>
-        </div>
-
-        <!-- ═══ Tab 2: Typography & Sizes ═══ -->
-        <div id="dev-tab-typography" class="settings-tab-pane hidden">
-          <div style="display: flex; flex-direction: column; gap: 14px;">
-            <!-- Font Family -->
+          <div style="display:flex; flex-direction:column; gap:14px;">
+            <!-- Themes -->
             <div>
+              <label style="font-size: 12px; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 6px;">Theme</label>
+              <div class="theme-selector-grid">
+                <button type="button" class="theme-card-btn active" data-theme="obsidian" onclick="window._setAppTheme('obsidian')">
+                  <div class="theme-preview-dot obsidian"></div>
+                  <div class="theme-card-info">
+                    <span class="theme-title">Midnight Obsidian</span>
+                    <span class="theme-sub">الداكن الكلاسيكي (الحالي)</span>
+                  </div>
+                </button>
+                <button type="button" class="theme-card-btn" data-theme="emerald" onclick="window._setAppTheme('emerald')">
+                  <div class="theme-preview-dot emerald"></div>
+                  <div class="theme-card-info">
+                    <span class="theme-title">Emerald Matrix</span>
+                    <span class="theme-sub">الزمردي النيون (Cyber)</span>
+                  </div>
+                </button>
+                <button type="button" class="theme-card-btn" data-theme="amethyst" onclick="window._setAppTheme('amethyst')">
+                  <div class="theme-preview-dot amethyst"></div>
+                  <div class="theme-card-info">
+                    <span class="theme-title">Velvet Amethyst</span>
+                    <span class="theme-sub">الأرجواني الملكي (Royal)</span>
+                  </div>
+                </button>
+                <button type="button" class="theme-card-btn" data-theme="sapphire" onclick="window._setAppTheme('sapphire')">
+                  <div class="theme-preview-dot sapphire"></div>
+                  <div class="theme-card-info">
+                    <span class="theme-title">Oceanic Sapphire</span>
+                    <span class="theme-sub">الأزرق الكوني (Ocean)</span>
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            <!-- Font Family -->
+            <div style="padding-top:10px; border-top:1px solid var(--border-subtle);">
               <label style="font-size: 12px; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 6px;">Font Family</label>
               <div class="custom-pill-selector-row">
                 <button type="button" class="custom-pill-btn active" data-font="inter" onclick="window._setAppFontFamily('inter')">Inter</button>
@@ -475,14 +472,14 @@
   <div id="toast-container"></div>
 </div>
 
-<script src="./config.js?v=175"></script>
-<script src="./auth.js?v=175"></script>
-<script src="./github.js?v=175"></script>
-<script src="./models.js?v=175"></script>
-<script src="./ui-helpers.js?v=175"></script>
-<script src="./modules/dev-state.js?v=175"></script>
-<script src="./modules/dev-chat-engine.js?v=175"></script>
-<script src="./modules/dev-ui-engine.js?v=175"></script>
-<script src="./dev.js?v=175"></script>
+<script src="./config.js?v=176"></script>
+<script src="./auth.js?v=176"></script>
+<script src="./github.js?v=176"></script>
+<script src="./models.js?v=176"></script>
+<script src="./ui-helpers.js?v=176"></script>
+<script src="./modules/dev-state.js?v=176"></script>
+<script src="./modules/dev-chat-engine.js?v=176"></script>
+<script src="./modules/dev-ui-engine.js?v=176"></script>
+<script src="./dev.js?v=176"></script>
 </body>
 </html>
