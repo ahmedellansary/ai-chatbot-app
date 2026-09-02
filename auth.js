@@ -107,8 +107,12 @@
           if (isVerifying) return;
           const pwd = pinInput ? pinInput.value.trim() : '';
           if (!pwd) {
-            const toast = window.MessageRenderer?.showToast || window.DevUIEngine?.showToast || window.OpsUI?.showToast;
-            if (toast) toast('يرجى كتابة كلمة السر', 'warning');
+            const toastFn = window.MessageRenderer?.showToast || window.DevUIEngine?.showToast || window.OpsUI?.showToast;
+            if (toastFn) {
+              const toastTarget = window.MessageRenderer || window.DevUIEngine || window.OpsUI || null;
+              const toast = toastTarget ? toastFn.bind(toastTarget) : toastFn;
+              toast('يرجى كتابة كلمة السر', 'warning');
+            }
             return;
           }
           isVerifying = true;
@@ -118,13 +122,21 @@
             if (ok) {
               this.unlock();
               gate.classList.add('hidden');
-              const toast = window.MessageRenderer?.showToast || window.DevUIEngine?.showToast || window.OpsUI?.showToast;
-              if (toast) toast('🔓 تم فتح التطبيق بنجاح!', 'success');
+              const toastFn = window.MessageRenderer?.showToast || window.DevUIEngine?.showToast || window.OpsUI?.showToast;
+              if (toastFn) {
+                const toastTarget = window.MessageRenderer || window.DevUIEngine || window.OpsUI || null;
+                const toast = toastTarget ? toastFn.bind(toastTarget) : toastFn;
+                toast('🔓 تم فتح التطبيق بنجاح!', 'success');
+              }
               if (typeof onUnlock === 'function') onUnlock();
               if (gateId === 'ops-lock-gate' && window.OpsApp?.initData) window.OpsApp.initData();
             } else {
-              const toast = window.MessageRenderer?.showToast || window.DevUIEngine?.showToast || window.OpsUI?.showToast;
-              if (toast) toast('❌ كلمة السر غير صحيحة!', 'error');
+              const toastFn = window.MessageRenderer?.showToast || window.DevUIEngine?.showToast || window.OpsUI?.showToast;
+              if (toastFn) {
+                const toastTarget = window.MessageRenderer || window.DevUIEngine || window.OpsUI || null;
+                const toast = toastTarget ? toastFn.bind(toastTarget) : toastFn;
+                toast('❌ كلمة السر غير صحيحة!', 'error');
+              }
               if (pinInput) {
                 pinInput.value = '';
                 pinInput.style.borderColor = 'var(--error, #ef4444)';
