@@ -36,7 +36,12 @@
     estimateTokens(t) { return Math.ceil((t||'').length / 3.5); },
     record(m,p,pt,ct){ const d=this.load(); const tot=this.estimateTokens(pt)+this.estimateTokens(ct); const k=p==='openrouter'?'or':'groq'; d[k].t+=tot; d[k].r+=1; d.lastModel=m||k; d.lastAt=new Date().toISOString(); this.save(d); this.render(); },
     async fetchRealOpenRouter(){ const el=document.getElementById('or-sub'); try{ const k=(window.ConfigVault&&window.ConfigVault.getOpenRouterKey)?window.ConfigVault.getOpenRouterKey():'';
-        const r=await fetch('https://openrouter.ai/api/v1/credits',{headers:{'Authorization':`Bearer ${k}`}}); if(!r.ok) throw new Error();
+        if(!k) return;
+        const ctrl = new AbortController();
+        const tm = setTimeout(() => ctrl.abort(), 2000);
+        const r=await fetch('https://openrouter.ai/api/v1/credits',{headers:{'Authorization':`Bearer ${k}`}, signal: ctrl.signal});
+        clearTimeout(tm);
+        if(!r.ok) throw new Error();
         const j=await r.json(); const d=j.data||j; const u=d.total_usage??d.totalUsage??0; const c=d.total_credits??d.totalCredits??0;
         if(el) el.textContent=`الرصيد: ${Number(c).toFixed(2)} | المستهلك: ${Number(u).toFixed(3)}`;
         const s=this.load(); if(u) s.or.t=Math.round(u*1000); this.save(s); this.render(); }catch{ if(el) el.textContent='بيانات محلية (لا يمكن جلب الحقيقي)'; } },
@@ -1430,22 +1435,24 @@
         }
       });
 
-      // Text Input Reactivity
+      // Text Input Reactivity — High-Performance debounced rAF
       const input = $('user-input');
       const sendBtn = $('send-btn');
 
+      let _inputRaf = null;
       const onInput = () => {
-        this.adjustTextareaHeight();
-        this.updateInputDirection();
-        this.updateSendBtnState();
+        window.__userInteracted = true;
+        if (_inputRaf) cancelAnimationFrame(_inputRaf);
+        _inputRaf = requestAnimationFrame(() => {
+          this.adjustTextareaHeight();
+          this.updateInputDirection();
+          this.updateSendBtnState();
+        });
       };
 
-      ['input', 'keyup', 'change', 'paste', 'cut'].forEach(evt => {
-        input?.addEventListener(evt, onInput);
-        document.addEventListener(evt, (e) => {
-          if (e.target && e.target.id === 'user-input') onInput();
-        });
-      });
+      input?.addEventListener('input', onInput);
+      input?.addEventListener('paste', () => setTimeout(onInput, 10));
+      input?.addEventListener('cut', () => setTimeout(onInput, 10));
 
       input?.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
@@ -1475,7 +1482,8 @@
     setupPullToRefresh() {
       if (window.setupUnifiedPullToRefresh) return window.setupUnifiedPullToRefresh({ indicatorId: 'pull-refresh-indicator', chatAreaId: 'chat-area', threshold: 50 });
       const indicator = $('pull-refresh-indicator');
-      if (!indicator) return;
+      const chatArea = $('chat-area');
+      if (!indicator || !chatArea) return;
 
       const spinner = indicator.querySelector('.pull-refresh-spinner');
       let startY = 0;
@@ -1485,8 +1493,6 @@
 
       const onTouchStart = (e) => {
         if (e.touches.length !== 1) return;
-        const chatArea = $('chat-area');
-        if (!chatArea) return;
         if (chatArea.scrollTop <= 4) {
           startY = e.touches[0].clientY;
           isTracking = true;
@@ -1500,7 +1506,6 @@
         const diff = y - startY;
 
         if (diff > 8) {
-          if (e.cancelable) e.preventDefault();
           currentPull = diff;
           const visualPull = Math.min(diff * 0.45, 75);
           indicator.classList.add('visible');
@@ -1537,10 +1542,10 @@
         currentPull = 0;
       };
 
-      document.addEventListener('touchstart', onTouchStart, { passive: true });
-      document.addEventListener('touchmove', onTouchMove, { passive: false });
-      document.addEventListener('touchend', onTouchEnd, { passive: true });
-      document.addEventListener('touchcancel', onTouchEnd, { passive: true });
+      chatArea.addEventListener('touchstart', onTouchStart, { passive: true });
+      chatArea.addEventListener('touchmove', onTouchMove, { passive: true });
+      chatArea.addEventListener('touchend', onTouchEnd, { passive: true });
+      chatArea.addEventListener('touchcancel', onTouchEnd, { passive: true });
     },
 
     setupAttachmentHandler() {
@@ -1848,13 +1853,18 @@
   window._openSettingsModal = async function() {
     const modal = $('settings-modal');
     if (!modal) return;
-    await InstructionManager.load();
-    InstructionManager.renderList();
-    InstructionManager.closeEditor();
+    const mgr = window.InstructionManager || InstructionManager;
     modal.classList.remove('hidden');
     UIEngine.closeSidebar();
-    UsageTracker.render();
-    UsageTracker.fetchRealOpenRouter();
+    try {
+      await mgr.load();
+      mgr.renderList();
+      mgr.closeEditor();
+    } catch(e) {}
+    if (window.UsageTracker) {
+      window.UsageTracker.render();
+      try { window.UsageTracker.fetchRealOpenRouter().catch(() => {}); } catch(e) {}
+    }
     
     // Populate API keys input
     const orInput = $('input-openrouter-keys');
