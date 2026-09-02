@@ -868,6 +868,10 @@
         DevState.newConversation();
       }
       updateDevVersionBadge().catch(()=>{});
+      // Auto-focus chat box for instant typing
+      setTimeout(() => { try { if (DevAuthManager.isUnlocked()) document.getElementById('user-input')?.focus(); } catch {} }, 600);
+      const _devOrigUnlock = DevAuthManager.unlock.bind(DevAuthManager);
+      DevAuthManager.unlock = function() { _devOrigUnlock(); setTimeout(() => { try { document.getElementById('user-input')?.focus(); } catch {} }, 400); };
     },
 
     async loadDevPrompt() {
