@@ -2,7 +2,7 @@
    NYTRON (نيترون) AI - SLEEK MOBILE & DESKTOP DESIGN SYSTEM
    ═════════════════════════════════════════════════════════════════ */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400&family=Tajawal:wght@400;500;700;800&display=swap');
 
 :root {
   --bg-main: #131315;
@@ -15,6 +15,7 @@
 
   --accent-color: #da7756;
   --accent-color-dark: #b85d3e;
+  --accent-glow: rgba(218, 119, 86, 0.25);
 
   --border-subtle: rgba(255, 255, 255, 0.08);
   --border-focus: rgba(255, 255, 255, 0.22);
@@ -30,9 +31,86 @@
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-serif: 'Newsreader', Georgia, serif;
   --font-mono: 'JetBrains Mono', monospace;
+  --chat-font-size: 15px;
 
   --header-h: 56px;
   --sidebar-w: 290px;
+}
+
+/* 🎨 Theme 2: Emerald Matrix */
+[data-theme="emerald"] {
+  --bg-main: #06110d;
+  --bg-sidebar: #091913;
+  --bg-card: #0e241c;
+  --bg-card-hover: #132e24;
+  --bg-user-bubble: #102920;
+  --bg-input: #0a1b15;
+  --bg-pill: #123025;
+  --accent-color: #10b981;
+  --accent-color-dark: #059669;
+  --accent-glow: rgba(16, 185, 129, 0.3);
+  --border-subtle: rgba(16, 185, 129, 0.16);
+  --border-focus: rgba(16, 185, 129, 0.4);
+}
+
+/* 🎨 Theme 3: Velvet Amethyst */
+[data-theme="amethyst"] {
+  --bg-main: #0f0a1c;
+  --bg-sidebar: #150e27;
+  --bg-card: #1e1338;
+  --bg-card-hover: #261947;
+  --bg-user-bubble: #231640;
+  --bg-input: #170f2c;
+  --bg-pill: #251745;
+  --accent-color: #a855f7;
+  --accent-color-dark: #9333ea;
+  --accent-glow: rgba(168, 85, 247, 0.3);
+  --border-subtle: rgba(168, 85, 247, 0.16);
+  --border-focus: rgba(168, 85, 247, 0.4);
+}
+
+/* 🎨 Theme 4: Oceanic Sapphire */
+[data-theme="sapphire"] {
+  --bg-main: #060e1a;
+  --bg-sidebar: #0a1526;
+  --bg-card: #0f2038;
+  --bg-card-hover: #152c4d;
+  --bg-user-bubble: #122540;
+  --bg-input: #0c1a2e;
+  --bg-pill: #132847;
+  --accent-color: #0ea5e9;
+  --accent-color-dark: #0284c7;
+  --accent-glow: rgba(14, 165, 233, 0.3);
+  --border-subtle: rgba(14, 165, 233, 0.16);
+  --border-focus: rgba(14, 165, 233, 0.4);
+}
+
+/* 🔤 Font Family Options */
+[data-font="cairo"] {
+  --font-sans: 'Cairo', 'Inter', -apple-system, sans-serif !important;
+}
+[data-font="tajawal"] {
+  --font-sans: 'Tajawal', 'Inter', -apple-system, sans-serif !important;
+}
+[data-font="mono"] {
+  --font-sans: 'JetBrains Mono', monospace !important;
+}
+[data-font="inter"] {
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+
+/* 📏 Font Size Options */
+[data-size="sm"] {
+  --chat-font-size: 13.5px !important;
+}
+[data-size="md"] {
+  --chat-font-size: 15px !important;
+}
+[data-size="lg"] {
+  --chat-font-size: 16.5px !important;
+}
+[data-size="xl"] {
+  --chat-font-size: 18px !important;
 }
 
 *, *::before, *::after {
@@ -817,12 +895,12 @@ html, body {
 
 .message-row.ai .msg-content {
   color: var(--text-main);
-  font-family: var(--font-serif);
-  font-size: 16.5px;
+  font-family: var(--font-sans);
+  font-size: var(--chat-font-size, 16px);
   line-height: 1.7;
-  width: 100%;
+  max-width: 100%;
+  overflow-wrap: break-word;
   word-break: break-word;
-  unicode-bidi: plaintext;
 }
 
 .message-row.ai.is-rtl .msg-content,
@@ -2786,4 +2864,106 @@ html, body {
 }
 @media (max-width: 500px) {
   .usage-grid { grid-template-columns: 1fr; }
+}
+
+/* ─── Themes & Font Customization Component Styles ─── */
+.theme-selector-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-top: 10px;
+}
+
+@media (max-width: 480px) {
+  .theme-selector-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.theme-card-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  color: var(--text-main);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  text-align: right;
+  direction: rtl;
+}
+
+.theme-card-btn:hover {
+  border-color: rgba(255, 255, 255, 0.25);
+  background: var(--bg-card-hover);
+  transform: translateY(-1px);
+}
+
+.theme-card-btn.active {
+  border-color: var(--accent-color);
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 0 14px var(--accent-glow, rgba(218, 119, 86, 0.25));
+}
+
+.theme-preview-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 8px rgba(0,0,0,0.5);
+  border: 2px solid rgba(255,255,255,0.2);
+}
+.theme-preview-dot.obsidian { background: radial-gradient(circle, #da7756 30%, #131315 100%); }
+.theme-preview-dot.emerald { background: radial-gradient(circle, #10b981 30%, #06110d 100%); }
+.theme-preview-dot.amethyst { background: radial-gradient(circle, #a855f7 30%, #0f0a1c 100%); }
+.theme-preview-dot.sapphire { background: radial-gradient(circle, #0ea5e9 30%, #060e1a 100%); }
+
+.theme-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.theme-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.theme-sub {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.custom-pill-selector-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.custom-pill-btn {
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.custom-pill-btn:hover {
+  background: var(--bg-card-hover);
+  color: #fff;
+}
+
+.custom-pill-btn.active {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: var(--accent-color);
+  color: var(--text-main);
+  box-shadow: 0 0 10px var(--accent-glow, rgba(218, 119, 86, 0.2));
 }
