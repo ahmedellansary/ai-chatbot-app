@@ -11,13 +11,13 @@
   <meta name="apple-mobile-web-app-title" content="X.v1">
 
   <title>X.v1</title>
-  <link rel="manifest" href="./manifest.json?v=185">
+  <link rel="manifest" href="./manifest.json?v=186">
   <!-- Modular CSS (load before fallback) -->
-  <link rel="stylesheet" href="./css/base.css?v=185">
-  <link rel="stylesheet" href="./css/chat.css?v=185">
-  <link rel="stylesheet" href="./css/input.css?v=185">
-  <link rel="stylesheet" href="./css/modal.css?v=185">
-  <link rel="stylesheet" href="./style.css?v=185">
+  <link rel="stylesheet" href="./css/base.css?v=186">
+  <link rel="stylesheet" href="./css/chat.css?v=186">
+  <link rel="stylesheet" href="./css/input.css?v=186">
+  <link rel="stylesheet" href="./css/modal.css?v=186">
+  <link rel="stylesheet" href="./style.css?v=186">
   <link rel="icon" type="image/png" href="./icons/icon-192.png?v=49">
   <link rel="apple-touch-icon" href="./icons/icon-192.png?v=49">
   <link rel="apple-touch-icon" sizes="512x512" href="./icons/icon-512.png?v=49">
@@ -31,6 +31,28 @@
         document.documentElement.setAttribute('data-font', f);
         document.documentElement.setAttribute('data-size', s);
       } catch(e) {}
+
+      // Auto-bust stale PWA cache on mobile app startup
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.addEventListener('controllerchange', function() {
+          window.location.reload();
+        });
+      }
+      fetch('./version.json?t=' + Date.now()).then(function(r){ return r.json(); }).then(function(d){
+        if (d && d.version) {
+          var localVer = localStorage.getItem('XV1_APP_VERSION');
+          if (localVer !== d.version) {
+            localStorage.setItem('XV1_APP_VERSION', d.version);
+            if (typeof caches !== 'undefined' && caches.keys) {
+              caches.keys().then(function(keys){
+                return Promise.all(keys.map(function(k){ return caches.delete(k); }));
+              }).then(function(){
+                window.location.reload(true);
+              });
+            }
+          }
+        }
+      }).catch(function(){});
     })();
   </script>
 </head>
@@ -69,7 +91,7 @@
         <span>Settings</span>
       </button>
       <div id="app-version-badge" style="font-size:10.5px; color:var(--text-dim); font-family:var(--font-mono); text-align:center; padding:8px 0 2px; border-top:1px solid var(--border-subtle); margin-top:8px; letter-spacing:0.02em;">
-        <span id="app-version-text">v185</span> • <span id="app-last-update">جاري...</span>
+        <span id="app-version-text">v186</span> • <span id="app-last-update">جاري...</span>
       </div>
     </div>
   </aside>
@@ -87,7 +109,7 @@
       </button>
       <div id="chat-top-badge" class="repo-status-badge" style="position:absolute; left:50%; transform:translateX(-50%);">
         <span class="status-dot"></span>
-        <span class="repo-badge-text" id="chat-status-text" style="font-weight:700; letter-spacing:0.02em;">X (V185) —</span>
+        <span class="repo-badge-text" id="chat-status-text" style="font-weight:700; letter-spacing:0.02em;">X (V186) —</span>
       </div>
       <script>
         (function() {
@@ -549,10 +571,10 @@
 </div>
 
 <!-- Consolidated High-Performance Script Bundle -->
-<script src="./config.js?v=185"></script>
-<script src="./auth.js?v=185"></script>
-<script src="./models.js?v=185"></script>
-<script src="./modules/instruction-manager.js?v=185"></script>
-<script src="./app.js?v=185"></script>
+<script src="./config.js?v=186"></script>
+<script src="./auth.js?v=186"></script>
+<script src="./models.js?v=186"></script>
+<script src="./modules/instruction-manager.js?v=186"></script>
+<script src="./app.js?v=186"></script>
 </body>
 </html>
