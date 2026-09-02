@@ -534,16 +534,18 @@
     // If payload is large (> 5000 tokens), prioritizes 128k-200k OpenRouter models so no code is ever truncated.
     // If payload is normal (<= 5000 tokens), uses lightning-fast Groq models (120B / 27B) first.
     buildFallbackCascade(primaryAgent, estimatedTokens = 0) {
+      // اختيارك أولوية قصوى، ثم الباقي من الأقوى للأضعف (حسب ترتيب DEV_AGENTS الأصلي)
+      const remaining = DEV_AGENTS.filter(a => a.id !== primaryAgent.id);
       if (estimatedTokens > 5000) {
-        const largeContextAgents = DEV_AGENTS.filter(a => a.provider === 'openrouter');
-        const groqAgents = DEV_AGENTS.filter(a => a.provider === 'groq');
+        const largeOpen = remaining.filter(a => a.provider === 'openrouter');
+        const groqRest = remaining.filter(a => a.provider === 'groq');
         if (primaryAgent.provider === 'openrouter') {
-          return [primaryAgent, ...largeContextAgents.filter(a => a.id !== primaryAgent.id), ...groqAgents];
+          return [primaryAgent, ...largeOpen, ...groqRest];
         } else {
-          return [primaryAgent, ...largeContextAgents, ...groqAgents.filter(a => a.id !== primaryAgent.id)];
+          return [primaryAgent, ...largeOpen, ...groqRest];
         }
       }
-      return [primaryAgent, ...DEV_AGENTS.filter(a => a.id !== primaryAgent.id)];
+      return [primaryAgent, ...remaining];
     },
 
     async callSingleAgentStream(agent, messages, signal, onChunk) {
@@ -749,8 +751,34 @@
 
           console.warn(`[Agent Fallback] Agent ${currentAgent.name} failed:`, err.message);
 
-          // If Groq rate limit, retry with next Groq key once before falling back
-          if (err.message === 'GROQ_RATE_LIMIT') {
+          // اختيارك أولوية قصوى: حاول مرة ثانية مع نفس الموديل قبل الفولباك (من الأقوى للأضعف)
+          if (i === 0) {
+            try {
+              if (currentAgent.provider === 'groq') DevConfigVault.rotateGroqKey();
+              fullContent = '';
+              const retryMsg = document.querySelector(`[data-id="${aiMsgId}"] .msg-content`);
+              if (retryMsg) retryMsg.innerHTML = `<span style="color:#fbbf24; font-size:12.5px;">🔄 إعادة محاولة مع <strong>${DevUIEngine.escapeHtml(currentAgent.name)}</strong>...</span>`;
+              await new Promise(r => setTimeout(r, 700));
+              await this.callSingleAgentStream(currentAgent, apiMessages, state.abortController.signal, (delta) => {
+                fullContent += delta;
+                const mRow = document.querySelector(`[data-id="${aiMsgId}"]`);
+                if (mRow) {
+                  const hasAr = /[\u0600-\u06FF]/.test(fullContent);
+                  mRow.className = `message-row ai ${hasAr ? 'is-rtl' : 'is-ltr'}`;
+                  const me = mRow.querySelector('.msg-content');
+                  if (me) me.innerHTML = DevUIEngine.parseMarkdown(fullContent);
+                }
+              });
+              succeeded = true;
+              usedAgent = currentAgent;
+              break;
+            } catch (retryErr) {
+              console.warn(`[Primary Retry Failed] ${currentAgent.name}:`, retryErr.message);
+            }
+          }
+
+          // If Groq rate limit on fallback agents, rotate key once
+          if (err.message === 'GROQ_RATE_LIMIT' && i > 0) {
             try {
               fullContent = '';
               await this.callSingleAgentStream(currentAgent, apiMessages, state.abortController.signal, (delta) => {
