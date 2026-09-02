@@ -937,11 +937,32 @@
       return { textForPayload, currentAttachments };
     },
 
-    async buildSystemPrompt(userText = '', attachments = []) {
+    getAdaptiveConfig(tier) {
+      if (tier === 'FAST') return { recentCount: 6, maxBriefingChars: 600 };
+      return { recentCount: 10, maxBriefingChars: 1200 };
+    },
+
+    generateBriefing(conv, tier) {
+      if (!conv || !Array.isArray(conv.messages) || conv.messages.length <= 12) return '';
+      const cfg = this.getAdaptiveConfig(tier);
+      const firstUser = (conv.messages.find(m => m.role === 'user')?.content || '').slice(0, 200).replace(/\n/g, ' ').trim();
+      const recentAi = conv.messages.filter(m => m.role === 'ai').slice(-3).map(m => (m.content || '').slice(0, 180).replace(/\n/g, ' ').trim()).filter(Boolean).join(' | ');
+      const lang = /[\u0600-\u06FF]/.test(firstUser) ? 'العربية' : 'English';
+      const turns = conv.messages.length;
+      const title = conv.title || 'محادثة';
+      let briefing = `📋 بريفنج المحادثة (${title}):\n- الهدف الأساسي: ${firstUser.slice(0, 180)}\n- اللغة والنبرة: ${lang}\n- عدد التبادلات: ${turns}\n- آخر خلاصات: ${recentAi.slice(0, 350)}`;
+      if (briefing.length > cfg.maxBriefingChars) briefing = briefing.slice(0, cfg.maxBriefingChars) + '...';
+      return briefing;
+    },
+
+    async buildSystemPrompt(userText = '', attachments = [], conv = null, tier = 'MID') {
       if (!InstructionManager.files || !InstructionManager.files.length) {
         await InstructionManager.load();
       }
-      return InstructionManager.assemblePrompt(userText, attachments);
+      const basePrompt = InstructionManager.assemblePrompt(userText, attachments);
+      const briefing = this.generateBriefing(conv, tier);
+      if (!briefing) return basePrompt;
+      return `${basePrompt}\n\n═══════════════════════════════════════════════════════════════\n${briefing}\n═══════════════════════════════════════════════════════════════\n(هذه خلاصة ذكية للمحادثة الكاملة — استخدمها كسياق كأنك كنت حاضراً من البداية. آخر ${this.getAdaptiveConfig(tier).recentCount} رسائل التالية هي النص الحرفي الأحدث)`;
     },
 
     async sendMessage(userText) {
@@ -967,10 +988,12 @@
       state.isStreaming = true;
       state.abortController = new AbortController();
 
-      const systemPromptForCall = await this.buildSystemPrompt(textForPayload, currentAttachments);
+      const tier = state.currentMode || 'MID';
+      const systemPromptForCall = await this.buildSystemPrompt(textForPayload, currentAttachments, conv, tier);
+      const cfg = this.getAdaptiveConfig(tier);
       const recentMessages = conv.messages
         .filter(m => m.id !== userMsg.id)
-        .slice(-8);
+        .slice(-cfg.recentCount);
 
       const apiMessages = [
         { role: 'system', content: systemPromptForCall },
