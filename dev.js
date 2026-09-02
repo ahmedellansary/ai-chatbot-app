@@ -1872,9 +1872,28 @@
     DevUIEngine.showToast('تم إلغاء التعديل', 'info');
   };
 
-  window._openFilesModal = function() {
+  window._openFilesModal = async function() {
     $('files-modal')?.classList.remove('hidden');
     window._selectFileForEditing(state.currentEditingFile || 'index.html');
+    const grid = $('all-files-grid');
+    if (!grid) return;
+    grid.innerHTML = '<span style="font-size:11px; color:var(--text-dim);">جاري جلب كل ملفات المشروع...</span>';
+    try {
+      const files = await DevGitHubService.listFiles();
+      const iconFor = (p) => {
+        if (p.endsWith('.html')) return '📄';
+        if (p.endsWith('.css')) return '🎨';
+        if (p.endsWith('.js')) return '⚙️';
+        if (p.endsWith('.json')) return '📋';
+        if (p.endsWith('.txt')) return '🧠';
+        if (p.includes('manifest')) return '📱';
+        if (p.includes('icon')) return '🖼️';
+        return '📄';
+      };
+      grid.innerHTML = files.map(f => `<button class="icon-btn" onclick="window._selectFileForEditing('${f.replace(/'/g, "\\'")}')" title="${f}">${iconFor(f)} ${f}</button>`).join('');
+    } catch (e) {
+      grid.innerHTML = `<span style="font-size:11px; color:var(--accent-rose);">تعذر جلب القائمة: ${e.message}</span>`;
+    }
   };
 
   window._closeFilesModal = function() {
