@@ -6,69 +6,27 @@
   'use strict';
 
   // ─────────────────────────────────────────────────────────────────
-  // 1. CONFIG & CREDENTIALS VAULT
+  // 1. CONFIG & CREDENTIALS VAULT — Unified (config.js)
   // ─────────────────────────────────────────────────────────────────
-  const _k1 = ['sk-or-v1-', 'b82e11595ed064e7', '51bfff2b251a4c54', 'ca0da9bc779786cd', 'baf933e916398e03'].join('');
-  const _k2 = [
-    ['gsk_6ULPilUmj8gf0mbu2ZlX', 'WGdyb3FYkqImKQ7lZPdjGIBERqBKrDhX'].join(''),
-    ['gsk_ECkO3AaJ8sBRAnd7gLMN', 'WGdyb3FYTMBNYK0SxQU6W1CSXEx23koB'].join(''),
-    ['gsk_QiThrmueUOxgPM9xcIwn', 'WGdyb3FYVF37eSLhIgG9RYTXakzxc16l'].join(''),
-    ['gsk_dVkSeAKGE0wQRxqy7OWX', 'WGdyb3FY0vHBuaJxlmnjbaPytbsl4dn8'].join(''),
-    ['gsk_u5bCiNIx7oQaS2XzqiAG', 'WGdyb3FYE6s7QoY0qntIUhBU4D13AhjZ'].join('')
-  ].join(',');
-  const _k3 = ['ghp_Ep2hC2i0', 'LFNVeyCSiUFlMMb0', '5ILzmJ2nzGGN'].join('');
-
-  const DEFAULTS = {
-    OPENROUTER_API_KEY: _k1,
-    GROQ_KEYS: _k2,
-    GITHUB_TOKEN: _k3
-  };
-
-  const ConfigVault = {
-    getOpenRouterKey() {
-      const k = (window.AppConfig && window.AppConfig.getOpenRouterKey && window.AppConfig.getOpenRouterKey()) ||
-                localStorage.getItem('OPENROUTER_API_KEY');
-      return (k && k.trim()) ? k.trim() : DEFAULTS.OPENROUTER_API_KEY;
-    },
-
-    getGroqKeys() {
-      const k = (window.AppConfig && window.AppConfig.getGroqKeys && window.AppConfig.getGroqKeys()) ||
-                localStorage.getItem('GROQ_API_KEY');
-      if (Array.isArray(k) && k.length) return k;
-      if (typeof k === 'string' && k.trim()) return k.split(',').map(s => s.trim()).filter(Boolean);
-      return DEFAULTS.GROQ_KEYS.split(',');
-    },
-
-    _groqIdx: 0,
-    getGroqKey() {
-      const keys = this.getGroqKeys();
-      return keys[this._groqIdx % keys.length];
-    },
-
-    rotateGroqKey() {
-      this._groqIdx++;
-    },
-
-    getGitHubToken() {
-      const k = (window.AppConfig && window.AppConfig.getGitHubToken && window.AppConfig.getGitHubToken()) ||
-                localStorage.getItem('GITHUB_TOKEN');
-      return (k && k.trim()) ? k.trim() : DEFAULTS.GITHUB_TOKEN;
-    },
-
-    getGitHubHeaders() {
-      return {
-        'Authorization': `Bearer ${this.getGitHubToken()}`,
-        'Accept': 'application/vnd.github.v3+json',
-        'Content-Type': 'application/json',
-        'User-Agent': 'X.v1-ChatBot-App'
-      };
-    }
-  };
-
-  const GITHUB_USER   = 'ahmedellansary';
-  const GITHUB_REPO   = 'ai-chatbot-app';
-  const GITHUB_BRANCH = 'main';
-  const GITHUB_API    = 'https://api.github.com';
+  // Single Source of Truth — loaded from config.js before this file.
+  // Fallback only if config.js fails to load (preserves original behavior).
+  const ConfigVault = window.ConfigVault || window.DevConfigVault || window.OpsConfig || (() => {
+    const _k1f = ['sk-or-v1-', 'b82e11595ed064e7', '51bfff2b251a4c54', 'ca0da9bc779786cd', 'baf933e916398e03'].join('');
+    const _k2f = [['gsk_6ULPilUmj8gf0mbu2ZlX', 'WGdyb3FYkqImKQ7lZPdjGIBERqBKrDhX'].join(''), ['gsk_ECkO3AaJ8sBRAnd7gLMN', 'WGdyb3FYTMBNYK0SxQU6W1CSXEx23koB'].join(''), ['gsk_QiThrmueUOxgPM9xcIwn', 'WGdyb3FYVF37eSLhIgG9RYTXakzxc16l'].join(''), ['gsk_dVkSeAKGE0wQRxqy7OWX', 'WGdyb3FY0vHBuaJxlmnjbaPytbsl4dn8'].join(''), ['gsk_u5bCiNIx7oQaS2XzqiAG', 'WGdyb3FYE6s7QoY0qntIUhBU4D13AhjZ'].join('')].join(',');
+    const _k3f = ['ghp_Ep2hC2i0', 'LFNVeyCSiUFlMMb0', '5ILzmJ2nzGGN'].join('');
+    return {
+      getOpenRouterKey() { const k = localStorage.getItem('OPENROUTER_API_KEY'); return (k && k.trim()) ? k.trim() : _k1f; },
+      getGroqKeys() { const k = localStorage.getItem('GROQ_API_KEY'); if (k && k.trim()) return k.split(',').map(s=>s.trim()).filter(Boolean); return _k2f.split(','); },
+      _groqIdx: 0, getGroqKey() { const ks=this.getGroqKeys(); return ks[this._groqIdx%ks.length]; }, rotateGroqKey(){ this._groqIdx++; },
+      getGitHubToken(){ const k=localStorage.getItem('GITHUB_TOKEN'); return (k&&k.trim())?k.trim():_k3f; },
+      getGitHubHeaders(){ return {'Authorization':`Bearer ${this.getGitHubToken()}`,'Accept':'application/vnd.github.v3+json','Content-Type':'application/json','User-Agent':'X.v1-ChatBot-App'}; },
+      getGithubToken(){ return this.getGitHubToken(); }, getHeaders(){ return this.getGitHubHeaders(); }, getGHHeaders(){ return this.getGitHubHeaders(); }
+    };
+  })();
+  const GITHUB_USER   = window.GITHUB_USER   || 'ahmedellansary';
+  const GITHUB_REPO   = window.GITHUB_REPO   || 'ai-chatbot-app';
+  const GITHUB_BRANCH = window.GITHUB_BRANCH || 'main';
+  const GITHUB_API    = window.GITHUB_API    || 'https://api.github.com';
 
   // ── Usage Tracker (Real + Tracked, Auto) ──
   const UsageTracker = {
@@ -116,142 +74,21 @@
   };
 
   // ─────────────────────────────────────────────────────────────────
-  // 2. AUTHENTICATION & SECURITY (AuthManager)
+  // 2. AUTHENTICATION & SECURITY — Unified (auth.js)
   // ─────────────────────────────────────────────────────────────────
-  const MASTER_AUTH_RECORD = 'd34a56498cc5f912d1f55cefd6382af6:c000fd79842150a9fdb7b3d30ed0f964652ad5ba078beb7b7f9c47a523a16595';
+  // Single Source of Truth — loaded from auth.js before this file.
+  const MASTER_AUTH_RECORD = window.MASTER_AUTH_RECORD || 'd34a56498cc5f912d1f55cefd6382af6:c000fd79842150a9fdb7b3d30ed0f964652ad5ba078beb7b7f9c47a523a16595';
+  const AuthManager = window.AuthManager || (window.createAuthManager ? window.createAuthManager({
+    storageKey: 'xv1_authenticated',
+    previewFlag: '__IS_DEV_PREVIEW',
+    legacyKeys: ['nytron_app_unlocked', 'claude_app_unlocked', 'owner_unlocked'],
+    gateId: 'app-lock-gate',
+    formId: 'lock-gate-form',
+    inputId: 'gate-pin-input',
+    buttonId: 'gate-unlock-btn'
+  }) : null);
 
-  const AuthManager = {
-    async hashWithSalt(password, salt) {
-      const encoder = new TextEncoder();
-      const data = encoder.encode(`${salt}:${password}`);
-      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-    },
-
-    async verify(password) {
-      if (!password) return false;
-      const cleanPass = password.trim();
-      if (cleanPass === 'A7med011@@') return true;
-      try {
-        if (!MASTER_AUTH_RECORD || !MASTER_AUTH_RECORD.includes(':')) return false;
-        const [salt, expectedHash] = MASTER_AUTH_RECORD.split(':');
-        const computedHash = await this.hashWithSalt(cleanPass, salt);
-        return computedHash === expectedHash;
-      } catch (e) {
-        return false;
-      }
-    },
-
-    isUnlocked() {
-      if (typeof window !== 'undefined' && window.__IS_DEV_PREVIEW === true) {
-        return true;
-      }
-      try {
-        return sessionStorage.getItem('xv1_authenticated') === 'true' ||
-               localStorage.getItem('owner_unlocked') === '1' ||
-               localStorage.getItem('nytron_app_unlocked') === '1';
-      } catch {
-        return false;
-      }
-    },
-
-    unlock() {
-      sessionStorage.setItem('xv1_authenticated', 'true');
-      localStorage.removeItem('nytron_app_unlocked');
-      localStorage.removeItem('claude_app_unlocked');
-      localStorage.removeItem('owner_unlocked');
-    },
-
-    lock() {
-      sessionStorage.removeItem('xv1_authenticated');
-      localStorage.removeItem('nytron_app_unlocked');
-      localStorage.removeItem('owner_unlocked');
-      this.setupGate();
-    },
-
-    setupGate() {
-      const gate = $('app-lock-gate');
-      const form = $('lock-gate-form');
-      const pinInput = $('gate-pin-input');
-      if (!gate) return;
-
-      if (!this.isUnlocked()) {
-        gate.classList.remove('hidden');
-        if (pinInput) {
-          pinInput.value = '';
-          setTimeout(() => pinInput.focus(), 150);
-        }
-      } else {
-        gate.classList.add('hidden');
-      }
-
-      const unlockBtn = $('gate-unlock-btn');
-
-      let isVerifying = false;
-      const handleGateSubmit = async () => {
-        if (isVerifying) return;
-        const password = pinInput ? pinInput.value.trim() : '';
-        if (!password) {
-          MessageRenderer.showToast('يرجى كتابة كلمة السر', 'warning');
-          return;
-        }
-
-        isVerifying = true;
-        if (unlockBtn) unlockBtn.innerHTML = '<span>جاري التحقق...</span> <span>⏳</span>';
-        try {
-          const isValid = await this.verify(password);
-          if (isValid) {
-            this.unlock();
-            gate.classList.add('hidden');
-          } else {
-            MessageRenderer.showToast('❌ كلمة السر غير صحيحة!', 'error');
-            if (pinInput) {
-              pinInput.value = '';
-              pinInput.style.borderColor = 'var(--error)';
-              setTimeout(() => pinInput.style.borderColor = '', 1000);
-            }
-          }
-        } finally {
-          isVerifying = false;
-          if (unlockBtn) unlockBtn.innerHTML = '<span>Unlock Workspace</span> <span>🔓</span>';
-        }
-      };
-
-      if (form) {
-        form.onsubmit = (e) => {
-          e.preventDefault();
-          handleGateSubmit();
-        };
-      }
-
-      if (unlockBtn) {
-        unlockBtn.onclick = (e) => {
-          e.preventDefault();
-          handleGateSubmit();
-        };
-      }
-
-      if (pinInput) {
-        pinInput.onkeydown = (e) => {
-          if (e.key === 'Enter') {
-            e.preventDefault();
-            handleGateSubmit();
-          }
-        };
-      }
-    },
-
-    requireAuth(onSuccess) {
-      if (this.isUnlocked()) {
-        if (typeof onSuccess === 'function') onSuccess();
-        return;
-      }
-      this.setupGate();
-    }
-  };
-
-  // Safe global aliases for compatibility
+  // Safe global aliases for compatibility (preserved — auth.js also defines them)
   function isAppUnlocked() { return AuthManager.isUnlocked(); }
   function isOwnerUnlocked() { return AuthManager.isUnlocked(); }
   function updateOwnerLockUI() {}
@@ -599,144 +436,21 @@
   };
 
   // ─────────────────────────────────────────────────────────────────
-  // 5. GITHUB & SELF-MODIFYING DEV SERVICE (GitHubService)
-  // ─────────────────────────────────────────────────────────────────
-  const GitHubService = {
-    utf8ToBase64(str) {
-      const bytes = new TextEncoder().encode(str);
-      let binary = '';
-      for (let i = 0; i < bytes.byteLength; i++) {
-        binary += String.fromCharCode(bytes[i]);
-      }
-      return btoa(binary);
-    },
-
-    base64ToUtf8(b64) {
-      const binary = atob(b64.replace(/\s/g, ''));
-      const bytes = new Uint8Array(binary.length);
-      for (let i = 0; i < binary.length; i++) {
-        bytes[i] = binary.charCodeAt(i);
-      }
-      return new TextDecoder().decode(bytes);
-    },
-
-    async getFileSHA(path) {
-      try {
-        const res = await fetch(
-          `${GITHUB_API}/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${path}?ref=${GITHUB_BRANCH}&t=${Date.now()}`,
-          { headers: ConfigVault.getGitHubHeaders() }
-        );
-        if (!res.ok) return null;
-        const data = await res.json();
-        return data.sha;
-      } catch {
-        return null;
-      }
-    },
-
-    async uploadFile(path, content, message = 'Update from App') {
-      const sha = await this.getFileSHA(path);
-      const encoded = this.utf8ToBase64(content);
-
-      const body = {
-        message,
-        content: encoded,
-        branch: GITHUB_BRANCH
-      };
-      if (sha) body.sha = sha;
-
-      const res = await fetch(
-        `${GITHUB_API}/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${path}`,
-        {
-          method: 'PUT',
-          headers: ConfigVault.getGitHubHeaders(),
-          body: JSON.stringify(body)
-        }
-      );
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.message || 'فشل رفع الملف إلى GitHub');
-      }
-      return await res.json();
-    },
-
-    async getLatestCommits(limit = 10) {
-      const res = await fetch(
-        `${GITHUB_API}/repos/${GITHUB_USER}/${GITHUB_REPO}/commits?per_page=${limit}&t=${Date.now()}`,
-        { headers: ConfigVault.getGitHubHeaders() }
-      );
-      if (!res.ok) throw new Error('فشل جلب سجل النسخ من GitHub');
-      return await res.json();
-    },
-
-    async rollbackToPreviousCommit() {
-      MessageRenderer.showToast('🔄 جاري البحث عن آخر نسخة مستقرة...', 'info');
-      try {
-        const commits = await this.getLatestCommits(5);
-        if (commits.length < 2) throw new Error('لا توجد نسخ سابقة للاسترجاع');
-
-        const prevCommit = commits[1];
-        const prevSHA = prevCommit.sha;
-
-        MessageRenderer.showToast(`⏪ جاري استرجاع النسخة (${prevSHA.slice(0, 7)})...`, 'info');
-
-        const filesToRestore = ['index.html', 'style.css', 'app.js'];
-        for (const file of filesToRestore) {
-          const fileRes = await fetch(
-            `${GITHUB_API}/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${file}?ref=${prevSHA}`,
-            { headers: ConfigVault.getGitHubHeaders() }
-          );
-          if (fileRes.ok) {
-            const fileData = await fileRes.json();
-            const content = this.base64ToUtf8(fileData.content);
-            await this.uploadFile(file, content, `⏪ Emergency Rollback to ${prevSHA.slice(0, 7)}`);
-          }
-        }
-
-        MessageRenderer.showToast('✅ تم استرجاع النسخة بنجاح! جاري التحديث...', 'success');
-        setTimeout(() => location.reload(), 1500);
-      } catch (e) {
-        MessageRenderer.showToast('❌ خطأ أثناء الاسترجاع: ' + e.message, 'error');
-      }
-    },
-
-    applyRuntimePatch(file, content) {
-      if (!file) return false;
-      try {
-        if (file.endsWith('.css')) {
-          let styleTag = document.getElementById('live-patch-style');
-          if (!styleTag) {
-            styleTag = document.createElement('style');
-            styleTag.id = 'live-patch-style';
-            document.head.appendChild(styleTag);
-          }
-          styleTag.textContent = content;
-          return true;
-        }
-
-        if (file.endsWith('.html') || file === 'index.html') {
-          const parser = new DOMParser();
-          const doc = parser.parseFromString(content, 'text/html');
-          const newApp = doc.getElementById('app');
-          const currentApp = document.getElementById('app');
-          if (newApp && currentApp) {
-            currentApp.innerHTML = newApp.innerHTML;
-            return true;
-          }
-        }
-
-        if (file === 'system_prompt.txt') {
-          state.systemPrompt = content;
-          localStorage.setItem('system_prompt', content);
-          return true;
-        }
-      } catch (e) {
-        console.warn('[Live Patch Failed]', e.message);
-      }
-      return false;
-    }
-  };
+  // 5. GITHUB & SELF-MODIFYING DEV SERVICE — Unified (github.js)
+  // Single Source of Truth — loaded from github.js before this file.
+  const GitHubService = window.GitHubService || window.UnifiedGitHub || window.DevGitHubService || window.OpsGitHubEngine || (() => {
+    // Fallback minimal (preserves original behavior if github.js fails to load)
+    const _fallback = {
+      utf8ToBase64(s) { const b = new TextEncoder().encode(s); let t=''; for(let i=0;i<b.length;i++) t+=String.fromCharCode(b[i]); return btoa(t); },
+      base64ToUtf8(b) { const bin=atob(b.replace(/\s/g,'')); const u=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i); return new TextDecoder().decode(u); },
+      async getFileSHA(p){ try{ const r=await fetch(`${GITHUB_API}/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${p}?ref=${GITHUB_BRANCH}&t=${Date.now()}`,{headers:ConfigVault.getGitHubHeaders()}); if(!r.ok) return null; return (await r.json()).sha; }catch{ return null; } },
+      async uploadFile(p,c,m='Update via X.v1'){ const s=await this.getFileSHA(p); const e=this.utf8ToBase64(c); const b={message:m,content:e,branch:GITHUB_BRANCH}; if(s) b.sha=s; const r=await fetch(`${GITHUB_API}/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${p}`,{method:'PUT',headers:ConfigVault.getGitHubHeaders(),body:JSON.stringify(b)}); if(!r.ok) throw new Error((await r.json().catch(()=>({}))).message||'فشل رفع الملف'); return await r.json(); },
+      async getLatestCommits(l=10){ const r=await fetch(`${GITHUB_API}/repos/${GITHUB_USER}/${GITHUB_REPO}/commits?per_page=${l}&t=${Date.now()}`,{headers:ConfigVault.getGitHubHeaders()}); if(!r.ok) throw new Error('فشل جلب سجل النسخ'); return await r.json(); },
+      async rollbackToPreviousCommit(){ MessageRenderer.showToast('🔄 جاري البحث عن آخر نسخة مستقرة...','info'); try{ const cs=await this.getLatestCommits(5); if(cs.length<2) throw new Error('لا توجد نسخ سابقة'); const p=cs[1]; MessageRenderer.showToast(`⏪ جاري استرجاع النسخة (${p.sha.slice(0,7)})...`,'info'); for(const f of ['index.html','style.css','app.js']){ const fr=await fetch(`${GITHUB_API}/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${f}?ref=${p.sha}`,{headers:ConfigVault.getGitHubHeaders()}); if(fr.ok){ const fd=await fr.json(); await this.uploadFile(f,this.base64ToUtf8(fd.content),`⏪ Emergency Rollback to ${p.sha.slice(0,7)}`); } } MessageRenderer.showToast('✅ تم استرجاع النسخة بنجاح! جاري التحديث...','success'); setTimeout(()=>location.reload(),1500); }catch(e){ MessageRenderer.showToast('❌ خطأ أثناء الاسترجاع: '+e.message,'error'); } },
+      applyRuntimePatch(f,c){ if(!f) return false; try{ if(f.endsWith('.css')){ let t=document.getElementById('live-patch-style'); if(!t){ t=document.createElement('style'); t.id='live-patch-style'; document.head.appendChild(t); } t.textContent=c; return true; } if(f.endsWith('.html')||f==='index.html'){ const d=new DOMParser().parseFromString(c,'text/html'); const n=d.getElementById('app'); const cur=document.getElementById('app'); if(n&&cur){ cur.innerHTML=n.innerHTML; return true; } } if(f==='system_prompt.txt'){ state.systemPrompt=c; try{localStorage.setItem('system_prompt',c);}catch{} return true; } }catch(e){ console.warn('[Live Patch Failed]',e.message); } return false; }
+    };
+    return _fallback;
+  })();
 
   // ─────────────────────────────────────────────────────────────────
   // 6. MARKDOWN & UI MESSAGE RENDERER (MessageRenderer)
