@@ -103,8 +103,22 @@
       <div class="header-right">
         <div class="repo-status-badge">
           <span class="status-dot"></span>
-          <span class="repo-badge-text" id="dev-status-badge-text">Dev (V125) 02-09-2026 5:02AM</span>
+          <span class="repo-badge-text" id="dev-status-badge-text">Dev (V137) 02-09-2026 5:32AM</span>
         </div>
+        <script>
+          (function() {
+            var b = document.getElementById('dev-status-badge-text');
+            var saved = localStorage.getItem('DEV_LAST_SYNC_BADGE');
+            if (saved && b) b.textContent = saved;
+            fetch('./version.json?t=' + Date.now()).then(function(r) { return r.json(); }).then(function(d) {
+              if (d && d.version && d.updated_at && b) {
+                var txt = 'Dev (V' + d.version + ') ' + d.updated_at;
+                b.textContent = txt;
+                localStorage.setItem('DEV_LAST_SYNC_BADGE', txt);
+              }
+            }).catch(function(){});
+          })();
+        </script>
         <button class="icon-btn" id="sidebar-toggle" aria-label="Menu">
           <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none">
             <line x1="4" y1="7" x2="20" y2="7"></line>
