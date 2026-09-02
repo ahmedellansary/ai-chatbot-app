@@ -2540,6 +2540,10 @@
     const savedFont = localStorage.getItem('xv1_font_family') || 'inter';
     const savedSize = localStorage.getItem('xv1_font_size') || 'md';
 
+    window.DevChatEngine = DevChatEngine;
+    window.DevUIEngine = DevUIEngine;
+    window.DevState = DevState;
+
     window._setAppTheme(savedTheme);
     window._setAppFontFamily(savedFont);
     window._setAppFontSize(savedSize);
