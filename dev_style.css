@@ -2204,15 +2204,31 @@ pre code {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 4px 2px;
-  gap: 8px;
+  gap: 12px;
   flex-wrap: wrap;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  padding: 8px 12px;
 }
 
-.active-file-info {
+.active-file-selector-wrap {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  flex: 1;
+  min-width: 240px;
+}
+
+.active-file-label-prefix {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fbbf24;
+  font-family: var(--font-mono);
+  white-space: nowrap;
 }
 
 .active-file-dot {
@@ -2223,9 +2239,24 @@ pre code {
   box-shadow: 0 0 8px rgba(251, 191, 36, 0.8);
 }
 
-.active-file-label {
-  font-weight: 700;
-  color: #fbbf24;
-  font-size: 13px;
+.repo-file-dropdown-select {
+  flex: 1;
+  max-width: 320px;
+  background: #0d0d12;
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  border-radius: 8px;
+  color: #f3f4f6;
+  padding: 7px 12px;
   font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  outline: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.repo-file-dropdown-select:hover,
+.repo-file-dropdown-select:focus {
+  border-color: #fbbf24;
+  box-shadow: 0 0 10px rgba(251, 191, 36, 0.2);
 }
