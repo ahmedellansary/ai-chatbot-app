@@ -75,7 +75,7 @@
         if (stored.includes(',')) return stored.split(/[\n,]+/).map(s=>s.trim()).filter(Boolean);
         return [stored];
       }
-      return [_k1];
+      return _k1.split(',').map(s => s.trim()).filter(Boolean);
     },
     getOpenRouterKey() {
       const keys = this.getOpenRouterKeys();
@@ -132,6 +132,7 @@
   };
 
   // Expose as globals for backward compatibility — all three apps use different names
+  window.UnifiedConfig = UnifiedConfig;
   window.ConfigVault = UnifiedConfig;
   window.DevConfigVault = UnifiedConfig;
   window.OpsConfig = UnifiedConfig;
