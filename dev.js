@@ -1016,6 +1016,11 @@
     const badgeEl = $('dev-status-badge-text');
     if (!badgeEl) return;
 
+    const cachedBadge = localStorage.getItem('DEV_LAST_SYNC_BADGE');
+    if (cachedBadge && badgeEl.textContent.includes('Loading')) {
+      badgeEl.textContent = cachedBadge;
+    }
+
     const formatDateTime = (d) => {
       const pad = (n) => String(n).padStart(2, '0');
       const day = pad(d.getDate());
@@ -1029,7 +1034,7 @@
       return `${day}-${month}-${year} ${hours}:${minutes}${ampm}`;
     };
 
-    let verNum = '121';
+    let verNum = '123';
     try {
       const swRes = await fetch('./sw.js?t=' + Date.now());
       if (swRes.ok) {
@@ -1039,23 +1044,37 @@
       }
     } catch {}
 
+    const repoOwner = 'ahmedellansary';
+    const repoName = 'ai-chatbot-app';
+    const headers = { 'Accept': 'application/vnd.github.v3+json' };
     try {
-      const res = await fetch(`https://api.github.com/repos/${DevConfigVault.githubUser}/${DevConfigVault.githubRepo}/commits?per_page=1`, {
-        headers: DevGitHubService.getHeaders()
+      if (typeof DevGitHubService !== 'undefined' && DevGitHubService.getToken()) {
+        headers['Authorization'] = `Bearer ${DevGitHubService.getToken()}`;
+      }
+    } catch {}
+
+    try {
+      const res = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/commits?per_page=1&t=${Date.now()}`, {
+        headers
       });
       if (res.ok) {
         const commits = await res.json();
         if (commits && commits.length > 0) {
-          const commitDate = new Date(commits[0].commit.committer.date || commits[0].commit.author.date);
-          badgeEl.textContent = `Dev (V${verNum}) ${formatDateTime(commitDate)}`;
+          const rawDate = commits[0].commit.committer.date || commits[0].commit.author.date;
+          const commitDate = new Date(rawDate);
+          const badgeText = `Dev (V${verNum}) ${formatDateTime(commitDate)}`;
+          badgeEl.textContent = badgeText;
+          localStorage.setItem('DEV_LAST_SYNC_BADGE', badgeText);
           return;
         }
       }
     } catch (e) {
-      console.warn('[Version Badge]', e);
+      console.warn('[Dynamic Version Badge]', e);
     }
 
-    badgeEl.textContent = `Dev (V${verNum}) ${formatDateTime(new Date())}`;
+    const fallbackText = `Dev (V${verNum}) ${formatDateTime(new Date())}`;
+    badgeEl.textContent = fallbackText;
+    localStorage.setItem('DEV_LAST_SYNC_BADGE', fallbackText);
   }
 
   // ─────────────────────────────────────────────────────────────────
