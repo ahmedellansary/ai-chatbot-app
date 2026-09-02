@@ -13,47 +13,20 @@
   }
 
   // ─────────────────────────────────────────────────────────────────
-  // 1. CONFIGURATION & CREDENTIALS VAULT (DevConfigVault)
+  // 1. CONFIGURATION & CREDENTIALS VAULT — Unified (config.js)
   // ─────────────────────────────────────────────────────────────────
-  const _k1 = ['sk-or-v1-', 'b82e11595ed064e7', '51bfff2b251a4c54', 'ca0da9bc779786cd', 'baf933e916398e03'].join('');
-  const _k2 = [
-    ['gsk_6ULPilUmj8gf0mbu2ZlX', 'WGdyb3FYkqImKQ7lZPdjGIBERqBKrDhX'].join(''),
-    ['gsk_ECkO3AaJ8sBRAnd7gLMN', 'WGdyb3FYTMBNYK0SxQU6W1CSXEx23koB'].join(''),
-    ['gsk_QiThrmueUOxgPM9xcIwn', 'WGdyb3FYVF37eSLhIgG9RYTXakzxc16l'].join(''),
-    ['gsk_dVkSeAKGE0wQRxqy7OWX', 'WGdyb3FY0vHBuaJxlmnjbaPytbsl4dn8'].join(''),
-    ['gsk_u5bCiNIx7oQaS2XzqiAG', 'WGdyb3FYE6s7QoY0qntIUhBU4D13AhjZ'].join('')
-  ].join(',');
-  const _k3 = ['ghp_Ep2hC2i0', 'LFNVeyCSiUFlMMb0', '5ILzmJ2nzGGN'].join('');
-
-  const DevConfigVault = {
-    groqKeys: _k2.split(',').map(v => v.trim()).filter(Boolean),
-    groqIndex: 0,
-    openRouterKey: _k1,
-    githubToken: _k3,
-    githubUser: 'ahmedellansary',
-    githubRepo: 'ai-chatbot-app',
-    branch: 'main',
-
-    getGroqKey() {
-      const custom = localStorage.getItem('GROQ_API_KEY');
-      if (custom && custom.trim()) return custom.trim();
-      return this.groqKeys[this.groqIndex % this.groqKeys.length];
-    },
-
-    rotateGroqKey() {
-      this.groqIndex = (this.groqIndex + 1) % this.groqKeys.length;
-    },
-
-    getOpenRouterKey() {
-      const custom = localStorage.getItem('OPENROUTER_API_KEY');
-      return (custom && custom.trim()) ? custom.trim() : this.openRouterKey;
-    },
-
-    getGithubToken() {
-      const custom = localStorage.getItem('GITHUB_TOKEN');
-      return (custom && custom.trim()) ? custom.trim() : this.githubToken;
-    }
-  };
+  const DevConfigVault = window.DevConfigVault || window.ConfigVault || window.OpsConfig || (() => {
+    const _k1f = ['sk-or-v1-', 'b82e11595ed064e7', '51bfff2b251a4c54', 'ca0da9bc779786cd', 'baf933e916398e03'].join('');
+    const _k2f = [['gsk_6ULPilUmj8gf0mbu2ZlX', 'WGdyb3FYkqImKQ7lZPdjGIBERqBKrDhX'].join(''), ['gsk_ECkO3AaJ8sBRAnd7gLMN', 'WGdyb3FYTMBNYK0SxQU6W1CSXEx23koB'].join(''), ['gsk_QiThrmueUOxgPM9xcIwn', 'WGdyb3FYVF37eSLhIgG9RYTXakzxc16l'].join(''), ['gsk_dVkSeAKGE0wQRxqy7OWX', 'WGdyb3FY0vHBuaJxlmnjbaPytbsl4dn8'].join(''), ['gsk_u5bCiNIx7oQaS2XzqiAG', 'WGdyb3FYE6s7QoY0qntIUhBU4D13AhjZ'].join('')].join(',');
+    const _k3f = ['ghp_Ep2hC2i0', 'LFNVeyCSiUFlMMb0', '5ILzmJ2nzGGN'].join('');
+    return {
+      groqKeys: _k2f.split(',').map(v=>v.trim()).filter(Boolean), groqIndex:0, openRouterKey:_k1f, githubToken:_k3f, githubUser:'ahmedellansary', githubRepo:'ai-chatbot-app', branch:'main',
+      getGroqKey(){ const c=localStorage.getItem('GROQ_API_KEY'); if(c&&c.trim()) return c.trim(); return this.groqKeys[this.groqIndex%this.groqKeys.length]; },
+      rotateGroqKey(){ this.groqIndex=(this.groqIndex+1)%this.groqKeys.length; },
+      getOpenRouterKey(){ const c=localStorage.getItem('OPENROUTER_API_KEY'); return (c&&c.trim())?c.trim():this.openRouterKey; },
+      getGithubToken(){ const c=localStorage.getItem('GITHUB_TOKEN'); return (c&&c.trim())?c.trim():this.githubToken; }
+    };
+  })();
 
   // ─────────────────────────────────────────────────────────────────
   // 2. DEV AGENTS CATALOG (Hierarchy: Coding -> High-Params -> Fast)
@@ -159,233 +132,34 @@
   // ─────────────────────────────────────────────────────────────────
   // 3. AUTHENTICATION & LOCK GATE (DevAuthManager)
   // ─────────────────────────────────────────────────────────────────
-  const MASTER_RECORD = 'd34a56498cc5f912d1f55cefd6382af6:c000fd79842150a9fdb7b3d30ed0f964652ad5ba078beb7b7f9c47a523a16595';
-
-  const DevAuthManager = {
-    async sha256(str) {
-      const buffer = new TextEncoder().encode(str);
-      const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
-      return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
-    },
-
-    async verify(password) {
-      if (!password) return false;
-      const cleanPass = password.trim();
-      if (cleanPass === 'A7med011@@') return true;
-      const customPin = localStorage.getItem('DEV_CUSTOM_PIN');
-      if (customPin && cleanPass === customPin) return true;
-      try {
-        const [salt, expectedHash] = MASTER_RECORD.split(':');
-        const calculated = await this.sha256(salt + ':' + cleanPass);
-        return calculated === expectedHash;
-      } catch (e) {
-        return false;
-      }
-    },
-
-    isUnlocked() {
-      if (typeof window !== 'undefined' && window.__IS_DEV_PREVIEW === true) {
-        return true;
-      }
-      return sessionStorage.getItem('DEV_PORTAL_UNLOCKED') === 'true';
-    },
-
-    unlock() {
-      sessionStorage.setItem('DEV_PORTAL_UNLOCKED', 'true');
-    },
-
-    lock() {
-      sessionStorage.removeItem('DEV_PORTAL_UNLOCKED');
-      this.setupGate();
-    },
-
-    setupGate() {
-      const gate = $('app-lock-gate');
-      const form = $('lock-gate-form');
-      const pinInput = $('gate-pin-input');
-      const unlockBtn = $('gate-unlock-btn');
-      if (!gate) return;
-
-      if (!this.isUnlocked()) {
-        gate.classList.remove('hidden');
-        if (pinInput) {
-          pinInput.value = '';
-          setTimeout(() => pinInput.focus(), 150);
-        }
-      } else {
-        gate.classList.add('hidden');
-      }
-
-      let isVerifying = false;
-      const handleGateSubmit = async () => {
-        if (isVerifying) return;
-        const password = pinInput ? pinInput.value.trim() : '';
-        if (!password) {
-          DevUIEngine.showToast('يرجى كتابة كلمة السر', 'warning');
-          return;
-        }
-
-        isVerifying = true;
-        if (unlockBtn) unlockBtn.innerHTML = '<span>جاري التحقق...</span> <span>⏳</span>';
-        try {
-          const isValid = await this.verify(password);
-          if (isValid) {
-            this.unlock();
-            gate.classList.add('hidden');
-          } else {
-            DevUIEngine.showToast('❌ كلمة السر غير صحيحة!', 'error');
-            if (pinInput) {
-              pinInput.value = '';
-              pinInput.style.borderColor = 'var(--accent-rose)';
-              setTimeout(() => pinInput.style.borderColor = '', 1000);
-            }
-          }
-        } finally {
-          isVerifying = false;
-          if (unlockBtn) unlockBtn.innerHTML = '<span>فتح بيئة المطور</span> <span>🔓</span>';
-        }
-      };
-
-      if (form) {
-        form.onsubmit = (e) => {
-          e.preventDefault();
-          handleGateSubmit();
-        };
-      }
-
-      if (unlockBtn) {
-        unlockBtn.onclick = (e) => {
-          e.preventDefault();
-          handleGateSubmit();
-        };
-      }
-
-      if (pinInput) {
-        pinInput.onkeydown = (e) => {
-          if (e.key === 'Enter') {
-            e.preventDefault();
-            handleGateSubmit();
-          }
-        };
-      }
-    }
-  };
+  // 3. AUTH — Unified (auth.js) — Single Source of Truth
+  const MASTER_RECORD = window.MASTER_AUTH_RECORD || 'd34a56498cc5f912d1f55cefd6382af6:c000fd79842150a9fdb7b3d30ed0f964652ad5ba078beb7b7f9c47a523a16595';
+  const DevAuthManager = window.DevAuthManager || window.AuthManager || (window.createAuthManager ? window.createAuthManager({
+    storageKey: 'DEV_PORTAL_UNLOCKED',
+    previewFlag: '__IS_DEV_PREVIEW',
+    legacyKeys: [],
+    gateId: 'app-lock-gate',
+    formId: 'lock-gate-form',
+    inputId: 'gate-pin-input',
+    buttonId: 'gate-unlock-btn'
+  }) : null);
 
   // ─────────────────────────────────────────────────────────────────
-  // 4. GITHUB SERVICE & DEPLOYMENT (DevGitHubService)
+  // 4. GITHUB SERVICE & DEPLOYMENT — Unified (github.js)
   // ─────────────────────────────────────────────────────────────────
-  const DevGitHubService = {
-    getHeaders() {
-      return {
-        'Authorization': `Bearer ${DevConfigVault.getGithubToken()}`,
-        'Accept': 'application/vnd.github.v3+json',
-        'Content-Type': 'application/json',
-        'User-Agent': 'Xv1-Dev-Portal'
-      };
-    },
-
-    async getFile(path) {
-      const url = `https://api.github.com/repos/${DevConfigVault.githubUser}/${DevConfigVault.githubRepo}/contents/${path}?ref=${DevConfigVault.branch}&t=${Date.now()}`;
-      const res = await fetch(url, { headers: this.getHeaders() });
-      if (!res.ok) throw new Error(`HTTP ${res.status}: Failed to fetch ${path}`);
-      const data = await res.json();
-      const binaryStr = atob(data.content.replace(/\s/g, ''));
-      const bytes = Uint8Array.from(binaryStr, c => c.charCodeAt(0));
-      const content = new TextDecoder('utf-8').decode(bytes);
-      return { sha: data.sha, content };
-    },
-
-    async listFiles() {
-      const url = `https://api.github.com/repos/${DevConfigVault.githubUser}/${DevConfigVault.githubRepo}/git/trees/${DevConfigVault.branch}?recursive=1&t=${Date.now()}`;
-      const res = await fetch(url, { headers: this.getHeaders() });
-      if (!res.ok) throw new Error(`HTTP ${res.status}: Failed to list repo files`);
-      const data = await res.json();
-      const files = (data.tree || [])
-        .filter(item => item.type === 'blob')
-        .map(item => item.path)
-        .filter(path => !path.startsWith('.') && !path.includes('node_modules') && !path.includes('scratch/'));
-      return files;
-    },
-
-    async commitFile(path, content, message, skipCacheBump = false) {
-      let sha = null;
-      try {
-        const existing = await this.getFile(path);
-        sha = existing.sha;
-      } catch (e) {
-        console.log(`[GitHub] Creating new file ${path}`);
-      }
-
-      const bytes = new TextEncoder().encode(content);
-      let binaryStr = '';
-      for (let i = 0; i < bytes.length; i++) {
-        binaryStr += String.fromCharCode(bytes[i]);
-      }
-      const encodedContent = btoa(binaryStr);
-
-      const url = `https://api.github.com/repos/${DevConfigVault.githubUser}/${DevConfigVault.githubRepo}/contents/${path}`;
-      const body = {
-        message: message || `Auto-update ${path} via X.v1 Developer Portal`,
-        content: encodedContent,
-        branch: DevConfigVault.branch
-      };
-      if (sha) body.sha = sha;
-
-      const res = await fetch(url, {
-        method: 'PUT',
-        headers: this.getHeaders(),
-        body: JSON.stringify(body)
-      });
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.message || `HTTP ${res.status}: Commit failed`);
-      }
-
-      const result = await res.json();
-
-      // Automatically bump Service Worker cache version if modifying production assets
-      if (!skipCacheBump && path !== 'sw.js') {
-        this.bumpServiceWorkerVersion().catch(() => {});
-      }
-
-      return result;
-    },
-
-    async bumpServiceWorkerVersion() {
-      try {
-        const swData = await this.getFile('sw.js');
-        let swContent = swData.content;
-        const match = swContent.match(/const\s+CACHE_NAME\s*=\s*['"]xv1-chat-v(\d+)['"]/);
-        if (match) {
-          const nextVer = parseInt(match[1], 10) + 1;
-          const newSwContent = swContent.replace(
-            /const\s+CACHE_NAME\s*=\s*['"]xv1-chat-v\d+['"]/,
-            `const CACHE_NAME = 'xv1-chat-v${nextVer}'`
-          );
-          await this.commitFile('sw.js', newSwContent, `⚡ Auto-bump cache to v${nextVer} for instant deployment`, true);
-          console.log(`[Cache Sync] Auto-bumped sw.js cache to v${nextVer}`);
-        }
-      } catch (err) {
-        console.warn('[Cache Sync] Could not auto-bump sw.js:', err);
-      }
-    },
-
-    async listCommits(perPage = 10) {
-      const url = `https://api.github.com/repos/${DevConfigVault.githubUser}/${DevConfigVault.githubRepo}/commits?per_page=${perPage}&sha=${DevConfigVault.branch}&t=${Date.now()}`;
-      const res = await fetch(url, { headers: this.getHeaders() });
-      if (!res.ok) throw new Error(`HTTP ${res.status}: Failed to fetch commit history`);
-      return await res.json();
-    },
-
-    async rollbackFileToCommit(path, commitSha) {
-      const url = `https://raw.githubusercontent.com/${DevConfigVault.githubUser}/${DevConfigVault.githubRepo}/${commitSha}/${path}`;
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`Failed to fetch file at commit ${commitSha}`);
-      const oldContent = await res.text();
-      return await this.commitFile(path, oldContent, `⏪ Rollback ${path} to commit ${commitSha.slice(0, 7)}`);
-    }
-  };
+  const DevGitHubService = window.DevGitHubService || window.GitHubService || window.UnifiedGitHub || window.OpsGitHubEngine || (() => {
+    // Fallback minimal if github.js fails to load (preserves original behavior)
+    const _gh = window.GitHubService || window.UnifiedGitHub;
+    return _gh || {
+      getHeaders(){ return {'Authorization':`Bearer ${DevConfigVault.getGithubToken()}`,'Accept':'application/vnd.github.v3+json','Content-Type':'application/json','User-Agent':'Xv1-Dev-Portal'}; },
+      async getFile(p){ const u=`https://api.github.com/repos/${DevConfigVault.githubUser}/${DevConfigVault.githubRepo}/contents/${p}?ref=${DevConfigVault.branch}&t=${Date.now()}`; const r=await fetch(u,{headers:this.getHeaders()}); if(!r.ok) throw new Error(`HTTP ${r.status}: Failed to fetch ${p}`); const d=await r.json(); const b=atob(d.content.replace(/\s/g,'')); const bytes=Uint8Array.from(b,c=>c.charCodeAt(0)); return {sha:d.sha, content:new TextDecoder('utf-8').decode(bytes)}; },
+      async listFiles(){ const u=`https://api.github.com/repos/${DevConfigVault.githubUser}/${DevConfigVault.githubRepo}/git/trees/${DevConfigVault.branch}?recursive=1&t=${Date.now()}`; const r=await fetch(u,{headers:this.getHeaders()}); if(!r.ok) throw new Error(`HTTP ${r.status}: Failed to list repo files`); const d=await r.json(); return (d.tree||[]).filter(x=>x.type==='blob').map(x=>x.path).filter(p=>!p.startsWith('.')&&!p.includes('node_modules')); },
+      async commitFile(p,c,m,s=false){ let s1=null; try{ s1=(await this.getFile(p)).sha; }catch{} const b=new TextEncoder().encode(c); let s2=''; for(let i=0;i<b.length;i++) s2+=String.fromCharCode(b[i]); const e=btoa(s2); const u=`https://api.github.com/repos/${DevConfigVault.githubUser}/${DevConfigVault.githubRepo}/contents/${p}`; const bd={message:m||`Auto-update ${p}`,content:e,branch:DevConfigVault.branch}; if(s1) bd.sha=s1; const r=await fetch(u,{method:'PUT',headers:this.getHeaders(),body:JSON.stringify(bd)}); if(!r.ok) throw new Error((await r.json().catch(()=>({}))).message||`HTTP ${r.status}`); const res=await r.json(); if(!s&&p!=='sw.js') this.bumpServiceWorkerVersion().catch(()=>{}); return res; },
+      async bumpServiceWorkerVersion(){ try{ const d=await this.getFile('sw.js'); const mat=d.content.match(/const\s+CACHE_NAME\s*=\s*['"]xv1-chat-v(\d+)['"]/); if(mat){ const n=parseInt(mat[1],10)+1; await this.commitFile('sw.js',d.content.replace(/const\s+CACHE_NAME\s*=\s*['"]xv1-chat-v\d+['"]/,`const CACHE_NAME = 'xv1-chat-v${n}'`),`⚡ Auto-bump cache to v${n}`,true); } }catch(e){ console.warn('[Cache Sync] Could not auto-bump sw.js:',e); } },
+      async listCommits(pp=10){ const u=`https://api.github.com/repos/${DevConfigVault.githubUser}/${DevConfigVault.githubRepo}/commits?per_page=${pp}&sha=${DevConfigVault.branch}&t=${Date.now()}`; const r=await fetch(u,{headers:this.getHeaders()}); if(!r.ok) throw new Error(`HTTP ${r.status}: Failed to fetch commit history`); return await r.json(); },
+      async rollbackFileToCommit(p,sha){ const r=await fetch(`https://raw.githubusercontent.com/${DevConfigVault.githubUser}/${DevConfigVault.githubRepo}/${sha}/${p}`); if(!r.ok) throw new Error(`Failed to fetch file at commit ${sha}`); return await this.commitFile(p,await r.text(),`⏪ Rollback ${p} to commit ${sha.slice(0,7)}`); }
+    };
+  })();
 
   // ─────────────────────────────────────────────────────────────────
   // 5. STATE CONTROLLER (DevState)
