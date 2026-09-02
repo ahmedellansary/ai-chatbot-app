@@ -228,7 +228,7 @@ async function* chatWithFallback(tier, messages, signal, onModelChange) {
   throw new Error(`كل موديلز ${tier} توقفت مؤقتاً. جرب مرة أخرى أو غيّر الـ Mode.`);
 }
 
-export { chatWithFallback, readStream, MODELS, DEV_MODELS };
+// export { chatWithFallback, readStream, MODELS, DEV_MODELS }; // ESM — disabled for IIFE load (use window.*)
 
 // ── Global exposure for IIFE apps (Phase 2 Refactor) ──
 if (typeof window !== 'undefined') {
