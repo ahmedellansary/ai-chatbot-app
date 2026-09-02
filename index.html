@@ -11,13 +11,13 @@
   <meta name="apple-mobile-web-app-title" content="X.v1">
 
   <title>X.v1</title>
-  <link rel="manifest" href="./manifest.json?v=171">
+  <link rel="manifest" href="./manifest.json?v=172">
   <!-- Modular CSS (load before fallback) -->
-  <link rel="stylesheet" href="./css/base.css?v=171">
-  <link rel="stylesheet" href="./css/chat.css?v=171">
-  <link rel="stylesheet" href="./css/input.css?v=171">
-  <link rel="stylesheet" href="./css/modal.css?v=171">
-  <link rel="stylesheet" href="./style.css?v=171">
+  <link rel="stylesheet" href="./css/base.css?v=172">
+  <link rel="stylesheet" href="./css/chat.css?v=172">
+  <link rel="stylesheet" href="./css/input.css?v=172">
+  <link rel="stylesheet" href="./css/modal.css?v=172">
+  <link rel="stylesheet" href="./style.css?v=172">
   <link rel="icon" type="image/png" href="./icons/icon-192.png?v=49">
   <link rel="apple-touch-icon" href="./icons/icon-192.png?v=49">
   <link rel="apple-touch-icon" sizes="512x512" href="./icons/icon-512.png?v=49">
@@ -69,7 +69,7 @@
         <span>Settings</span>
       </button>
       <div id="app-version-badge" style="font-size:10.5px; color:var(--text-dim); font-family:var(--font-mono); text-align:center; padding:8px 0 2px; border-top:1px solid var(--border-subtle); margin-top:8px; letter-spacing:0.02em;">
-        <span id="app-version-text">v171</span> • <span id="app-last-update">جاري...</span>
+        <span id="app-version-text">v172</span> • <span id="app-last-update">جاري...</span>
       </div>
     </div>
   </aside>
@@ -87,7 +87,7 @@
       </button>
       <div id="chat-top-badge" class="repo-status-badge" style="position:absolute; left:50%; transform:translateX(-50%);">
         <span class="status-dot"></span>
-        <span class="repo-badge-text" id="chat-status-text" style="font-weight:700; letter-spacing:0.02em;">X (V171) —</span>
+        <span class="repo-badge-text" id="chat-status-text" style="font-weight:700; letter-spacing:0.02em;">X (V172) —</span>
       </div>
       <script>
         (function() {
@@ -327,11 +327,6 @@
 
         <!-- ═══ Tab 1: Themes ═══ -->
         <div id="settings-tab-themes" class="settings-tab-pane active">
-          <div style="font-weight: 600; font-size: 13.5px; color: #fff; margin-bottom: 2px;">
-            <span>🎨</span> <span>Theme</span>
-          </div>
-          <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">Applied instantly.</p>
-          
           <div class="theme-selector-grid">
             <button type="button" class="theme-card-btn active" data-theme="obsidian" onclick="window._setAppTheme('obsidian')">
               <div class="theme-preview-dot obsidian"></div>
@@ -366,11 +361,6 @@
 
         <!-- ═══ Tab 2: Fonts ═══ -->
         <div id="settings-tab-typography" class="settings-tab-pane hidden">
-          <div style="font-weight: 600; font-size: 13.5px; color: #fff; margin-bottom: 2px;">
-            <span>🔤</span> <span>Fonts</span>
-          </div>
-          <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">Adjust for readability.</p>
-
           <div style="display: flex; flex-direction: column; gap: 14px;">
             <!-- Font Family -->
             <div>
@@ -407,8 +397,7 @@
         <!-- ═══ Tab 3: Instruction Files Manager ═══ -->
         <div id="settings-tab-instructions" class="settings-tab-pane hidden">
           <div class="inst-manager-topbar">
-            <p class="settings-section-desc" style="margin:0;">Modular instruction files auto-triggered based on conversation context.</p>
-            <div class="inst-topbar-actions">
+            <div class="inst-topbar-actions" style="margin-bottom: 8px;">
               <button class="settings-action-btn" onclick="window._addNewInstructionFile()"><span>+</span> Add New File</button>
               <button class="settings-action-btn" onclick="window._resetDefaultInstructionFiles()">Reset Default</button>
             </div>
@@ -590,17 +579,17 @@
 </div>
 
 <!-- Unified Application Script Bundle (Phase 3 Refactor) -->
-<script src="./config.js?v=171"></script>
-<script src="./auth.js?v=171"></script>
-<script src="./github.js?v=171"></script>
-<script src="./models.js?v=171"></script>
-<script src="./ui-helpers.js?v=171"></script>
-<script src="./modules/usage-tracker.js?v=171"></script>
-<script src="./modules/message-renderer.js?v=171"></script>
-<script src="./modules/instruction-manager.js?v=171"></script>
-<script src="./modules/state-controller.js?v=171"></script>
-<script src="./modules/chat-engine.js?v=171"></script>
-<script src="./modules/ui-engine.js?v=171"></script>
-<script src="./app.js?v=171"></script>
+<script src="./config.js?v=172"></script>
+<script src="./auth.js?v=172"></script>
+<script src="./github.js?v=172"></script>
+<script src="./models.js?v=172"></script>
+<script src="./ui-helpers.js?v=172"></script>
+<script src="./modules/usage-tracker.js?v=172"></script>
+<script src="./modules/message-renderer.js?v=172"></script>
+<script src="./modules/instruction-manager.js?v=172"></script>
+<script src="./modules/state-controller.js?v=172"></script>
+<script src="./modules/chat-engine.js?v=172"></script>
+<script src="./modules/ui-engine.js?v=172"></script>
+<script src="./app.js?v=172"></script>
 </body>
 </html>
