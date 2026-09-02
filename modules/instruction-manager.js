@@ -9,7 +9,7 @@
     activeEditingId: null,
 
     async load() {
-      const CURRENT_VERSION = 'v179_json_strict';
+      const CURRENT_VERSION = 'v189_chat_isolated';
       try {
         const storedVer = localStorage.getItem('instruction_files_version');
         const custom = localStorage.getItem('instruction_files');
