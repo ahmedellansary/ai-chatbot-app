@@ -70,18 +70,22 @@
       return `<div class="roundtable-persona synthesizer"><div class="roundtable-badge"><span>🎯</span> <span>المنسق التنفيذي (Synthesizer)</span></div><div class="roundtable-body">${content.trim()}</div></div>`;
     });
     html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
-    html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
-    html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
-    html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
+    html = html.replace(/^### (.+)$/gm, '\n\n<h3>$1</h3>\n\n');
+    html = html.replace(/^## (.+)$/gm, '\n\n<h2>$1</h2>\n\n');
+    html = html.replace(/^# (.+)$/gm, '\n\n<h1>$1</h1>\n\n');
     html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
     html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
     html = html.replace(/^[\*\-] (.+)$/gm, '<li>$1</li>');
-    html = html.replace(/(<li>.*<\/li>\n?)+/g, m => `<ul>${m}</ul>`);
-    html = html.replace(/\n\n/g, '</p><p>');
-    html = html.replace(/\n/g, '<br>');
-    html = `<p>${html}</p>`;
-    html = html.replace(/<p><\/p>/g, '');
-    return html;
+    html = html.replace(/(<li>.*<\/li>\n?)+/g, m => `\n\n<ul>${m}</ul>\n\n`);
+
+    const blocks = html.split(/\n\s*\n/).map(b => b.trim()).filter(Boolean);
+    const formattedBlocks = blocks.map(block => {
+      if (/^<(h[1-6]|ul|ol|div|pre|blockquote)/i.test(block)) {
+        return block;
+      }
+      return `<p>${block.replace(/\n/g, '<br>')}</p>`;
+    });
+    return formattedBlocks.join('\n');
   }
 
   function createMessageRow(msg) {
