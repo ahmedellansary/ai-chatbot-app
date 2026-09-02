@@ -280,41 +280,41 @@
       <div class="custom-modal-header">
         <div class="modal-header-title">
           <span>⚙️</span>
-          <span>الإعدادات وتخصيص التطبيق</span>
+          <span>Settings</span>
         </div>
         <div class="modal-header-actions">
           <button class="icon-btn" onclick="window._closeSettingsModal()" title="Close">✕</button>
         </div>
       </div>
 
-      <div class="settings-modal-body" style="padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+      <div class="settings-modal-body">
         
-        <!-- ═══ Settings Navigation Tabs ═══ -->
+        <!-- ═══ Settings Navigation Tabs (vertical) ═══ -->
         <div class="settings-modal-tabs-bar">
           <button type="button" class="settings-tab-btn active" data-tab="themes" onclick="window._switchSettingsTab('themes')">
             <span>🎨</span>
-            <span>المظهر والثيم</span>
+            <span>Theme</span>
           </button>
           <button type="button" class="settings-tab-btn" data-tab="typography" onclick="window._switchSettingsTab('typography')">
             <span>🔤</span>
-            <span>نوع وحجم الخط</span>
+            <span>Fonts</span>
           </button>
           <button type="button" class="settings-tab-btn" data-tab="instructions" onclick="window._switchSettingsTab('instructions')">
             <span>📁</span>
-            <span>ملفات التعليمات</span>
+            <span>Instructions</span>
           </button>
           <button type="button" class="settings-tab-btn" data-tab="system" onclick="window._switchSettingsTab('system')">
             <span>⚙️</span>
-            <span>النظام والكاش</span>
+            <span>System</span>
           </button>
         </div>
 
-        <!-- ═══ Tab 1: Themes & Appearance ═══ -->
+        <!-- ═══ Tab 1: Themes ═══ -->
         <div id="settings-tab-themes" class="settings-tab-pane active">
           <div style="font-weight: 600; font-size: 13.5px; color: #fff; margin-bottom: 2px;">
-            <span>🎨</span> <span>اختر الثيم اللوني المفضل للتطبيق:</span>
+            <span>🎨</span> <span>Theme</span>
           </div>
-          <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">يتم تطبيق الثيم فورياً وحفظه تلقائياً في المتصفح.</p>
+          <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">Applied instantly.</p>
           
           <div class="theme-selector-grid">
             <button type="button" class="theme-card-btn active" data-theme="obsidian" onclick="window._setAppTheme('obsidian')">
@@ -348,12 +348,12 @@
           </div>
         </div>
 
-        <!-- ═══ Tab 2: Typography & Sizes ═══ -->
+        <!-- ═══ Tab 2: Fonts ═══ -->
         <div id="settings-tab-typography" class="settings-tab-pane hidden">
           <div style="font-weight: 600; font-size: 13.5px; color: #fff; margin-bottom: 2px;">
-            <span>🔤</span> <span>تخصيص نوع الخط وحجم الرسائل:</span>
+            <span>🔤</span> <span>Fonts</span>
           </div>
-          <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">اضبط الخط المناسب لتجربة قراءة سلسة ومريحة.</p>
+          <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">Adjust for readability.</p>
 
           <div style="display: flex; flex-direction: column; gap: 14px;">
             <!-- Font Family -->
