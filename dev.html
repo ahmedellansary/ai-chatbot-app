@@ -99,7 +99,7 @@
       <div class="header-right">
         <div class="repo-status-badge">
           <span class="status-dot"></span>
-          <span class="repo-badge-text" id="dev-status-badge-text">Dev (V146) 02-09-2026 5:54AM</span>
+          <span class="repo-badge-text" id="dev-status-badge-text">Dev (V147) 02-09-2026 5:56AM</span>
         </div>
         <script>
           (function() {
@@ -326,15 +326,30 @@
         </div>
         <button class="icon-btn" onclick="window._closeDevSettingsModal()">✕</button>
       </div>
-      <div class="modal-body" style="gap: 16px;">
+      <div class="modal-body" style="gap: 12px;">
 
-        <!-- 🎨 Appearance & Themes Customization Section -->
-        <div class="settings-section" style="padding-bottom: 12px; border-bottom: 1px solid var(--border-subtle);">
-          <div style="font-weight: 600; font-size: 13.5px; color: #fff; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+        <!-- ═══ Settings Navigation Tabs ═══ -->
+        <div class="settings-modal-tabs-bar">
+          <button type="button" class="settings-tab-btn active" data-tab="themes" onclick="window._switchDevSettingsTab('themes')">
             <span>🎨</span>
-            <span>الثيم والمظهر (Theme & Colors)</span>
+            <span>المظهر والثيم</span>
+          </button>
+          <button type="button" class="settings-tab-btn" data-tab="typography" onclick="window._switchDevSettingsTab('typography')">
+            <span>🔤</span>
+            <span>نوع وحجم الخط</span>
+          </button>
+          <button type="button" class="settings-tab-btn" data-tab="prompt" onclick="window._switchDevSettingsTab('prompt')">
+            <span>🧠</span>
+            <span>تعليمات المطور</span>
+          </button>
+        </div>
+
+        <!-- ═══ Tab 1: Themes & Appearance ═══ -->
+        <div id="dev-tab-themes" class="settings-tab-pane active">
+          <div style="font-weight: 600; font-size: 13.5px; color: #fff; margin-bottom: 2px;">
+            <span>🎨</span> <span>اختر الثيم اللوني للاستوديو:</span>
           </div>
-          <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px;">اختر ثيم ألوان الاستوديو المفضل لك للتطبيق فورياً.</p>
+          <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">يتم تطبيق الثيم فورياً وحفظه تلقائياً في المتصفح.</p>
           
           <div class="theme-selector-grid">
             <button type="button" class="theme-card-btn active" data-theme="obsidian" onclick="window._setAppTheme('obsidian')">
@@ -368,29 +383,28 @@
           </div>
         </div>
 
-        <!-- 🔤 Typography & Font Family Section -->
-        <div class="settings-section" style="padding-bottom: 12px; border-bottom: 1px solid var(--border-subtle);">
-          <div style="font-weight: 600; font-size: 13.5px; color: #fff; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
-            <span>🔤</span>
-            <span>نوع وحجم الخط (Typography & Size)</span>
+        <!-- ═══ Tab 2: Typography & Sizes ═══ -->
+        <div id="dev-tab-typography" class="settings-tab-pane hidden">
+          <div style="font-weight: 600; font-size: 13.5px; color: #fff; margin-bottom: 2px;">
+            <span>🔤</span> <span>تخصيص الخطوط وحجم العرض:</span>
           </div>
-          <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px;">اضبط نوع الخط وحجمه لتجربة قراءة مريحة.</p>
+          <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">اختر نوع الخط وحجمه المناسب للقراءة وكتابة الأكواد.</p>
 
-          <div style="display: flex; flex-direction: column; gap: 12px;">
-            <!-- Font Family Selector -->
+          <div style="display: flex; flex-direction: column; gap: 14px;">
+            <!-- Font Family -->
             <div>
-              <label style="font-size: 12px; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 5px;">نوع الخط (Font Family):</label>
+              <label style="font-size: 12.5px; font-weight: 600; color: #e5e7eb; display: block; margin-bottom: 6px;">نوع الخط (Font Family):</label>
               <div class="custom-pill-selector-row">
                 <button type="button" class="custom-pill-btn active" data-font="inter" onclick="window._setAppFontFamily('inter')">Modern Inter</button>
                 <button type="button" class="custom-pill-btn" data-font="cairo" onclick="window._setAppFontFamily('cairo')">Cairo (عربي أنيق)</button>
                 <button type="button" class="custom-pill-btn" data-font="tajawal" onclick="window._setAppFontFamily('tajawal')">Tajawal (تجوّل)</button>
-                <button type="button" class="custom-pill-btn" data-font="mono" onclick="window._setAppFontFamily('mono')">Code Mono</button>
+                <button type="button" class="custom-pill-btn" data-font="mono" onclick="window._setAppFontFamily('mono')">Code Mono (مطورين)</button>
               </div>
             </div>
 
-            <!-- Font Size Selector -->
+            <!-- Font Size -->
             <div>
-              <label style="font-size: 12px; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 5px;">حجم الخط (Font Size):</label>
+              <label style="font-size: 12.5px; font-weight: 600; color: #e5e7eb; display: block; margin-bottom: 6px;">حجم الخط (Font Size):</label>
               <div class="custom-pill-selector-row">
                 <button type="button" class="custom-pill-btn" data-size="sm" onclick="window._setAppFontSize('sm')">صغير (13.5px)</button>
                 <button type="button" class="custom-pill-btn active" data-size="md" onclick="window._setAppFontSize('md')">افتراضي (15px)</button>
@@ -398,16 +412,25 @@
                 <button type="button" class="custom-pill-btn" data-size="xl" onclick="window._setAppFontSize('xl')">عريض (18px)</button>
               </div>
             </div>
+
+            <!-- Live Text Preview Box -->
+            <div class="typography-preview-box">
+              <div style="font-size: 11px; color: var(--text-dim); margin-bottom: 4px; font-weight: 600;">معاينة حية للنص والخط المختار:</div>
+              <div class="typography-preview-text">
+                أهلاً بك في X.v1 Dev Studio — منصة التطوير الذكية والتعديل الحي الفوري للأكواد.
+              </div>
+            </div>
           </div>
         </div>
 
-        <div>
+        <!-- ═══ Tab 3: System Prompt / Instructions ═══ -->
+        <div id="dev-tab-prompt" class="settings-tab-pane hidden">
           <div style="display:flex; justify-content:space-between; align-items:center;">
             <span style="font-weight:600; font-size:13.5px; color:#fff;">Developer System Prompt:</span>
-            <button class="icon-btn" onclick="window._resetDefaultDevPrompt()" style="font-size:11.5px;">Reset Default</button>
+            <button class="icon-btn" onclick="window._resetDefaultDevPrompt()" style="font-size:11.5px; padding:4px 8px;">Reset Default</button>
           </div>
-          <p style="font-size:12.5px; color:var(--text-muted); margin-top:2px;">Direct instructions governing the AI Codebase Engineer's behavior and patching rules.</p>
-          <textarea id="dev-prompt-textarea" class="dev-textarea" style="background:#0d0d10; border:1px solid var(--border-subtle); border-radius:10px; padding:12px; min-height:180px; width:100%; margin-top:8px;" rows="7"></textarea>
+          <p style="font-size:12px; color:var(--text-muted); margin-top:2px;">Direct instructions governing the AI Codebase Engineer's behavior and patching rules.</p>
+          <textarea id="dev-prompt-textarea" class="dev-textarea" style="background:#08080b; border:1px solid var(--border-subtle); border-radius:10px; padding:12px; min-height:220px; width:100%; margin-top:6px; font-family:var(--font-mono); font-size:12.5px; line-height:1.5;" rows="9"></textarea>
           <button class="dev-btn-primary" onclick="window._saveDevPrompt()" style="align-self:flex-start; margin-top:8px;">
             <span>💾</span>
             <span>Save Prompt</span>
