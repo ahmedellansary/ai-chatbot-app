@@ -11,13 +11,13 @@
   <meta name="apple-mobile-web-app-title" content="X.v1">
 
   <title>X.v1</title>
-  <link rel="manifest" href="./manifest.json?v=169">
+  <link rel="manifest" href="./manifest.json?v=170">
   <!-- Modular CSS (load before fallback) -->
-  <link rel="stylesheet" href="./css/base.css?v=169">
-  <link rel="stylesheet" href="./css/chat.css?v=169">
-  <link rel="stylesheet" href="./css/input.css?v=169">
-  <link rel="stylesheet" href="./css/modal.css?v=169">
-  <link rel="stylesheet" href="./style.css?v=169">
+  <link rel="stylesheet" href="./css/base.css?v=170">
+  <link rel="stylesheet" href="./css/chat.css?v=170">
+  <link rel="stylesheet" href="./css/input.css?v=170">
+  <link rel="stylesheet" href="./css/modal.css?v=170">
+  <link rel="stylesheet" href="./style.css?v=170">
   <link rel="icon" type="image/png" href="./icons/icon-192.png?v=49">
   <link rel="apple-touch-icon" href="./icons/icon-192.png?v=49">
   <link rel="apple-touch-icon" sizes="512x512" href="./icons/icon-512.png?v=49">
@@ -69,7 +69,7 @@
         <span>Settings</span>
       </button>
       <div id="app-version-badge" style="font-size:10.5px; color:var(--text-dim); font-family:var(--font-mono); text-align:center; padding:8px 0 2px; border-top:1px solid var(--border-subtle); margin-top:8px; letter-spacing:0.02em;">
-        <span id="app-version-text">v169</span> • <span id="app-last-update">جاري...</span>
+        <span id="app-version-text">v170</span> • <span id="app-last-update">جاري...</span>
       </div>
     </div>
   </aside>
@@ -87,7 +87,7 @@
       </button>
       <div id="chat-top-badge" class="repo-status-badge" style="position:absolute; left:50%; transform:translateX(-50%); background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.3); color:#6ee7b7; backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); box-shadow:0 4px 16px rgba(16,185,129,0.15);">
         <span class="status-dot" style="background:#10b981; box-shadow:0 0 8px #10b981; animation:pulseGlow 1.6s infinite;"></span>
-        <span id="chat-status-text" style="font-weight:700; letter-spacing:0.02em;">X (V169) —</span>
+        <span id="chat-status-text" style="font-weight:700; letter-spacing:0.02em;">X (V170) —</span>
       </div>
       <div class="header-right" style="display:flex; align-items:center; gap:6px;">
         <button class="icon-btn" onclick="window._refreshApp()" title="تحديث ومزامنة الصفحة" aria-label="Refresh">
@@ -188,15 +188,12 @@
               <div class="model-dropdown" id="model-dropdown-menu">
                 <button class="dropdown-opt" data-mode="HIGH">
                   <div class="opt-title">HIGH</div>
-                  <div class="opt-desc">Nemotron 550B · MiniMax M3</div>
                 </button>
                 <button class="dropdown-opt active" data-mode="MID">
                   <div class="opt-title">MID</div>
-                  <div class="opt-desc">Nemotron 120B · GPT OSS 120B</div>
                 </button>
                 <button class="dropdown-opt" data-mode="FAST">
                   <div class="opt-title">FAST</div>
-                  <div class="opt-desc">Groq Compound · Qwen 27B</div>
                 </button>
               </div>
             </div>
@@ -453,6 +450,30 @@
 
         <!-- ═══ Tab 4: System & Cache & Usage ═══ -->
         <div id="settings-tab-system" class="settings-tab-pane hidden">
+          <!-- API Keys Section (Multi-Key Rotation, Tier-Isolated) -->
+          <div class="settings-section" id="api-keys-section">
+            <div class="settings-section-title">
+              <span>🔑</span>
+              <span>API Keys (Multi-Key, Tier-Isolated)</span>
+            </div>
+            <p class="settings-section-desc" style="font-size:11.5px;">أدخل أكثر من مفتاح لنفس الشركة مفصولة بفاصلة — تتم المزامنة أوتو، كل مستوى HIGH/MID/FAST يستخدم موديلزه من الأقوى للأضعف بدون تبديل بين المستويات.</p>
+            <div style="display:flex; flex-direction:column; gap:10px; margin-top:8px;">
+              <div>
+                <label style="font-size:11.5px; font-weight:600; color:var(--text-muted);">OpenRouter Keys (comma separated)</label>
+                <input type="password" id="input-openrouter-keys" class="settings-textarea" style="min-height:auto; height:42px; font-family:var(--font-mono); font-size:12px;" placeholder="sk-or-v1-..., sk-or-v1-...">
+              </div>
+              <div>
+                <label style="font-size:11.5px; font-weight:600; color:var(--text-muted);">Groq Keys (comma separated)</label>
+                <input type="password" id="input-groq-keys" class="settings-textarea" style="min-height:auto; height:42px; font-family:var(--font-mono); font-size:12px;" placeholder="gsk_..., gsk_...">
+              </div>
+              <div style="display:flex; gap:8px;">
+                <button class="settings-save-btn" onclick="window._saveApiKeys()" style="flex:1;">💾 حفظ المفاتيح</button>
+                <button class="settings-action-btn" onclick="window._clearApiKeys()" style="flex:0;">مسح</button>
+              </div>
+              <div id="api-keys-status" style="font-size:11px; color:var(--text-dim); min-height:16px;"></div>
+            </div>
+          </div>
+
           <!-- Usage Section (Auto — Real Data) -->
           <div class="settings-section usage-section" id="usage-section">
             <div class="settings-section-title">
@@ -555,17 +576,17 @@
 </div>
 
 <!-- Unified Application Script Bundle (Phase 3 Refactor) -->
-<script src="./config.js?v=169"></script>
-<script src="./auth.js?v=169"></script>
-<script src="./github.js?v=169"></script>
-<script src="./models.js?v=169"></script>
-<script src="./ui-helpers.js?v=169"></script>
-<script src="./modules/usage-tracker.js?v=169"></script>
-<script src="./modules/message-renderer.js?v=169"></script>
-<script src="./modules/instruction-manager.js?v=169"></script>
-<script src="./modules/state-controller.js?v=169"></script>
-<script src="./modules/chat-engine.js?v=169"></script>
-<script src="./modules/ui-engine.js?v=169"></script>
-<script src="./app.js?v=169"></script>
+<script src="./config.js?v=170"></script>
+<script src="./auth.js?v=170"></script>
+<script src="./github.js?v=170"></script>
+<script src="./models.js?v=170"></script>
+<script src="./ui-helpers.js?v=170"></script>
+<script src="./modules/usage-tracker.js?v=170"></script>
+<script src="./modules/message-renderer.js?v=170"></script>
+<script src="./modules/instruction-manager.js?v=170"></script>
+<script src="./modules/state-controller.js?v=170"></script>
+<script src="./modules/chat-engine.js?v=170"></script>
+<script src="./modules/ui-engine.js?v=170"></script>
+<script src="./app.js?v=170"></script>
 </body>
 </html>
