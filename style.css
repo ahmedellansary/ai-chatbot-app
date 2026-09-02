@@ -1677,17 +1677,18 @@ html, body {
   margin-top: 8px;
 }
 
-/* ─── Toast Notifications ─── */
+/* ─── Toast Notifications (above input bar, not overlapping) ─── */
 #toast-container {
   position: fixed;
-  bottom: 24px;
+  bottom: calc(86px + env(safe-area-inset-bottom, 0px));
   left: 50%;
   transform: translateX(-50%);
   display: flex;
   flex-direction: column;
   gap: 8px;
-  z-index: 200;
+  z-index: 250;
   pointer-events: none;
+  max-width: calc(100vw - 24px);
 }
 
 .toast {
@@ -1749,6 +1750,32 @@ html, body {
 
   .chat-textarea {
     font-size: 16px;
+  }
+
+  /* Mobile modal & box visibility — prevent overlap / cutoff */
+  .custom-modal {
+    padding: 12px;
+    align-items: flex-end;
+  }
+  .custom-modal-card,
+  .instructions-manager-card,
+  .settings-card {
+    width: calc(100vw - 16px);
+    max-width: calc(100vw - 16px);
+    height: auto;
+    max-height: 92vh;
+    max-height: 92dvh;
+    margin-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .instruction-files-list {
+    max-height: 38vh;
+  }
+  .instruction-editor-panel {
+    max-height: 42vh;
+    overflow-y: auto;
+  }
+  #toast-container {
+    bottom: calc(92px + env(safe-area-inset-bottom, 0px));
   }
 }
 
