@@ -11,19 +11,38 @@ const _k2 = [
   ['gsk_u5bCiNIx7oQaS2XzqiAG', 'WGdyb3FYE6s7QoY0qntIUhBU4D13AhjZ'].join('')
 ].join(',');
 
+const getOpenRouterKeys = () => {
+  if (typeof window !== 'undefined' && window.ConfigVault && window.ConfigVault.getOpenRouterKeys) return window.ConfigVault.getOpenRouterKeys();
+  const k = (typeof window !== 'undefined' && window.AppConfig && window.AppConfig.getOpenRouterKeys && window.AppConfig.getOpenRouterKeys()) ||
+            (typeof localStorage !== 'undefined' ? (localStorage.getItem('OPENROUTER_API_KEYS') || localStorage.getItem('OPENROUTER_API_KEY')) : null);
+  if (Array.isArray(k) && k.length) return k.map(s => String(s).trim()).filter(Boolean);
+  if (typeof k === 'string' && k.trim()) {
+    const list = k.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+    if (list.length) return list;
+  }
+  return [_k1];
+};
+
+let openRouterKeyIndex = 0;
 const getOpenRouterKey = () => {
   if (typeof window !== 'undefined' && window.ConfigVault && window.ConfigVault.getOpenRouterKey) return window.ConfigVault.getOpenRouterKey();
-  const k = (typeof window !== 'undefined' && window.AppConfig && window.AppConfig.getOpenRouterKey && window.AppConfig.getOpenRouterKey()) ||
-            (typeof localStorage !== 'undefined' ? localStorage.getItem('OPENROUTER_API_KEY') : null);
-  return (k && k.trim()) ? k.trim() : _k1;
+  const keys = getOpenRouterKeys();
+  return keys[openRouterKeyIndex % keys.length];
+};
+const rotateOpenRouterKey = () => {
+  if (typeof window !== 'undefined' && window.ConfigVault && window.ConfigVault.rotateOpenRouterKey) return window.ConfigVault.rotateOpenRouterKey();
+  openRouterKeyIndex++;
 };
 
 const getGroqKeys = () => {
   if (typeof window !== 'undefined' && window.ConfigVault && window.ConfigVault.getGroqKeys) return window.ConfigVault.getGroqKeys();
   const k = (typeof window !== 'undefined' && window.AppConfig && window.AppConfig.getGroqKeys && window.AppConfig.getGroqKeys()) ||
-            (typeof localStorage !== 'undefined' ? localStorage.getItem('GROQ_API_KEY') : null);
-  if (Array.isArray(k) && k.length) return k;
-  if (typeof k === 'string' && k.trim()) return k.split(',').map(s => s.trim()).filter(Boolean);
+            (typeof localStorage !== 'undefined' ? (localStorage.getItem('GROQ_API_KEYS') || localStorage.getItem('GROQ_API_KEY')) : null);
+  if (Array.isArray(k) && k.length) return k.map(s => String(s).trim()).filter(Boolean);
+  if (typeof k === 'string' && k.trim()) {
+    const list = k.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+    if (list.length) return list;
+  }
   return _k2.split(',');
 };
 
@@ -38,7 +57,7 @@ const rotateGroqKey = () => {
   groqKeyIndex++;
 };
 
-// ─── Model Tiers — Unified active model set (matches models.json) ───
+// ─── Model Tiers — Unified active model set (Strictly Isolated, Strongest to Weakest) ───
 const MODELS = {
   HIGH: [
     { id: 'nvidia/nemotron-3-ultra-550b-a55b:free', name: 'Nemotron 3 Ultra 550B', provider: 'openrouter' },
@@ -47,15 +66,15 @@ const MODELS = {
     { id: 'nvidia/nemotron-3-super-120b-a12b:free', name: 'Nemotron 3 Super 120B', provider: 'openrouter' }
   ],
   MID: [
+    { id: 'nvidia/nemotron-3-super-120b-a12b:free', name: 'Nemotron 3 Super 120B', provider: 'openrouter' },
     { id: 'openai/gpt-oss-120b', name: 'GPT OSS 120B', provider: 'groq' },
     { id: 'minimax/minimax-m2.7:free', name: 'MiniMax M2.7', provider: 'openrouter' },
     { id: 'qwen/qwen3.8-27b', name: 'Qwen 3.8 27B', provider: 'groq' },
-    { id: 'openai/gpt-oss-20b', name: 'GPT OSS 20B', provider: 'groq' },
-    { id: 'nvidia/nemotron-3-super-120b-a12b:free', name: 'Nemotron 3 Super 120B', provider: 'openrouter' }
+    { id: 'openai/gpt-oss-20b', name: 'GPT OSS 20B', provider: 'groq' }
   ],
   FAST: [
-    { id: 'groq/compound', name: 'Groq Compound', provider: 'groq' },
     { id: 'qwen/qwen3.8-27b', name: 'Qwen 3.8 27B', provider: 'groq' },
+    { id: 'groq/compound', name: 'Groq Compound', provider: 'groq' },
     { id: 'openai/gpt-oss-20b', name: 'GPT OSS 20B', provider: 'groq' },
     { id: 'groq/compound-mini', name: 'Groq Compound Mini', provider: 'groq' }
   ]
@@ -91,6 +110,11 @@ async function callOpenRouter(model, messages, signal) {
     }),
     signal
   });
+
+  if (response.status === 429) {
+    rotateOpenRouterKey();
+    throw new Error('RATE_LIMIT');
+  }
 
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));
@@ -135,7 +159,6 @@ async function* readStream(response) {
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = '';
-  let tokensEmitted = 0;
 
   try {
     while (true) {
@@ -148,16 +171,7 @@ async function* readStream(response) {
 
       for (const line of lines) {
         const trimmed = line.trim();
-        if (!trimmed) continue;
-        if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
-          try {
-            const obj = JSON.parse(trimmed);
-            if (obj.error) throw new Error(obj.error.message || 'Stream error');
-          } catch (e) {
-            if (e.message && !e.message.includes('JSON')) throw e;
-          }
-        }
-        if (!trimmed.startsWith('data: ')) continue;
+        if (!trimmed || !trimmed.startsWith('data: ')) continue;
         const data = trimmed.slice(6);
         if (data === '[DONE]') return;
         try {
@@ -166,21 +180,10 @@ async function* readStream(response) {
           const delta = parsed.choices?.[0]?.delta?.content;
           if (delta) {
             yield delta;
-            tokensEmitted++;
           }
         } catch (e) {
           if (e.message && !e.message.includes('JSON')) throw e;
         }
-      }
-    }
-    if (tokensEmitted === 0 && buffer.trim()) {
-      try {
-        const parsed = JSON.parse(buffer.trim());
-        if (parsed.error) throw new Error(parsed.error.message || 'Stream error');
-        const content = parsed.choices?.[0]?.message?.content;
-        if (content) yield content;
-      } catch (e) {
-        if (e.message && !e.message.includes('JSON')) throw e;
       }
     }
   } finally {
@@ -214,14 +217,19 @@ async function* chatWithFallback(tier, messages, signal, onModelChange) {
       if (err.name === 'AbortError') throw err;
       console.warn(`[Model Router] ${model.name} failed:`, err.message);
 
-      if (err.message === 'RATE_LIMIT' && model.provider === 'groq') {
+      if (err.message === 'RATE_LIMIT') {
         try {
-          const response = await callGroq(model, messages, signal);
+          const response = model.provider === 'groq'
+            ? await callGroq(model, messages, signal)
+            : await callOpenRouter(model, messages, signal);
           for await (const chunk of readStream(response)) {
             yield { chunk, model, usedFallback };
           }
           return;
-        } catch {}
+        } catch (retryErr) {
+          if (retryErr.name === 'AbortError') throw retryErr;
+          console.warn(`[Model Router] Retry failed:`, retryErr.message);
+        }
       }
     }
   }
