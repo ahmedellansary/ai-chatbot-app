@@ -243,16 +243,26 @@
       
       <div class="modal-body" style="flex:1; display:flex; flex-direction:column; gap:10px;">
         
-        <!-- Ultra-Clean Bar: Active File Selector Dropdown + Deploy Action -->
+        <!-- Active File on Left + See More Button + Commit on Right -->
         <div class="active-file-editor-bar">
-          <div class="active-file-selector-wrap">
-            <label for="repo-file-select" class="active-file-label-prefix">
+          <div class="active-file-left-group">
+            <div class="active-file-badge-pill">
               <span class="active-file-dot"></span>
-              <span>Active File:</span>
-            </label>
-            <select id="repo-file-select" class="repo-file-dropdown-select" onchange="window._selectFileForEditing(this.value)">
-              <!-- Populated dynamically -->
-            </select>
+              <span id="active-file-name-display" class="active-file-name">index.html</span>
+            </div>
+
+            <!-- See More Popover Container -->
+            <div class="see-more-files-container">
+              <button type="button" class="see-more-files-btn" id="btn-see-more-files" onclick="window._toggleSeeMoreFiles(event)">
+                <span>See More</span>
+                <span id="see-more-chevron">▾</span>
+              </button>
+
+              <!-- Dropdown Menu of all files -->
+              <div id="see-more-files-dropdown" class="see-more-files-dropdown hidden">
+                <!-- Dynamically filled with file items -->
+              </div>
+            </div>
           </div>
 
           <button class="dev-btn-action deploy" onclick="window._commitCurrentEditorFile()">
