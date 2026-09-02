@@ -22,8 +22,9 @@
   const GITHUB_BRANCH = 'main';
   const GITHUB_API = 'https://api.github.com';
 
-  // Internal Groq rotation index (shared)
+  // Internal rotation indexes (shared) — tier-isolated per provider
   let _groqIdx = 0;
+  let _openRouterIdx = 0;
 
   // Helpers — same priority as before: window.AppConfig > localStorage > hardcoded
   function _getStored(key) {
@@ -58,13 +59,27 @@
     get githubRepo() { return GITHUB_REPO; },
     get branch() { return GITHUB_BRANCH; },
 
-    // ── OpenRouter ──
-    getOpenRouterKey() {
-      const fromApp = _getAppConfigKey('getOpenRouterKey');
-      if (fromApp && String(fromApp).trim()) return String(fromApp).trim();
+    // ── OpenRouter (Multi-Key Rotation, Tier-Isolated) ──
+    getOpenRouterKeys() {
+      const fromApp = _getAppConfigKey('getOpenRouterKeys') || _getAppConfigKey('getOpenRouterKey');
+      if (Array.isArray(fromApp) && fromApp.length) return fromApp;
+      if (typeof fromApp === 'string' && fromApp.trim()) {
+        if (fromApp.includes(',')) return fromApp.split(',').map(s=>s.trim()).filter(Boolean);
+        return [fromApp.trim()];
+      }
       const stored = _getStored('OPENROUTER_API_KEY');
-      if (stored) return stored;
-      return _k1;
+      if (stored) {
+        if (stored.includes(',')) return stored.split(',').map(s=>s.trim()).filter(Boolean);
+        return [stored];
+      }
+      return [_k1];
+    },
+    getOpenRouterKey() {
+      const keys = this.getOpenRouterKeys();
+      return keys[_openRouterIdx % keys.length];
+    },
+    rotateOpenRouterKey() {
+      _openRouterIdx = (_openRouterIdx + 1) % this.getOpenRouterKeys().length;
     },
 
     // ── Groq ──
