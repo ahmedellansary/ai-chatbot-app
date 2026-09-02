@@ -30,6 +30,10 @@
       const $ = _d.$ || window.$;
       const inputEl = $('user-input');
       const btn = $('send-btn');
+      const inputContainer = document.querySelector('#input-section .input-container') || document.querySelector('.input-container');
+      if (inputContainer && state) {
+        inputContainer.classList.toggle('thinking', Boolean(state.isStreaming));
+      }
       if (!btn) return;
 
       if (state && state.isStreaming) {
@@ -59,7 +63,7 @@
       const textVal = inputEl ? inputEl.value : '';
       const hasText = textVal.trim().length > 0;
       const hasAtt = Array.isArray(state?.attachments) && state.attachments.length > 0;
-      const canSend = (hasText || hasAtt);
+      const canSend = (hasText || hasAtt) && !state?.isStreaming;
 
       if (canSend) {
         btn.classList.add('active');
