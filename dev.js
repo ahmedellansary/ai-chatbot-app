@@ -919,6 +919,7 @@
     },
 
     setupPullToRefresh() {
+      if (window.setupUnifiedPullToRefresh) return window.setupUnifiedPullToRefresh({ indicatorId: 'pull-refresh-indicator', chatAreaId: 'chat-area', threshold: 50 });
       const indicator = $('pull-refresh-indicator');
       if (!indicator) return;
 
@@ -1346,6 +1347,7 @@
     },
 
     showToast(message, type = 'info') {
+      if (window.UnifiedToast && window.UnifiedToast.showToast) return window.UnifiedToast.showToast(message, type);
       const container = $('toast-container');
       if (!container) return;
       const t = document.createElement('div');
