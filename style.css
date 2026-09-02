@@ -50,7 +50,7 @@ html, body {
   background-color: var(--bg-main);
   color: var(--text-main);
   font-family: var(--font-sans);
-  font-size: 15.5px;
+  font-size: 16.5px;
   line-height: 1.6;
   overflow: hidden;
   overscroll-behavior-y: none;
