@@ -9,13 +9,13 @@
   <meta name="apple-mobile-web-app-title" content="X.v1 Dev">
 
   <title>X.v1 — Developer Portal & Codebase Studio</title>
-  <link rel="manifest" href="./dev-manifest.json?v=173">
+  <link rel="manifest" href="./dev-manifest.json?v=174">
   <!-- Modular Dev CSS (load before fallback) -->
-  <link rel="stylesheet" href="./css/dev-base.css?v=173">
-  <link rel="stylesheet" href="./css/dev-chat.css?v=173">
-  <link rel="stylesheet" href="./css/dev-input.css?v=173">
-  <link rel="stylesheet" href="./css/dev-modal.css?v=173">
-  <link rel="stylesheet" href="./dev_style.css?v=173">
+  <link rel="stylesheet" href="./css/dev-base.css?v=174">
+  <link rel="stylesheet" href="./css/dev-chat.css?v=174">
+  <link rel="stylesheet" href="./css/dev-input.css?v=174">
+  <link rel="stylesheet" href="./css/dev-modal.css?v=174">
+  <link rel="stylesheet" href="./dev_style.css?v=174">
   <link rel="icon" type="image/png" href="./icons/dev-icon-192.png?v=52">
   <link rel="apple-touch-icon" href="./icons/dev-icon-192.png?v=52">
   <link rel="apple-touch-icon" sizes="512x512" href="./icons/dev-icon-512.png?v=52">
@@ -116,7 +116,7 @@
       <div class="header-right">
         <div class="repo-status-badge">
           <span class="status-dot"></span>
-          <span class="repo-badge-text" id="dev-status-badge-text">Dev (V173) 02-09-2026 8:56AM</span>
+          <span class="repo-badge-text" id="dev-status-badge-text">Dev (V174) 02-09-2026 8:59AM</span>
         </div>
         <script>
           (function() {
@@ -401,31 +401,23 @@
           <div style="display: flex; flex-direction: column; gap: 14px;">
             <!-- Font Family -->
             <div>
-              <label style="font-size: 12.5px; font-weight: 600; color: #e5e7eb; display: block; margin-bottom: 6px;">نوع الخط (Font Family):</label>
+              <label style="font-size: 12px; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 6px;">Font Family</label>
               <div class="custom-pill-selector-row">
-                <button type="button" class="custom-pill-btn active" data-font="inter" onclick="window._setAppFontFamily('inter')">Modern Inter</button>
-                <button type="button" class="custom-pill-btn" data-font="cairo" onclick="window._setAppFontFamily('cairo')">Cairo (عربي أنيق)</button>
-                <button type="button" class="custom-pill-btn" data-font="tajawal" onclick="window._setAppFontFamily('tajawal')">Tajawal (تجوّل)</button>
-                <button type="button" class="custom-pill-btn" data-font="mono" onclick="window._setAppFontFamily('mono')">Code Mono (مطورين)</button>
+                <button type="button" class="custom-pill-btn active" data-font="inter" onclick="window._setAppFontFamily('inter')">Inter</button>
+                <button type="button" class="custom-pill-btn" data-font="cairo" onclick="window._setAppFontFamily('cairo')">Cairo</button>
+                <button type="button" class="custom-pill-btn" data-font="tajawal" onclick="window._setAppFontFamily('tajawal')">Tajawal</button>
+                <button type="button" class="custom-pill-btn" data-font="mono" onclick="window._setAppFontFamily('mono')">Mono</button>
               </div>
             </div>
 
             <!-- Font Size -->
             <div>
-              <label style="font-size: 12.5px; font-weight: 600; color: #e5e7eb; display: block; margin-bottom: 6px;">حجم الخط (Font Size):</label>
+              <label style="font-size: 12px; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 6px;">Font Size</label>
               <div class="custom-pill-selector-row">
-                <button type="button" class="custom-pill-btn" data-size="sm" onclick="window._setAppFontSize('sm')">صغير (13.5px)</button>
-                <button type="button" class="custom-pill-btn active" data-size="md" onclick="window._setAppFontSize('md')">افتراضي (15px)</button>
-                <button type="button" class="custom-pill-btn" data-size="lg" onclick="window._setAppFontSize('lg')">كبير (16.5px)</button>
-                <button type="button" class="custom-pill-btn" data-size="xl" onclick="window._setAppFontSize('xl')">عريض (18px)</button>
-              </div>
-            </div>
-
-            <!-- Live Text Preview Box -->
-            <div class="typography-preview-box">
-              <div style="font-size: 11px; color: var(--text-dim); margin-bottom: 4px; font-weight: 600;">معاينة حية للنص والخط المختار:</div>
-              <div class="typography-preview-text">
-                أهلاً بك في X.v1 Dev Studio — منصة التطوير الذكية والتعديل الحي الفوري للأكواد.
+                <button type="button" class="custom-pill-btn" data-size="sm" onclick="window._setAppFontSize('sm')">Small</button>
+                <button type="button" class="custom-pill-btn active" data-size="md" onclick="window._setAppFontSize('md')">Medium</button>
+                <button type="button" class="custom-pill-btn" data-size="lg" onclick="window._setAppFontSize('lg')">Large</button>
+                <button type="button" class="custom-pill-btn" data-size="xl" onclick="window._setAppFontSize('xl')">XL</button>
               </div>
             </div>
           </div>
@@ -483,14 +475,14 @@
   <div id="toast-container"></div>
 </div>
 
-<script src="./config.js?v=173"></script>
-<script src="./auth.js?v=173"></script>
-<script src="./github.js?v=173"></script>
-<script src="./models.js?v=173"></script>
-<script src="./ui-helpers.js?v=173"></script>
-<script src="./modules/dev-state.js?v=173"></script>
-<script src="./modules/dev-chat-engine.js?v=173"></script>
-<script src="./modules/dev-ui-engine.js?v=173"></script>
-<script src="./dev.js?v=173"></script>
+<script src="./config.js?v=174"></script>
+<script src="./auth.js?v=174"></script>
+<script src="./github.js?v=174"></script>
+<script src="./models.js?v=174"></script>
+<script src="./ui-helpers.js?v=174"></script>
+<script src="./modules/dev-state.js?v=174"></script>
+<script src="./modules/dev-chat-engine.js?v=174"></script>
+<script src="./modules/dev-ui-engine.js?v=174"></script>
+<script src="./dev.js?v=174"></script>
 </body>
 </html>
