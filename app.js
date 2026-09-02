@@ -694,6 +694,28 @@
       this.scrollToBottom();
     },
 
+    startProgressiveThinking(initialWord = 'Analyzing') {
+      this.hideTyping();
+      this.showTyping(initialWord);
+
+      const stages = [
+        { word: 'Analyzing', delay: 0 },
+        { word: 'Thinking', delay: 1800 },
+        { word: 'Reasoning', delay: 4200 },
+        { word: 'Synthesizing', delay: 7500 },
+        { word: 'Refining', delay: 11000 },
+        { word: 'Composing', delay: 14500 }
+      ];
+
+      this._thinkingTimers = [];
+      stages.slice(1).forEach(stage => {
+        const timer = setTimeout(() => {
+          this.setThinkingStage(stage.word);
+        }, stage.delay);
+        this._thinkingTimers.push(timer);
+      });
+    },
+
     setThinkingStage(text) {
       const wordEl = document.getElementById('thinking-word');
       if (wordEl) {
@@ -703,6 +725,10 @@
     },
 
     hideTyping() {
+      if (this._thinkingTimers && this._thinkingTimers.length) {
+        this._thinkingTimers.forEach(t => clearTimeout(t));
+        this._thinkingTimers = [];
+      }
       if (this._thinkingTimer) {
         clearTimeout(this._thinkingTimer);
         this._thinkingTimer = null;
@@ -827,20 +853,16 @@
         return;
       }
 
-      MessageRenderer.showTyping('Analyzing...');
+      MessageRenderer.startProgressiveThinking('Analyzing');
 
       const onModelEvent = (model, isFallback) => {
         aiMsgObj.model = model.name;
         aiMsgObj.provider = model.provider || 'groq';
         aiMsgObj.usedFallback = isFallback;
 
-        const connectText = isFallback ? `Switching to ${model.name}...` : `Connecting to ${model.name}...`;
-        MessageRenderer.setThinkingStage(connectText);
-
-        if (MessageRenderer._thinkingTimer) clearTimeout(MessageRenderer._thinkingTimer);
-        MessageRenderer._thinkingTimer = setTimeout(() => {
-          MessageRenderer.setThinkingStage('Reasoning...');
-        }, 550);
+        if (isFallback) {
+          MessageRenderer.setThinkingStage('Switching');
+        }
       };
 
       try {
