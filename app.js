@@ -1165,6 +1165,27 @@
       </svg>
     `,
 
+    closeSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('overlay');
+      sidebar?.classList.remove('open');
+      overlay?.classList.remove('active');
+    },
+
+    openSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('overlay');
+      sidebar?.classList.add('open');
+      overlay?.classList.add('active');
+    },
+
+    toggleSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('overlay');
+      sidebar?.classList.toggle('open');
+      overlay?.classList.toggle('active');
+    },
+
     updateSendBtnState() {
       const inputEl = $('user-input');
       const btn = $('send-btn');
