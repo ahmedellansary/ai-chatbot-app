@@ -59,7 +59,7 @@
       if (!_im || !_im.files || !_im.files.length) {
         if (_im && _im.load) await _im.load();
       }
-      const basePrompt = _im ? _im.assemblePrompt(userText, attachments) : 'You are X.v1, an advanced AI assistant.';
+      const basePrompt = _im ? _im.assemblePrompt(userText, attachments, tier) : 'You are X.v1 Claude Intelligence Engine.';
       const briefing = this.generateBriefing(conv, tier);
       if (!briefing) return basePrompt;
       return `${basePrompt}\n\n═══════════════════════════════════════════════════════════════\n${briefing}\n═══════════════════════════════════════════════════════════════\n(هذه خلاصة ذكية للمحادثة الكاملة — استخدمها كسياق كأنك كنت حاضراً من البداية. آخر ${this.getAdaptiveConfig(tier).recentCount} رسائل التالية هي النص الحرفي الأحدث)`;
