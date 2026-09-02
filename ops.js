@@ -143,6 +143,7 @@
     },
 
     showToast(message, type = 'info') {
+      if (window.UnifiedToast && window.UnifiedToast.showToast) return window.UnifiedToast.showToast(message, type);
       const container = document.getElementById('ops-toast-container');
       if (!container) return;
       const toast = document.createElement('div');
