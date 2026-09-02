@@ -2520,6 +2520,16 @@
     window.location.reload();
   };
 
+  window._switchSettingsTab = function(tabName) {
+    $$('#settings-modal .settings-tab-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.getAttribute('data-tab') === tabName);
+    });
+    $$('#settings-modal .settings-tab-pane').forEach(pane => {
+      pane.classList.toggle('hidden', pane.id !== `settings-tab-${tabName}`);
+      pane.classList.toggle('active', pane.id === `settings-tab-${tabName}`);
+    });
+  };
+
   window._setAppTheme = function(themeName) {
     document.documentElement.setAttribute('data-theme', themeName);
     localStorage.setItem('xv1_theme', themeName);
