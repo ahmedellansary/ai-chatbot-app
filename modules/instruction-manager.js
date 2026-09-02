@@ -11,23 +11,18 @@
     async load() {
       const CURRENT_VERSION = 'v200_claude_intelligence_tiers';
       try {
+        if (this.files && this.files.length) {
+          return this.files;
+        }
+
         const storedVer = localStorage.getItem('instruction_files_version');
         const custom = localStorage.getItem('instruction_files');
         
-        // If version matches AND all items are strictly valid JSON, use saved
+        // If version matches AND items have valid tiers or JSON content, use saved
         if (storedVer === CURRENT_VERSION && custom) {
           try {
             const parsed = JSON.parse(custom);
-            const hasLegacy = parsed.some(f => {
-              if (!f || !f.content) return true;
-              try {
-                const inner = JSON.parse(f.content);
-                return typeof inner !== 'object' || inner === null;
-              } catch(e) {
-                return true;
-              }
-            });
-            if (!hasLegacy && Array.isArray(parsed) && parsed.length) {
+            if (Array.isArray(parsed) && parsed.length && parsed.every(f => f && (f.tiers || f.content))) {
               this.files = parsed;
               return this.files;
             }
@@ -120,10 +115,16 @@
       if (kwInput) kwInput.value = (file.keywords || []).join(', ');
       const contentTextarea = document.getElementById('inst-editor-content');
       if (contentTextarea) {
-        let val = file.content || '';
-        try {
-          val = JSON.stringify(JSON.parse(val), null, 2);
-        } catch(e) {}
+        let val = '';
+        if (file.tiers) {
+          val = JSON.stringify(file.tiers.HIGH || file.tiers, null, 2);
+        } else if (file.content) {
+          try {
+            val = JSON.stringify(JSON.parse(file.content), null, 2);
+          } catch(e) {
+            val = file.content;
+          }
+        }
         contentTextarea.value = val;
       }
       const enabledCheckbox = document.getElementById('inst-editor-enabled');
