@@ -1441,28 +1441,26 @@ pre code {
   }
 }
 
-/* Model Dropdown Menu Popup right above the pill */
+/* Model Dropdown Menu — Compact & Fits Text */
 .model-dropdown {
   position: absolute;
   bottom: calc(100% + 8px);
-  right: 0;
-  left: auto;
-  background: #18181f;
+  left: 0;
+  right: auto;
+  background: rgba(28, 28, 34, 0.96);
   border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 14px;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.9);
-  padding: 6px;
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.7);
+  padding: 5px;
   display: none;
   flex-direction: column;
-  gap: 4px;
-  width: 290px;
-  max-width: calc(100vw - 24px);
-  max-height: 52vh;
-  overflow-y: auto;
+  gap: 3px;
+  width: max-content;
+  min-width: 125px;
+  max-width: 170px;
   z-index: 1000;
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  direction: rtl;
 }
 
 .model-dropdown.show {
