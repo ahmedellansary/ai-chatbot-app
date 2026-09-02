@@ -204,7 +204,6 @@
           if (isValid) {
             this.unlock();
             gate.classList.add('hidden');
-            MessageRenderer.showToast('🔐 تم فتح التطبيق بنجاح! مرحباً بك.', 'success');
           } else {
             MessageRenderer.showToast('❌ كلمة السر غير صحيحة!', 'error');
             if (pinInput) {
