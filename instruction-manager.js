@@ -242,6 +242,16 @@
       }
     },
 
+    isComplexQuery(userText = '', attachments = []) {
+      if (Array.isArray(attachments) && attachments.length > 0) return true;
+      const text = (userText || '').trim();
+      if (text.length >= 60) return true;
+      if (text.includes('\n') && text.length > 25) return true;
+      
+      const complexRegex = /(كود|code|برمج|function|class|script|bug|error|خطأ|حل|شرح|مقارنة|بحث|أكتب|اكتب|صمم|أنشئ|انشئ|حلل|اشرح|وضح|معمارية|استراتيجية|نظام|أفضل ممارسة|قاعدة|دليل|خطة|خطوات|قانون|احسب|رياضيات|best practice|architecture|explain|compare|implement|create|design|refactor|analyze|calculate)/i;
+      return complexRegex.test(text);
+    },
+
     buildSystemPrompt(userText, tier = 'MID') {
       return this.assemblePrompt(userText, [], tier);
     },
@@ -252,16 +262,21 @@
       let coreContent = '';
       const normalizedTier = (tier === 'FAST') ? 'FAST' : ((tier === 'HIGH' || tier === 'DEEP') ? 'HIGH' : 'MID');
       
+      const isComplex = this.isComplexQuery(userText, attachments);
+      // For simple/casual messages across ALL 3 tiers: use FAST concise summary (1.1k chars)
+      // For complex/deep reasoning: use the selected tier (HIGH = full 200 rules, MID = balanced summary, FAST = fast summary)
+      const effectiveTier = isComplex ? normalizedTier : 'FAST';
+
       if (coreFile) {
-        if (coreFile.tiers && coreFile.tiers[normalizedTier]) {
-          coreContent = typeof coreFile.tiers[normalizedTier] === 'string'
-            ? coreFile.tiers[normalizedTier]
-            : JSON.stringify(coreFile.tiers[normalizedTier], null, 2);
+        if (coreFile.tiers) {
+          const tierData = coreFile.tiers[effectiveTier] || coreFile.tiers[normalizedTier] || coreFile.tiers.FAST;
+          coreContent = typeof tierData === 'string' ? tierData : JSON.stringify(tierData, null, 2);
         } else if (coreFile.content) {
           try {
             const parsed = JSON.parse(coreFile.content);
-            if (parsed.tiers && parsed.tiers[normalizedTier]) {
-              coreContent = JSON.stringify(parsed.tiers[normalizedTier], null, 2);
+            if (parsed.tiers) {
+              const tierData = parsed.tiers[effectiveTier] || parsed.tiers[normalizedTier] || parsed.tiers.FAST;
+              coreContent = JSON.stringify(tierData, null, 2);
             } else {
               coreContent = coreFile.content;
             }
@@ -276,17 +291,21 @@
 
       let fullPrompt = coreContent;
 
-      const textLower = (userText + ' ' + (attachments || []).map(a => a.name || '').join(' ')).toLowerCase();
-      const activeContextualFiles = this.files.filter(f => !f.isCore && f.enabled);
-      const matchedFiles = activeContextualFiles.filter(f => {
-        if (!Array.isArray(f.keywords) || !f.keywords.length) return true;
-        return f.keywords.some(kw => kw && textLower.includes(kw.toLowerCase()));
-      });
-      if (matchedFiles.length > 0) {
-        matchedFiles.forEach(file => {
-          fullPrompt += `\n\n═══════════════════════════════════════════════════════════════\n🎯 Contextual Custom Instruction: [${file.name}]\n═══════════════════════════════════════════════════════════════\n${file.content}`;
+      // Only attach contextual custom files if the query is complex AND matches their keywords
+      if (isComplex) {
+        const textLower = ((userText || '') + ' ' + (attachments || []).map(a => a.name || '').join(' ')).toLowerCase();
+        const activeContextualFiles = this.files.filter(f => !f.isCore && f.enabled);
+        const matchedFiles = activeContextualFiles.filter(f => {
+          if (!Array.isArray(f.keywords) || !f.keywords.length) return false;
+          return f.keywords.some(kw => kw && textLower.includes(kw.toLowerCase()));
         });
+        if (matchedFiles.length > 0) {
+          matchedFiles.forEach(file => {
+            fullPrompt += `\n\n═══════════════════════════════════════════════════════════════\n🎯 Contextual Custom Instruction: [${file.name}]\n═══════════════════════════════════════════════════════════════\n${file.content}`;
+          });
+        }
       }
+
       return fullPrompt;
     },
 
