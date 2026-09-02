@@ -317,22 +317,13 @@
       return briefing;
     },
 
-    // Dynamic Context-Aware Cascade:
-    // If payload is large (> 5000 tokens), prioritizes 128k-200k OpenRouter models so no code is ever truncated.
-    // If payload is normal (<= 5000 tokens), uses lightning-fast Groq models (120B / 27B) first.
     buildFallbackCascade(primaryAgent, estimatedTokens = 0) {
-      // اختيارك أولوية قصوى، ثم الباقي من الأقوى للأضعف (حسب ترتيب DEV_AGENTS الأصلي)
-      const remaining = DEV_AGENTS.filter(a => a.id !== primaryAgent.id);
-      if (estimatedTokens > 5000) {
-        const largeOpen = remaining.filter(a => a.provider === 'openrouter');
-        const groqRest = remaining.filter(a => a.provider === 'groq');
-        if (primaryAgent.provider === 'openrouter') {
-          return [primaryAgent, ...largeOpen, ...groqRest];
-        } else {
-          return [primaryAgent, ...largeOpen, ...groqRest];
-        }
+      const mode = state.currentMode || 'MID';
+      const tierList = (DEV_TIER_MODELS && DEV_TIER_MODELS[mode]) ? DEV_TIER_MODELS[mode] : null;
+      if (tierList && tierList.length) {
+        return tierList;
       }
-      return [primaryAgent, ...remaining];
+      return DEV_AGENTS;
     },
 
     async callSingleAgentStream(agent, messages, signal, onChunk) {
@@ -348,7 +339,7 @@
       };
 
       if (!isGroq) {
-        headers['HTTP-Referer'] = window.location.origin;
+        headers['HTTP-Referer'] = (typeof window !== 'undefined' && window.location && window.location.origin) ? window.location.origin : 'https://ahmedellansary.github.io/ai-chatbot-app/';
         headers['X-Title'] = 'X.v1 Dev Portal';
       }
 
@@ -365,18 +356,20 @@
         signal
       });
 
-      if (response.status === 429 && isGroq) {
-        DevConfigVault.rotateGroqKey();
-        throw new Error('GROQ_RATE_LIMIT');
+      if (response.status === 429) {
+        if (isGroq) DevConfigVault.rotateGroqKey?.();
+        else DevConfigVault.rotateOpenRouterKey?.();
+        throw new Error('RATE_LIMIT');
       }
 
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}));
         const errMsg = errData.error?.message || `HTTP ${response.status}`;
         if (isGroq && /TPM|rate limit|too large|token/i.test(errMsg)) {
-          DevConfigVault.rotateGroqKey();
+          DevConfigVault.rotateGroqKey?.();
           throw new Error('GROQ_RATE_LIMIT');
         }
+        if (!isGroq) DevConfigVault.rotateOpenRouterKey?.();
         throw new Error(errMsg);
       }
 
