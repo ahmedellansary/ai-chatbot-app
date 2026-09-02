@@ -1336,10 +1336,119 @@
       out = out.replace(/```json\s*\{[\s\S]*?"file"[\s\S]*?"content"[\s\S]*?\}\s*```/g, '');
       out = out.replace(/\{[\s\S]*?"file"\s*:\s*["'][^"']+["'][\s\S]*?"content"\s*:[\s\S]*?\}/g, '');
 
-      // Code blocks
+      // Ultra-Modern Terminal / Code Card
       out = out.replace(/```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g, (m, lang, code) => {
-        return `<pre><code>${this.escapeHtml(code.trim())}</code></pre>`;
+        const trimmed = code.trim();
+        const escaped = this.escapeHtml(trimmed);
+        const rawLang = (lang || '').trim().toLowerCase();
+        let langTitle = 'Code';
+        let icon = '>_';
+
+        if (rawLang === 'bash' || rawLang === 'sh' || rawLang === 'shell' || rawLang === 'cmd' || rawLang === 'powershell') {
+          langTitle = 'Bash Command';
+          icon = '>_';
+        } else if (rawLang === 'js' || rawLang === 'javascript') {
+          langTitle = 'JavaScript';
+          icon = '⚡';
+        } else if (rawLang === 'python' || rawLang === 'py') {
+          langTitle = 'Python';
+          icon = '🐍';
+        } else if (rawLang === 'html') {
+          langTitle = 'HTML';
+          icon = '🌐';
+        } else if (rawLang === 'css') {
+          langTitle = 'CSS';
+          icon = '🎨';
+        } else if (rawLang === 'json') {
+          langTitle = 'JSON';
+          icon = '📦';
+        } else if (rawLang === 'sql') {
+          langTitle = 'SQL';
+          icon = '🗄️';
+        } else if (rawLang) {
+          langTitle = rawLang.toUpperCase();
+          icon = '📄';
+        }
+
+        const firstLine = trimmed.split('\n')[0] || '';
+        const preview = firstLine.length > 55 ? firstLine.slice(0, 52) + '...' : firstLine;
+        const linesCount = trimmed.split('\n').length;
+        const shouldCollapse = linesCount > 18;
+
+        return `
+<div class="dev-terminal-card">
+  <div class="terminal-card-header">
+    <div class="terminal-header-left">
+      <span class="terminal-icon-badge">${icon}</span>
+      <span class="terminal-lang-title">${this.escapeHtml(langTitle)}</span>
+      <span class="terminal-cmd-preview">${this.escapeHtml(preview)}</span>
+    </div>
+    <div class="terminal-header-right">
+      ${shouldCollapse ? '<button type="button" class="terminal-action-btn view-btn" onclick="window._toggleCodeView(this)">Expand</button>' : ''}
+      <button type="button" class="terminal-action-btn copy-btn" onclick="window._copyDevCode(this)">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+        <span>Copy</span>
+      </button>
+    </div>
+  </div>
+  <div class="terminal-card-body ${shouldCollapse ? 'collapsed' : ''}">
+    <pre><code class="language-${this.escapeHtml(rawLang)}">${escaped}</code></pre>
+  </div>
+  <div class="terminal-card-footer">
+    <div class="terminal-footer-status">
+      <span class="terminal-status-pill">Exit Code: 0</span>
+    </div>
+    <div class="terminal-footer-meta">
+      <span>${linesCount} lines</span>
+    </div>
+  </div>
+</div>`;
       });
+
+      // Ultra-Sleek Modern Audio Player Card
+      out = out.replace(/\[audio:(https?:\/\/[^\s|\]]+)(?:\|([^|\]]+))?(?:\|([^\]]+))?\]/gi, (m, src, desc, tag) => {
+        const tagTitle = (tag || 'ElevenLabs AI Sound').trim();
+        const descText = (desc || 'Generated Audio Track').trim();
+        const cleanSrc = src.trim();
+        return `
+<div class="modern-audio-card" data-src="${cleanSrc}">
+  <div class="audio-card-header">
+    <div class="audio-tag-badge">
+      <span class="audio-dot"></span>
+      <span>${this.escapeHtml(tagTitle)}</span>
+    </div>
+  </div>
+  <div class="audio-card-desc">${this.escapeHtml(descText)}</div>
+  <div class="audio-progress-row">
+    <span class="audio-time current-time">0:00</span>
+    <div class="audio-progress-bar-wrap" onclick="window._seekAudio(this, event)">
+      <div class="audio-progress-fill"></div>
+    </div>
+    <span class="audio-time total-time">--:--</span>
+  </div>
+  <div class="audio-controls-row">
+    <button type="button" class="audio-ctrl-btn speed-btn" onclick="window._changeAudioSpeed(this)" title="Playback Speed">1x</button>
+    <button type="button" class="audio-ctrl-btn" onclick="window._skipAudio(this, -15)" title="Replay 15s">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path><text x="8" y="15" font-size="7" fill="currentColor" font-weight="bold" font-family="sans-serif">15</text></svg>
+    </button>
+    <button type="button" class="audio-play-btn" onclick="window._togglePlayAudio(this)" title="Play / Pause">
+      <svg class="play-icon" viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"></polygon></svg>
+      <svg class="pause-icon" style="display:none;" viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"></rect><rect x="14" y="4" width="4" height="16" rx="1"></rect></svg>
+    </button>
+    <button type="button" class="audio-ctrl-btn" onclick="window._skipAudio(this, 15)" title="Forward 15s">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path><text x="8" y="15" font-size="7" fill="currentColor" font-weight="bold" font-family="sans-serif">15</text></svg>
+    </button>
+    <button type="button" class="audio-ctrl-btn volume-btn" onclick="window._toggleMuteAudio(this)" title="Mute / Unmute">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+    </button>
+    <button type="button" class="audio-ctrl-btn download-btn" onclick="window._downloadAudio(this)" title="تحميل الملف الصوتي">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+    </button>
+  </div>
+  <audio class="hidden-audio" src="${cleanSrc}" preload="metadata"></audio>
+</div>`;
+      });
+
       // Inline code
       out = out.replace(/`([^`]+)`/g, (m, code) => `<code>${this.escapeHtml(code)}</code>`);
       // Bold
@@ -1371,6 +1480,158 @@
   // ─────────────────────────────────────────────────────────────────
   // 8. GLOBAL WINDOW BRIDGES FOR DEV OPERATIONS & TOOLS
   // ─────────────────────────────────────────────────────────────────
+  window._copyDevCode = function(btn) {
+    const card = btn.closest('.dev-terminal-card');
+    if (!card) return;
+    const codeEl = card.querySelector('pre code');
+    if (!codeEl) return;
+    const text = codeEl.innerText || codeEl.textContent;
+    navigator.clipboard.writeText(text).then(() => {
+      const originalText = btn.innerHTML;
+      btn.innerHTML = '<span>✓ Copied</span>';
+      btn.style.color = '#34d399';
+      btn.style.borderColor = '#10b981';
+      setTimeout(() => {
+        btn.innerHTML = originalText;
+        btn.style.color = '';
+        btn.style.borderColor = '';
+      }, 2000);
+      if (window.DevUIEngine && window.DevUIEngine.showToast) {
+        window.DevUIEngine.showToast('📋 تم نسخ الكود بنجاح', 'success');
+      }
+    }).catch(() => {});
+  };
+
+  window._toggleCodeView = function(btn) {
+    const card = btn.closest('.dev-terminal-card');
+    if (!card) return;
+    const body = card.querySelector('.terminal-card-body');
+    if (!body) return;
+    const isCollapsed = body.classList.toggle('collapsed');
+    btn.textContent = isCollapsed ? 'Expand' : 'Collapse';
+  };
+
+  window._togglePlayAudio = function(btn) {
+    const card = btn.closest('.modern-audio-card');
+    if (!card) return;
+    let audio = card.querySelector('audio.hidden-audio');
+    if (!audio) {
+      audio = new Audio(card.dataset.src);
+      audio.className = 'hidden-audio';
+      card.appendChild(audio);
+    }
+    const playIcon = btn.querySelector('.play-icon');
+    const pauseIcon = btn.querySelector('.pause-icon');
+    const fill = card.querySelector('.audio-progress-fill');
+    const curTime = card.querySelector('.current-time');
+    const totTime = card.querySelector('.total-time');
+
+    if (!audio._boundEvents) {
+      audio._boundEvents = true;
+      audio.addEventListener('loadedmetadata', () => {
+        if (totTime && audio.duration) {
+          const m = Math.floor(audio.duration / 60);
+          const s = Math.floor(audio.duration % 60);
+          totTime.textContent = `${m}:${s < 10 ? '0' : ''}${s}`;
+        }
+      });
+      audio.addEventListener('timeupdate', () => {
+        if (!audio.duration) return;
+        const pct = (audio.currentTime / audio.duration) * 100;
+        if (fill) fill.style.width = `${pct}%`;
+        if (curTime) {
+          const m = Math.floor(audio.currentTime / 60);
+          const s = Math.floor(audio.currentTime % 60);
+          curTime.textContent = `${m}:${s < 10 ? '0' : ''}${s}`;
+        }
+        if (totTime && audio.duration) {
+          const rem = Math.max(0, audio.duration - audio.currentTime);
+          const rm = Math.floor(rem / 60);
+          const rs = Math.floor(rem % 60);
+          totTime.textContent = `-${rm}:${rs < 10 ? '0' : ''}${rs}`;
+        }
+      });
+      audio.addEventListener('ended', () => {
+        if (playIcon) playIcon.style.display = 'block';
+        if (pauseIcon) pauseIcon.style.display = 'none';
+        if (fill) fill.style.width = '0%';
+        if (curTime) curTime.textContent = '0:00';
+      });
+    }
+
+    if (audio.paused) {
+      document.querySelectorAll('audio.hidden-audio').forEach(a => { if (a !== audio) a.pause(); });
+      document.querySelectorAll('.modern-audio-card .pause-icon').forEach(p => p.style.display = 'none');
+      document.querySelectorAll('.modern-audio-card .play-icon').forEach(p => p.style.display = 'block');
+
+      audio.play().then(() => {
+        if (playIcon) playIcon.style.display = 'none';
+        if (pauseIcon) pauseIcon.style.display = 'block';
+      }).catch(e => console.warn('[Audio Play]', e));
+    } else {
+      audio.pause();
+      if (playIcon) playIcon.style.display = 'block';
+      if (pauseIcon) pauseIcon.style.display = 'none';
+    }
+  };
+
+  window._seekAudio = function(wrap, event) {
+    const card = wrap.closest('.modern-audio-card');
+    if (!card) return;
+    const audio = card.querySelector('audio.hidden-audio');
+    if (!audio || !audio.duration) return;
+    const rect = wrap.getBoundingClientRect();
+    const clickX = event.clientX - rect.left;
+    const pct = Math.max(0, Math.min(1, clickX / rect.width));
+    audio.currentTime = pct * audio.duration;
+  };
+
+  window._changeAudioSpeed = function(btn) {
+    const card = btn.closest('.modern-audio-card');
+    if (!card) return;
+    const audio = card.querySelector('audio.hidden-audio');
+    if (!audio) return;
+    const speeds = [1, 1.25, 1.5, 2];
+    const current = audio.playbackRate || 1;
+    const nextIdx = (speeds.indexOf(current) + 1) % speeds.length;
+    const nextSpeed = speeds[nextIdx];
+    audio.playbackRate = nextSpeed;
+    btn.textContent = `${nextSpeed}x`;
+  };
+
+  window._skipAudio = function(btn, seconds) {
+    const card = btn.closest('.modern-audio-card');
+    if (!card) return;
+    const audio = card.querySelector('audio.hidden-audio');
+    if (!audio) return;
+    audio.currentTime = Math.max(0, Math.min(audio.duration || 9999, audio.currentTime + seconds));
+  };
+
+  window._toggleMuteAudio = function(btn) {
+    const card = btn.closest('.modern-audio-card');
+    if (!card) return;
+    const audio = card.querySelector('audio.hidden-audio');
+    if (!audio) return;
+    audio.muted = !audio.muted;
+    btn.style.color = audio.muted ? '#ef4444' : '';
+  };
+
+  window._downloadAudio = function(btn) {
+    const card = btn.closest('.modern-audio-card');
+    if (!card) return;
+    const src = card.dataset.src;
+    if (!src) return;
+    const a = document.createElement('a');
+    a.href = src;
+    a.download = `audio_${Date.now()}.mp3`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    if (window.DevUIEngine && window.DevUIEngine.showToast) {
+      window.DevUIEngine.showToast('📥 جاري تحميل الملف الصوتي...', 'info');
+    }
+  };
+
   window._loadDevConv = (id) => DevState.loadConversation(id);
   window._deleteDevConv = (id) => DevState.deleteConversation(id);
 
