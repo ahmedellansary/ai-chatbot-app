@@ -801,21 +801,21 @@ html, body {
 }
 
 .message-row.ai {
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
+  align-items: stretch;
   gap: 8px;
   width: 100%;
 }
 
 .message-row.ai.is-rtl,
 .message-row.ai:not(.is-ltr) {
-  align-self: flex-end;
-  align-items: flex-end;
   text-align: right;
   direction: rtl;
 }
 
 .message-row.ai.is-ltr {
-  align-self: flex-start;
-  align-items: flex-start;
   text-align: left;
   direction: ltr;
 }
@@ -824,10 +824,12 @@ html, body {
   color: var(--text-main);
   font-family: var(--font-sans);
   font-size: var(--chat-font-size, 16px);
-  line-height: 1.7;
+  line-height: 1.75;
+  width: 100%;
   max-width: 100%;
   overflow-wrap: break-word;
   word-break: break-word;
+  display: block;
 }
 
 .message-row.ai.is-rtl .msg-content,
@@ -837,6 +839,26 @@ html, body {
 }
 
 .message-row.ai.is-ltr .msg-content {
+  text-align: left;
+  direction: ltr;
+}
+
+.message-row.ai.is-rtl .msg-content h1,
+.message-row.ai.is-rtl .msg-content h2,
+.message-row.ai.is-rtl .msg-content h3,
+.message-row.ai.is-rtl .msg-content p,
+.message-row.ai:not(.is-ltr) .msg-content h1,
+.message-row.ai:not(.is-ltr) .msg-content h2,
+.message-row.ai:not(.is-ltr) .msg-content h3,
+.message-row.ai:not(.is-ltr) .msg-content p {
+  text-align: right;
+  direction: rtl;
+}
+
+.message-row.ai.is-ltr .msg-content h1,
+.message-row.ai.is-ltr .msg-content h2,
+.message-row.ai.is-ltr .msg-content h3,
+.message-row.ai.is-ltr .msg-content p {
   text-align: left;
   direction: ltr;
 }
@@ -2299,31 +2321,17 @@ html, body {
 }
 
 .settings-modal-body {
-  padding: 16px;
+  padding: 16px 18px;
   overflow-y: auto;
   display: flex;
-  flex-direction: row;
-  gap: 16px;
-  align-items: flex-start;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
 }
 .settings-modal-body .settings-tab-pane {
   flex: 1;
+  width: 100%;
   min-width: 0;
-}
-@media (max-width: 600px) {
-  .settings-modal-body {
-    flex-direction: column;
-  }
-  .settings-modal-tabs-bar {
-    flex-direction: row;
-    width: 100%;
-    overflow-x: auto;
-  }
-  .settings-tab-btn {
-    flex: 1;
-    justify-content: center;
-    white-space: nowrap;
-  }
 }
 
 .settings-section {
@@ -2862,33 +2870,41 @@ html, body {
 /* ─── Modern Settings Tabbed Interface ─── */
 .settings-modal-tabs-bar {
   display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 6px;
-  padding: 6px;
-  background: rgba(0, 0, 0, 0.35);
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  padding: 5px;
+  width: 100%;
+  background: rgba(0, 0, 0, 0.4);
   border: 1px solid var(--border-subtle);
-  border-radius: 10px;
-  width: 150px;
-  flex-shrink: 0;
-  height: fit-content;
+  border-radius: 12px;
+  margin-bottom: 12px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.settings-modal-tabs-bar::-webkit-scrollbar {
+  display: none;
 }
 
 .settings-tab-btn {
-  display: flex;
+  flex: 1;
+  min-width: max-content;
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 9px 12px;
-  font-size: 12.5px;
+  justify-content: center;
+  gap: 7px;
+  padding: 9px 14px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--text-muted);
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 8px;
+  border-radius: 9px;
   cursor: pointer;
+  white-space: nowrap;
   transition: all 0.2s ease;
-  text-align: left;
-  justify-content: flex-start;
 }
 
 .settings-tab-btn:hover {
@@ -2899,14 +2915,15 @@ html, body {
 .settings-tab-btn.active {
   color: #fff;
   background: var(--bg-card);
-  border-color: var(--border-subtle);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  border-color: var(--border-focus);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
 }
 
 .settings-tab-pane {
   display: flex;
   flex-direction: column;
   gap: 14px;
+  width: 100%;
   animation: fadeIn 0.2s ease-out;
 }
 
@@ -2920,6 +2937,7 @@ html, body {
   border-radius: 10px;
   padding: 14px;
   margin-top: 6px;
+  width: 100%;
 }
 
 .typography-preview-text {
@@ -2934,10 +2952,11 @@ html, body {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 10px;
-  margin-top: 10px;
+  margin-top: 8px;
+  width: 100%;
 }
 
-@media (max-width: 480px) {
+@media (max-width: 500px) {
   .theme-selector-grid {
     grid-template-columns: 1fr;
   }
@@ -2946,11 +2965,13 @@ html, body {
 .theme-card-btn {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  width: 100%;
   background: var(--bg-card);
   border: 1px solid var(--border-subtle);
-  border-radius: 10px;
+  border-radius: 12px;
   color: var(--text-main);
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
@@ -2971,7 +2992,12 @@ html, body {
 }
 
 .theme-preview-dot {
-  width: 18px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 8px rgba(0,0,0,0.4);
+}
   height: 18px;
   border-radius: 50%;
   flex-shrink: 0;
