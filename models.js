@@ -60,11 +60,11 @@ const rotateGroqKey = () => {
   groqKeyIndex++;
 };
 
-// ─── Model Tiers — Unified active model set (Strictly Isolated, Fastest & Strongest First) ───
+// ─── Model Tiers — Unified active model set (Strictly Isolated within Tier) ───
 const MODELS = {
   HIGH: [
-    { id: 'poolside/laguna-s-2.1:free', name: 'Laguna S 2.1 (118B)', provider: 'openrouter' },
     { id: 'minimax/minimax-m3:free', name: 'MiniMax M3 (1M)', provider: 'openrouter' },
+    { id: 'poolside/laguna-s-2.1:free', name: 'Laguna S 2.1 (118B)', provider: 'openrouter' },
     { id: 'nvidia/nemotron-3-super-120b-a12b:free', name: 'Nemotron 3 Super 120B', provider: 'openrouter' },
     { id: 'z-ai/glm-5.2:free', name: 'GLM 5.2 (1M)', provider: 'openrouter' },
     { id: 'minimax/minimax-m2.7:free', name: 'MiniMax M2.7', provider: 'openrouter' }
@@ -87,8 +87,8 @@ const MODELS = {
 
 const DEV_TIER_MODELS = {
   HIGH: [
-    { id: 'poolside/laguna-s-2.1:free', name: 'Laguna S 2.1 (118B Coding Agent)', provider: 'openrouter' },
     { id: 'minimax/minimax-m3:free', name: 'MiniMax M3 Architect (1M)', provider: 'openrouter' },
+    { id: 'poolside/laguna-s-2.1:free', name: 'Laguna S 2.1 (118B Coding Agent)', provider: 'openrouter' },
     { id: 'nvidia/nemotron-3-super-120b-a12b:free', name: 'Nemotron 3 Super 120B', provider: 'openrouter' },
     { id: 'z-ai/glm-5.2:free', name: 'GLM 5.2 Reasoning (1M)', provider: 'openrouter' },
     { id: 'minimax/minimax-m2.7:free', name: 'MiniMax M2.7 Reasoning', provider: 'openrouter' }
@@ -132,11 +132,10 @@ async function callOpenRouter(model, messages, signal) {
   const timeoutId = setTimeout(() => {
     timedOut = true;
     controller.abort();
-  }, 15000);
+  }, 6000);
   const combinedSignal = signal ? AbortSignal.any([signal, controller.signal]) : controller.signal;
 
   try {
-    console.log(`[Model Router] callOpenRouter start: ${model.name} (provider=openrouter)`);
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers,
@@ -144,8 +143,6 @@ async function callOpenRouter(model, messages, signal) {
       signal: combinedSignal
     });
     clearTimeout(timeoutId);
-
-    console.log(`[Model Router] callOpenRouter response: ${model.name} status=${response.status}`);
 
     if (response.status === 429) {
       rotateOpenRouterKey();
@@ -159,11 +156,7 @@ async function callOpenRouter(model, messages, signal) {
     return response;
   } catch(e) {
     clearTimeout(timeoutId);
-    if (timedOut) {
-      console.warn(`[Model Router] callOpenRouter timed out: ${model.name}`);
-      throw new Error('MODEL_TIMEOUT');
-    }
-    console.warn(`[Model Router] callOpenRouter error: ${model.name} -> ${e && e.message}`);
+    if (timedOut) throw new Error('MODEL_TIMEOUT');
     throw e;
   }
 }
@@ -193,11 +186,10 @@ async function callGroq(model, messages, signal) {
   const timeoutId = setTimeout(() => {
     timedOut = true;
     controller.abort();
-  }, 15000);
+  }, 6000);
   const combinedSignal = signal ? AbortSignal.any([signal, controller.signal]) : controller.signal;
 
   try {
-    console.log(`[Model Router] callGroq start: ${model.name} (provider=groq)`);
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers,
@@ -212,8 +204,6 @@ async function callGroq(model, messages, signal) {
     });
     clearTimeout(timeoutId);
 
-    console.log(`[Model Router] callGroq response: ${model.name} status=${response.status}`);
-
     if (response.status === 429) {
       rotateGroqKey();
       throw new Error('RATE_LIMIT');
@@ -226,32 +216,36 @@ async function callGroq(model, messages, signal) {
     return response;
   } catch(e) {
     clearTimeout(timeoutId);
-    if (timedOut) {
-      console.warn(`[Model Router] callGroq timed out: ${model.name}`);
-      throw new Error('MODEL_TIMEOUT');
-    }
-    console.warn(`[Model Router] callGroq error: ${model.name} -> ${e && e.message}`);
+    if (timedOut) throw new Error('MODEL_TIMEOUT');
     throw e;
   }
 }
 
-async function* readStream(response) {
+async function* readStream(response, signal) {
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = '';
-  let streamTimedOut = false;
-  const streamTimeoutMs = 20000;
-  const streamTimer = setTimeout(() => {
-    streamTimedOut = true;
-    try { reader.cancel(new Error('STREAM_TIMEOUT')); } catch {}
-  }, streamTimeoutMs);
+  let receivedFirstChunk = false;
+
+  const readWithTimeout = async (ms) => {
+    let timer;
+    const timeoutPromise = new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error('STREAM_STALL')), ms);
+    });
+    try {
+      return await Promise.race([reader.read(), timeoutPromise]);
+    } finally {
+      clearTimeout(timer);
+    }
+  };
 
   try {
     while (true) {
-      const { done, value } = await reader.read();
+      if (signal && signal.aborted) break;
+      const timeoutMs = receivedFirstChunk ? 6000 : 5000;
+      const { done, value } = await readWithTimeout(timeoutMs);
       if (done) break;
-
-      if (streamTimedOut) throw new Error('STREAM_TIMEOUT');
+      receivedFirstChunk = true;
 
       buffer += decoder.decode(value, { stream: true });
       const lines = buffer.split('\n');
@@ -287,7 +281,6 @@ async function* readStream(response) {
       }
     }
   } finally {
-    clearTimeout(streamTimer);
     try { reader.releaseLock(); } catch {}
   }
 }
@@ -332,21 +325,19 @@ async function* chatWithFallback(tier, messages, signal, onModelChange) {
         const msg = (err && err.message) ? err.message : String(err);
         console.warn(`[Model Router] ${model.name} (Key ${attempt + 1}/${keyCount}) failed:`, msg);
 
-        // Provider timeout / saturated / unavailable: rotate key and retry same model.
-        if (/413|too large|content too large|limit \d+|MODEL_TIMEOUT|STREAM_TIMEOUT|timed out|only available on/i.test(msg)) {
-          if (model.provider === 'groq') rotateGroqKey();
-          else rotateOpenRouterKey();
-          continue;
+        // If model timed out, stalled, or request too large: immediately switch to the next model in the tier
+        if (/413|too large|content too large|limit \d+|MODEL_TIMEOUT|STREAM_TIMEOUT|STREAM_STALL|timed out|only available on/i.test(msg)) {
+          break; // Next model in the SAME tier!
         }
 
-        // Rate limit: rotate within the same model and same tier.
+        // Rate limit: rotate key for the same model
         if (msg === 'RATE_LIMIT' || /429|rate limit|rpm/i.test(msg)) {
           if (model.provider === 'groq') rotateGroqKey();
           else rotateOpenRouterKey();
-          continue;
+          continue; // Try next key for same model
         }
 
-        // Any other failure tries the next model in the same selected tier only.
+        // Any other failure switches to the next model in the same tier
         break;
       }
     }
