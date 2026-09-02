@@ -2085,6 +2085,34 @@
     window.location.reload();
   };
 
+  window._clearDevCache = async function() {
+    try {
+      const preservedConvs = localStorage.getItem('dev_conversations');
+      const preservedAgent = localStorage.getItem('dev_selected_agent');
+      const preservedGroq = localStorage.getItem('GROQ_API_KEY');
+      const preservedOr = localStorage.getItem('OPENROUTER_API_KEY');
+      const preservedGh = localStorage.getItem('GITHUB_TOKEN');
+      const preservedPin = localStorage.getItem('DEV_CUSTOM_PIN');
+      if (typeof caches !== 'undefined' && caches.keys) {
+        const names = await caches.keys();
+        await Promise.all(names.map(n => caches.delete(n)));
+      }
+      if (typeof sessionStorage !== 'undefined') sessionStorage.clear();
+      localStorage.clear();
+      if (preservedConvs) localStorage.setItem('dev_conversations', preservedConvs);
+      if (preservedAgent) localStorage.setItem('dev_selected_agent', preservedAgent);
+      if (preservedGroq) localStorage.setItem('GROQ_API_KEY', preservedGroq);
+      if (preservedOr) localStorage.setItem('OPENROUTER_API_KEY', preservedOr);
+      if (preservedGh) localStorage.setItem('GITHUB_TOKEN', preservedGh);
+      if (preservedPin) localStorage.setItem('DEV_CUSTOM_PIN', preservedPin);
+      DevUIEngine.showToast('✅ تم تنظيف الكاش مع الحفاظ على مهامك!', 'success');
+      setTimeout(() => window.location.reload(), 600);
+    } catch (e) {
+      console.warn('[DevCache] Clear error:', e);
+      window.location.reload();
+    }
+  };
+
   // Auto-init on DOM ready
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
