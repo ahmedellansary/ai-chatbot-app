@@ -459,6 +459,9 @@ html, body {
   min-height: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  scroll-behavior: smooth;
+  touch-action: pan-y;
   padding: 16px 16px 8px;
   display: flex;
   flex-direction: column;
