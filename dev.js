@@ -2350,6 +2350,8 @@
       console.warn('[DevCache] Clear error:', e);
       window.location.reload();
     }
+  };
+
   window._setAppTheme = function(themeName) {
     document.documentElement.setAttribute('data-theme', themeName);
     localStorage.setItem('xv1_theme', themeName);
