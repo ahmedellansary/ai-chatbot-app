@@ -737,32 +737,42 @@
 }
 
 /* ─── Modern Settings Tabbed Interface ─── */
+.settings-modal-body {
+  display: flex;
+  flex-direction: row;
+  gap: 16px;
+  min-height: 380px;
+}
+
 .settings-modal-tabs-bar {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 6px;
-  padding: 4px;
+  width: 155px;
+  min-width: 140px;
   background: rgba(0, 0, 0, 0.35);
   border: 1px solid var(--border-subtle);
-  border-radius: 10px;
-  margin-bottom: 14px;
+  border-radius: 14px;
+  padding: 8px;
+  flex-shrink: 0;
 }
 
 .settings-tab-btn {
-  flex: 1;
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 7px;
-  padding: 8px 12px;
-  font-size: 12.5px;
+  justify-content: flex-start;
+  gap: 10px;
+  padding: 10px 14px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--text-muted);
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 8px;
+  border-radius: 10px;
   cursor: pointer;
+  white-space: nowrap;
   transition: all 0.2s ease;
+  width: 100%;
 }
 
 .settings-tab-btn:hover {
@@ -773,11 +783,13 @@
 .settings-tab-btn.active {
   color: #fff;
   background: var(--bg-card);
-  border-color: var(--border-subtle);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
 }
 
 .settings-tab-pane {
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -786,6 +798,24 @@
 
 .settings-tab-pane.hidden {
   display: none !important;
+}
+
+@media (max-width: 600px) {
+  .settings-modal-body {
+    flex-direction: column;
+    gap: 12px;
+  }
+  .settings-modal-tabs-bar {
+    width: 100%;
+    flex-direction: row;
+    overflow-x: auto;
+    padding: 6px;
+  }
+  .settings-tab-btn {
+    flex: 1;
+    justify-content: center;
+    padding: 8px 12px;
+  }
 }
 
 .typography-preview-box {
