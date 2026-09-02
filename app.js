@@ -1952,7 +1952,6 @@
     if (label) {
       label.textContent = state.isMultiAgentMode ? 'تشاور الوكلاء (نشط)' : 'تشاور الوكلاء';
     }
-    MessageRenderer.showToast(state.isMultiAgentMode ? '👥 تم تفعيل وضع تشاور الوكلاء (Multi-Agent Consensus)!' : '⚪ تم تعطيل وضع تشاور الوكلاء', 'info');
   };
 
   window._toggleThinkingBox = function(msgId) {
