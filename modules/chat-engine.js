@@ -6,15 +6,15 @@
   'use strict';
 
   const getDeps = () => ({
-    StateController: window.StateController || null,
-    MessageRenderer: window.MessageRenderer || null,
-    ModelEngine: window.ModelEngine || null,
-    InstructionManager: window.InstructionManager || null,
-    UsageTracker: window.UsageTracker || null,
-    UIEngine: window.UIEngine || null,
-    generateId: window.generateId || (() => Date.now().toString(36) + Math.random().toString(36).slice(2)),
-    $: window.$ || ((id) => document.getElementById(id)),
-    get state() { return window.state || null; }
+    get StateController() { return window.StateController || null; },
+    get MessageRenderer() { return window.MessageRenderer || null; },
+    get ModelEngine() { return window.ModelEngine || null; },
+    get InstructionManager() { return window.InstructionManager || null; },
+    get UsageTracker() { return window.UsageTracker || null; },
+    get UIEngine() { return window.UIEngine || null; },
+    get generateId() { return window.generateId || (() => Date.now().toString(36) + Math.random().toString(36).slice(2)); },
+    get $() { return window.$ || ((id) => document.getElementById(id)); },
+    get state() { return window.state || window.AppState || null; }
   });
 
   const ChatEngine = {
@@ -66,15 +66,18 @@
     },
 
     async sendMessage(userText) {
-      const { StateController: sc, MessageRenderer: mr, ModelEngine: me, UIEngine: ui, generateId: gen, $: $fn } = getDeps();
-      const _sc = window.StateController || sc;
-      const _mr = window.MessageRenderer || mr;
-      const _me = window.ModelEngine || me;
-      const _ui = window.UIEngine || ui;
-      const _gen = gen || window.generateId || (() => Date.now().toString(36) + Math.random().toString(36).slice(2));
-      const _$ = $fn || window.$ || ((id) => document.getElementById(id));
-      const state = getDeps().state;
-      if (!state || !_sc || !_mr || !_me) { console.warn('[ChatEngine] Missing deps'); return; }
+      const deps = getDeps();
+      const _sc = window.StateController || deps.StateController;
+      const _mr = window.MessageRenderer || deps.MessageRenderer;
+      const _me = window.ModelEngine || deps.ModelEngine;
+      const _ui = window.UIEngine || deps.UIEngine;
+      const _gen = window.generateId || deps.generateId;
+      const _$ = window.$ || deps.$;
+      const state = window.state || window.AppState || deps.state;
+      if (!state || !_sc || !_mr || !_me) {
+        console.warn('[ChatEngine] Missing deps:', { hasState: !!state, hasSC: !!_sc, hasMR: !!_mr, hasME: !!_me });
+        return;
+      }
       const hasAttachments = state.attachments && state.attachments.length > 0;
       if (state.isStreaming || (!userText.trim() && !hasAttachments)) return;
       if (!state.activeConvId) _sc.newConversation();
