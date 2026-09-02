@@ -847,6 +847,34 @@
         const stream = ModelEngine.chatWithFallback(state.currentMode, apiMessages, state.abortController.signal, onModelEvent);
 
         let msgRow = null;
+        let pendingUpdate = false;
+        let lastUpdateTs = 0;
+
+        const scheduleUpdate = () => {
+          if (pendingUpdate) return;
+          pendingUpdate = true;
+          // Batch DOM updates to the next animation frame to avoid long synchronous reflows
+          requestAnimationFrame(() => {
+            try {
+              if (!msgRow) return;
+              msgRow.innerHTML = MessageRenderer.parseMarkdown(fullContent);
+              const isAr = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(fullContent);
+              const parentRow = document.querySelector(`[data-id="${aiMsgId}"]`);
+              if (parentRow) {
+                parentRow.classList.toggle('is-rtl', isAr);
+                parentRow.classList.toggle('is-ltr', !isAr);
+              }
+              msgRow.setAttribute('dir', isAr ? 'rtl' : 'ltr');
+              msgRow.style.textAlign = isAr ? 'right' : 'left';
+            } catch (err) {
+              console.warn('Error updating AI msg DOM:', err && err.message);
+            } finally {
+              pendingUpdate = false;
+              lastUpdateTs = Date.now();
+            }
+          });
+        };
+
         for await (const { chunk, model, usedFallback } of stream) {
           fullContent += chunk;
           aiMsgObj.model = model.name;
@@ -863,17 +891,18 @@
           }
 
           if (msgRow) {
-            msgRow.innerHTML = MessageRenderer.parseMarkdown(fullContent);
-            const isAr = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(fullContent);
-            const parentRow = document.querySelector(`[data-id="${aiMsgId}"]`);
-            if (parentRow) {
-              parentRow.classList.toggle('is-rtl', isAr);
-              parentRow.classList.toggle('is-ltr', !isAr);
+            // If last update was recent, batch this chunk and let requestAnimationFrame handle it.
+            const now = Date.now();
+            if (now - lastUpdateTs > 80) {
+              scheduleUpdate();
+            } else {
+              // ensure we schedule eventually
+              scheduleUpdate();
             }
-            msgRow.setAttribute('dir', isAr ? 'rtl' : 'ltr');
-            msgRow.style.textAlign = isAr ? 'right' : 'left';
           }
         }
+        // final flush after stream completes
+        if (msgRow && !pendingUpdate) scheduleUpdate();
 
         if (fullContent.includes('---BEGIN_INSTRUCTION_UPDATE---')) {
           InstructionManager.handleAutoInstructionUpdate(fullContent);
