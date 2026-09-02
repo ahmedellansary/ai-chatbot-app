@@ -1012,6 +1012,52 @@
     }
   };
 
+  async function updateDevVersionBadge() {
+    const badgeEl = $('dev-status-badge-text');
+    if (!badgeEl) return;
+
+    const formatDateTime = (d) => {
+      const pad = (n) => String(n).padStart(2, '0');
+      const day = pad(d.getDate());
+      const month = pad(d.getMonth() + 1);
+      const year = d.getFullYear();
+      let hours = d.getHours();
+      const minutes = pad(d.getMinutes());
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      hours = hours % 12;
+      hours = hours ? hours : 12;
+      return `${day}-${month}-${year} ${hours}:${minutes}${ampm}`;
+    };
+
+    let verNum = '121';
+    try {
+      const swRes = await fetch('./sw.js?t=' + Date.now());
+      if (swRes.ok) {
+        const swText = await swRes.text();
+        const match = swText.match(/xv1-chat-v(\d+)/i);
+        if (match) verNum = match[1];
+      }
+    } catch {}
+
+    try {
+      const res = await fetch(`https://api.github.com/repos/${DevConfigVault.githubUser}/${DevConfigVault.githubRepo}/commits?per_page=1`, {
+        headers: DevGitHubService.getHeaders()
+      });
+      if (res.ok) {
+        const commits = await res.json();
+        if (commits && commits.length > 0) {
+          const commitDate = new Date(commits[0].commit.committer.date || commits[0].commit.author.date);
+          badgeEl.textContent = `Dev (V${verNum}) ${formatDateTime(commitDate)}`;
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn('[Version Badge]', e);
+    }
+
+    badgeEl.textContent = `Dev (V${verNum}) ${formatDateTime(new Date())}`;
+  }
+
   // ─────────────────────────────────────────────────────────────────
   // 7. UI ENGINE & MODALS (DevUIEngine)
   // ─────────────────────────────────────────────────────────────────
@@ -1029,7 +1075,7 @@
       if (multiBtn && state.isMultiAgentMode) {
         multiBtn.classList.add('active');
         const label = $('dev-multi-agent-label-text');
-        if (label) label.textContent = 'تشاور الوكلاء (نشط)';
+        if (label) label.textContent = 'Multi-Agent (Active)';
       }
 
       if (state.conversations.length) {
