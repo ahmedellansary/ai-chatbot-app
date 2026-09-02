@@ -2913,44 +2913,43 @@ html, body {
   .usage-grid { grid-template-columns: 1fr; }
 }
 
-/* ─── Modern Settings Tabbed Interface ─── */
-.settings-modal-tabs-bar {
+/* ─── Modern Settings Tabbed Interface (Vertical Layout) ─── */
+.settings-modal-body {
   display: flex;
   flex-direction: row;
-  align-items: center;
-  gap: 8px;
-  padding: 5px;
-  width: 100%;
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid var(--border-subtle);
-  border-radius: 12px;
-  margin-bottom: 12px;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
+  gap: 16px;
+  min-height: 380px;
 }
 
-.settings-modal-tabs-bar::-webkit-scrollbar {
-  display: none;
+.settings-modal-tabs-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 155px;
+  min-width: 140px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  padding: 8px;
+  flex-shrink: 0;
 }
 
 .settings-tab-btn {
-  flex: 1;
-  min-width: max-content;
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 7px;
-  padding: 9px 14px;
-  font-size: 13px;
+  justify-content: flex-start;
+  gap: 10px;
+  padding: 10px 14px;
+  font-size: 13.5px;
   font-weight: 600;
   color: var(--text-muted);
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 9px;
+  border-radius: 10px;
   cursor: pointer;
   white-space: nowrap;
   transition: all 0.2s ease;
+  width: 100%;
 }
 
 .settings-tab-btn:hover {
@@ -2961,20 +2960,39 @@ html, body {
 .settings-tab-btn.active {
   color: #fff;
   background: var(--bg-card);
-  border-color: var(--border-focus);
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
 }
 
 .settings-tab-pane {
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 14px;
-  width: 100%;
   animation: fadeIn 0.2s ease-out;
 }
 
 .settings-tab-pane.hidden {
   display: none !important;
+}
+
+@media (max-width: 600px) {
+  .settings-modal-body {
+    flex-direction: column;
+    gap: 12px;
+  }
+  .settings-modal-tabs-bar {
+    width: 100%;
+    flex-direction: row;
+    overflow-x: auto;
+    padding: 6px;
+  }
+  .settings-tab-btn {
+    flex: 1;
+    justify-content: center;
+    padding: 8px 12px;
+  }
 }
 
 .typography-preview-box {
