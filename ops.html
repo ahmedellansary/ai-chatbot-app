@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="en" dir="ltr">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>X.v1 Ops & Rollback Center</title>
-  <meta name="description" content="مركز العمليات، سجل الأنشطة الشامل، والاسترجاع الزمني لتطبيقات X.v1">
+  <meta name="description" content="Operations center, activity audit logs, and time-travel rollback for X.v1 applications">
   <meta name="theme-color" content="#07090e">
   <link rel="icon" href="./icons/dev-icon-192.png">
   <link rel="stylesheet" href="./ops_style.css">
@@ -19,30 +19,30 @@
         <span class="logo-icon">⏳</span>
         <div class="logo-text">
           <span class="brand-name">X.v1 Ops & Rollback</span>
-          <span class="brand-sub">مركز العمليات وسجل الاسترجاع</span>
+          <span class="brand-sub">Deployment Engine & Time Machine</span>
         </div>
       </div>
       <div class="repo-badge">
         <span class="branch-dot"></span>
         <span id="repo-branch-label">main</span>
-        <span id="repo-commit-count" class="commit-pill">0 تعديلات</span>
+        <span id="repo-commit-count" class="commit-pill">0 commits</span>
       </div>
     </div>
 
     <div class="header-actions">
-      <button id="refresh-ops-btn" class="header-btn" title="تحديث السجلات">
+      <button id="refresh-ops-btn" class="header-btn" title="Refresh Logs & Timeline">
         <span>🔄</span>
-        <span class="btn-text">تحديث</span>
+        <span class="btn-text">Refresh</span>
       </button>
-      <a href="./dev.html" class="header-btn link-btn" title="العودة لاستوديو المطور">
+      <a href="./dev.html" class="header-btn link-btn" title="Back to Dev Studio">
         <span>👨‍💻</span>
-        <span class="btn-text">استوديو المطور</span>
+        <span class="btn-text">Dev Studio</span>
       </a>
-      <a href="./index.html" class="header-btn link-btn" title="العودة للشات">
+      <a href="./index.html" class="header-btn link-btn" title="Back to Chat">
         <span>💬</span>
-        <span class="btn-text">الشات</span>
+        <span class="btn-text">Chat</span>
       </a>
-      <button id="lock-portal-btn" class="header-btn lock-btn" title="قفل البوابة">
+      <button id="lock-portal-btn" class="header-btn lock-btn" title="Lock Portal">
         <span>🔒</span>
       </button>
     </div>
@@ -55,20 +55,20 @@
       <div class="controls-row">
         <!-- Rewind 1 Step -->
         <button id="rollback-1-btn" class="ops-action-btn single-rewind-btn">
-          <span>⏪ تراجع عن آخر تعديل (-1)</span>
+          <span>⏪ Rewind Last Commit (-1)</span>
         </button>
 
         <!-- Rewind N Steps -->
         <div class="multi-step-form">
-          <select id="rewind-steps-select" class="ops-select" aria-label="عدد التعديلات">
-            <option value="2">2 خطوات للخلف (-2)</option>
-            <option value="3">3 خطوات للخلف (-3)</option>
-            <option value="4">4 خطوات للخلف (-4)</option>
-            <option value="5">5 خطوات للخلف (-5)</option>
-            <option value="10">10 خطوات للخلف (-10)</option>
+          <select id="rewind-steps-select" class="ops-select" aria-label="Steps to rewind">
+            <option value="2">Rewind 2 Commits (-2)</option>
+            <option value="3">Rewind 3 Commits (-3)</option>
+            <option value="4">Rewind 4 Commits (-4)</option>
+            <option value="5">Rewind 5 Commits (-5)</option>
+            <option value="10">Rewind 10 Commits (-10)</option>
           </select>
           <button id="rollback-n-btn" class="ops-action-btn multi-rewind-btn">
-            <span>⏮️ تراجع (-N)</span>
+            <span>⏮️ Rewind (-N)</span>
           </button>
         </div>
       </div>
@@ -78,11 +78,11 @@
     <section class="ops-content-section">
       <div class="ops-tabs-nav">
         <button id="tab-timeline-btn" class="ops-tab-btn active">
-          <span>📜 النسخ السابقة</span>
+          <span>📜 Commit Timeline</span>
           <span id="tab-commits-badge" class="tab-badge">0</span>
         </button>
         <button id="tab-logs-btn" class="ops-tab-btn">
-          <span>📋 سجل العمليات</span>
+          <span>📋 Live Audit Log</span>
           <span id="tab-logs-badge" class="tab-badge">0</span>
         </button>
       </div>
@@ -90,14 +90,14 @@
       <!-- Tab 1: Timeline & Commits Tree -->
       <div id="tab-timeline-view" class="tab-view active">
         <div class="filter-bar">
-          <input type="text" id="commit-search-input" class="ops-search-input" placeholder="🔍 بحث في التعديلات...">
-          <button id="fetch-more-commits-btn" class="secondary-btn">تحميل المزيد</button>
+          <input type="text" id="commit-search-input" class="ops-search-input" placeholder="🔍 Search commits...">
+          <button id="fetch-more-commits-btn" class="secondary-btn">Load More</button>
         </div>
 
         <div id="commits-timeline-container" class="timeline-container">
           <div class="loading-spinner-box">
             <div class="spinner"></div>
-            <span>جاري قراءة النسخ من GitHub...</span>
+            <span>Fetching commit tree from GitHub...</span>
           </div>
         </div>
       </div>
@@ -105,14 +105,14 @@
       <!-- Tab 2: Live Activity Logs -->
       <div id="tab-logs-view" class="tab-view">
         <div class="filter-bar">
-          <input type="text" id="log-search-input" class="ops-search-input" placeholder="🔍 بحث في السجل...">
+          <input type="text" id="log-search-input" class="ops-search-input" placeholder="🔍 Search logs...">
           <select id="log-type-filter" class="ops-select small-select">
-            <option value="all">الكل</option>
-            <option value="deploy">نشر</option>
-            <option value="rollback">استرجاع</option>
-            <option value="error">أخطاء</option>
+            <option value="all">All</option>
+            <option value="deploy">Deploy</option>
+            <option value="rollback">Rollback</option>
+            <option value="error">Errors</option>
           </select>
-          <button id="clear-logs-btn" class="danger-outline-btn">مسح</button>
+          <button id="clear-logs-btn" class="danger-outline-btn">Clear</button>
         </div>
 
         <div id="audit-logs-container" class="logs-container">
@@ -128,14 +128,14 @@
       <div class="modal-header">
         <div class="modal-title">
           <span>⚠️</span>
-          <span>تأكيد عملية الاسترجاع الزمني</span>
+          <span>Confirm Time Travel Rollback</span>
         </div>
         <button id="close-modal-btn" class="modal-close-btn">&times;</button>
       </div>
 
       <div class="modal-body">
         <div class="rollback-warning-box">
-          <strong>تنبيه هام:</strong> سيتم الرجوع بملفات المستودع إلى النقطة الزمنية المحددة أدناه، وسيتم رفع تحديث تلقائي للكاش (`sw.js`) لتطبيقه فوراً على كافة المستخدمين.
+          <strong>Caution:</strong> Repository files will be restored to the selected snapshot point and committed directly to the main branch with an auto-bumped cache (`sw.js`).
         </div>
 
         <div id="rollback-target-details" class="target-details-box">
@@ -148,9 +148,9 @@
       </div>
 
       <div class="modal-footer">
-        <button id="cancel-rollback-btn" class="secondary-btn">إلغاء</button>
+        <button id="cancel-rollback-btn" class="secondary-btn">Cancel</button>
         <button id="execute-rollback-btn" class="danger-btn">
-          <span>تأكيد واسترجاع النسخة الآن</span>
+          <span>Execute Rollback Now</span>
           <span>🚀</span>
         </button>
       </div>
@@ -162,24 +162,24 @@
     <div class="lock-gate-card">
       <div class="lock-gate-star">⏳</div>
       <h2 class="lock-gate-title">X.v1 Ops & Rollback</h2>
-      <p class="lock-gate-sub">أدخل كلمة السر المشفرة لفتح مركز العمليات والاسترجاع.</p>
+      <p class="lock-gate-sub">Enter master password to access deployment & rollback controls.</p>
 
       <form id="ops-lock-form" style="width:100%; display:flex; flex-direction:column; gap:10px;">
         <input
           type="password"
           id="ops-gate-pin-input"
           class="lock-gate-input"
-          placeholder="أدخل كلمة السر..."
+          placeholder="Enter password..."
           maxlength="32"
           autocomplete="current-password"
         >
         <button type="button" id="ops-gate-unlock-btn" class="lock-gate-btn">
-          <span>فتح مركز العمليات</span>
+          <span>Unlock Ops Portal</span>
           <span>🔓</span>
         </button>
       </form>
 
-      <div style="font-size:11px; color:var(--text-dim); margin-top:6px;">🔐 محمية بتشفير Salted SHA-256</div>
+      <div style="font-size:11px; color:var(--text-dim); margin-top:6px;">🔐 Protected with Salted SHA-256</div>
     </div>
   </div>
 
