@@ -99,7 +99,6 @@
           if (isValid) {
             this.unlock();
             gate.classList.add('hidden');
-            OpsUI.showToast('🔓 مرحباً بك في مركز العمليات والاسترجاع!', 'success');
             OpsApp.initData();
           } else {
             OpsUI.showToast('❌ كلمة السر غير صحيحة!', 'error');
