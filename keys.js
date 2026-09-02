@@ -11,9 +11,11 @@
   }
 
   Object.entries(safeConfig).forEach(([key, value]) => {
-    window.__APP_CONFIG__[key] = value;
-    try {
-      localStorage.setItem(key, value);
-    } catch {}
+    if (value && value.trim()) {
+      window.__APP_CONFIG__[key] = value.trim();
+      try {
+        localStorage.setItem(key, value.trim());
+      } catch {}
+    }
   });
 })();
