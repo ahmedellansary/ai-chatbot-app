@@ -1898,27 +1898,95 @@
     DevUIEngine.showToast('تم إلغاء التعديل', 'info');
   };
 
+  let repoFilesCache = [];
+  let isMoreFilesExpanded = false;
+
+  const getFileIcon = (p) => {
+    if (p.endsWith('.html')) return '📄';
+    if (p.endsWith('.css')) return '🎨';
+    if (p.endsWith('.js') || p.endsWith('.mjs')) return '⚙️';
+    if (p.endsWith('.json')) return '📋';
+    if (p.endsWith('.txt')) return '🧠';
+    if (p.includes('manifest')) return '📱';
+    if (p.includes('icon') || p.endsWith('.png') || p.endsWith('.jpg')) return '🖼️';
+    return '📄';
+  };
+
+  function renderRepositoryFilesExplorer() {
+    const topPillsContainer = $('top-files-pills');
+    const extendedGrid = $('extended-files-grid');
+    const badge = $('files-count-badge');
+    const moreBtnText = $('more-files-text');
+    const moreChevron = $('more-files-chevron');
+    const toggleBtn = $('toggle-more-files-btn');
+    if (!topPillsContainer || !extendedGrid) return;
+
+    const allFiles = repoFilesCache.length > 0 
+      ? repoFilesCache 
+      : ['index.html', 'style.css', 'app.js', 'dev.html', 'dev_style.css', 'dev.js', 'system_prompt.txt', 'sw.js', 'manifest.json', 'ops.html', 'ops_style.css', 'ops.js'];
+
+    const activeFile = state.currentEditingFile || 'index.html';
+    
+    let top3 = allFiles.slice(0, 3);
+    if (!top3.includes(activeFile) && allFiles.includes(activeFile)) {
+      top3 = [activeFile, ...allFiles.filter(f => f !== activeFile).slice(0, 2)];
+    }
+
+    const remainingFiles = allFiles.filter(f => !top3.includes(f));
+    const totalCount = allFiles.length;
+    const hiddenCount = remainingFiles.length;
+
+    if (badge) {
+      badge.textContent = `${top3.length} of ${totalCount} files (${hiddenCount} hidden)`;
+    }
+
+    topPillsContainer.innerHTML = top3.map(file => `
+      <button class="file-pill-btn ${file === activeFile ? 'active' : ''}" onclick="window._selectFileForEditing('${file.replace(/'/g, "\\'")}')">
+        <span>${getFileIcon(file)}</span>
+        <span>${file}</span>
+      </button>
+    `).join('');
+
+    if (toggleBtn && moreBtnText && moreChevron) {
+      if (isMoreFilesExpanded) {
+        toggleBtn.classList.add('expanded');
+        moreBtnText.textContent = 'Collapse Files';
+        moreChevron.textContent = '▴';
+      } else {
+        toggleBtn.classList.remove('expanded');
+        moreBtnText.textContent = `+${hiddenCount} More Files`;
+        moreChevron.textContent = '▾';
+      }
+    }
+
+    extendedGrid.innerHTML = remainingFiles.map(file => `
+      <button class="file-pill-btn ${file === activeFile ? 'active' : ''}" onclick="window._selectFileForEditing('${file.replace(/'/g, "\\'")}')">
+        <span>${getFileIcon(file)}</span>
+        <span>${file}</span>
+      </button>
+    `).join('');
+
+    extendedGrid.classList.toggle('hidden', !isMoreFilesExpanded);
+  }
+
+  window._toggleMoreFiles = function() {
+    isMoreFilesExpanded = !isMoreFilesExpanded;
+    renderRepositoryFilesExplorer();
+  };
+
   window._openFilesModal = async function() {
     $('files-modal')?.classList.remove('hidden');
     window._selectFileForEditing(state.currentEditingFile || 'index.html');
-    const grid = $('all-files-grid');
-    if (!grid) return;
-    grid.innerHTML = '<span style="font-size:11px; color:var(--text-dim);">جاري جلب كل ملفات المشروع...</span>';
+    renderRepositoryFilesExplorer();
+
     try {
       const files = await DevGitHubService.listFiles();
-      const iconFor = (p) => {
-        if (p.endsWith('.html')) return '📄';
-        if (p.endsWith('.css')) return '🎨';
-        if (p.endsWith('.js')) return '⚙️';
-        if (p.endsWith('.json')) return '📋';
-        if (p.endsWith('.txt')) return '🧠';
-        if (p.includes('manifest')) return '📱';
-        if (p.includes('icon')) return '🖼️';
-        return '📄';
-      };
-      grid.innerHTML = files.map(f => `<button class="icon-btn" onclick="window._selectFileForEditing('${f.replace(/'/g, "\\'")}')" title="${f}">${iconFor(f)} ${f}</button>`).join('');
+      if (files && files.length) {
+        repoFilesCache = files;
+        renderRepositoryFilesExplorer();
+      }
     } catch (e) {
-      grid.innerHTML = `<span style="font-size:11px; color:var(--accent-rose);">تعذر جلب القائمة: ${e.message}</span>`;
+      console.warn('[Files list fetch]', e);
     }
   };
 
@@ -1931,18 +1999,20 @@
     const title = $('current-editing-filename');
     const editor = $('direct-code-editor');
 
-    if (title) title.innerText = `الملف المفتوح: ${fileName}`;
+    if (title) title.innerText = `Active: ${fileName}`;
+    renderRepositoryFilesExplorer();
+
     if (editor) {
       if (preloadedContent) {
         editor.value = preloadedContent;
         return;
       }
-      editor.value = 'جاري جلب محتوى الملف من GitHub...';
+      editor.value = 'Fetching file contents from GitHub...';
       try {
         const fileData = await DevGitHubService.getFile(fileName);
         editor.value = fileData.content;
       } catch (e) {
-        editor.value = `// تعذر جلب محتوى الملف: ${e.message}`;
+        editor.value = `// Failed to load file: ${e.message}`;
       }
     }
   };
@@ -1954,19 +2024,19 @@
 
     const content = editor.value;
     if (!content.trim()) {
-      DevUIEngine.showToast('الملف فارغ!', 'warning');
+      DevUIEngine.showToast('File content is empty!', 'warning');
       return;
     }
 
-    if (!confirm(`هل أنت متأكد من حفظ ونشر التعديل المباشر على ملف ${fileName} إلى مستودع GitHub؟`)) return;
+    if (!confirm(`Are you sure you want to commit and deploy direct changes to ${fileName} to GitHub?`)) return;
 
-    DevUIEngine.showToast(`💾 جاري رفع التعديل لـ ${fileName} على GitHub...`, 'info');
+    DevUIEngine.showToast(`💾 Committing and deploying ${fileName} to GitHub...`, 'info');
     try {
       await DevGitHubService.commitFile(fileName, content, `Direct edit of ${fileName} via X.v1 Dev Portal`);
-      DevUIEngine.showToast(`✅ تم حفظ ونشر ${fileName} بنجاح!`, 'success');
-      window._closeFilesModal();
+      DevUIEngine.showToast(`✅ Successfully deployed ${fileName}!`, 'success');
+      updateDevVersionBadge().catch(()=>{});
     } catch (e) {
-      DevUIEngine.showToast(`❌ فشل الحفظ: ${e.message}`, 'error');
+      DevUIEngine.showToast(`❌ Commit failed: ${e.message}`, 'error');
     }
   };
 
