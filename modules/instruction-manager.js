@@ -10,14 +10,25 @@
 
     async load() {
       try {
-        const custom = localStorage.getItem('instruction_files');
-        if (custom) {
-          this.files = JSON.parse(custom);
-          if (Array.isArray(this.files) && this.files.length) return this.files;
-        }
         const res = await fetch('./instructions.json?t=' + Date.now());
         if (res.ok) {
-          this.files = await res.json();
+          const fresh = await res.json();
+          const custom = localStorage.getItem('instruction_files');
+          if (custom) {
+            try {
+              const parsed = JSON.parse(custom);
+              // Check if any file has non-JSON content
+              const hasLegacy = parsed.some(f => {
+                if (!f || !f.content) return true;
+                try { JSON.parse(f.content); return false; } catch(e) { return true; }
+              });
+              if (!hasLegacy && Array.isArray(parsed) && parsed.length) {
+                this.files = parsed;
+                return this.files;
+              }
+            } catch(e) {}
+          }
+          this.files = fresh;
           this.save();
           return this.files;
         }
@@ -27,13 +38,17 @@
       if (!this.files || !this.files.length) {
         this.files = [{
           id: 'core_general',
-          name: 'التعليمات العامة الأساسية',
+          name: 'Core — Claude-like',
           icon: '🧠',
-          desc: 'الهوية الأساسية، الأسلوب الودود، الذكاء والوضوح',
+          desc: '',
           isCore: true,
           enabled: true,
           keywords: [],
-          content: 'You are "X.v1", an intelligent, creative, and friendly AI assistant.'
+          content: JSON.stringify({
+            "identity": "X.v1 — Claude-inspired",
+            "principles": ["warm_greeting", "mirror_language", "step_by_step_thinking", "clean_markdown", "honest_if_unknown"],
+            "format": "headings + bullets + tables when helpful"
+          }, null, 2)
         }];
       }
       return this.files;
@@ -57,14 +72,21 @@
             <span class="inst-file-icon">${file.icon || '📄'}</span>
             <div class="inst-file-text">
               <div class="inst-file-title">${esc(file.name)}</div>
-              <div class="inst-file-desc">${esc(file.desc || '')}</div>
             </div>
           </div>
           <div class="inst-file-badges">
-            ${file.isCore ? '<span class="inst-tag-badge">أساسي</span>' : ''}
+            ${file.isCore ? '<span class="inst-tag-badge">Core</span>' : ''}
             <button class="inst-toggle-btn ${file.enabled ? 'enabled' : ''}" onclick="event.stopPropagation(); window._toggleInstructionFile('${file.id}')">
               ${file.enabled ? '✓ مفعل' : '✕ معطل'}
             </button>
+            ${!file.isCore ? `
+              <button type="button" class="inst-trash-btn" onclick="event.stopPropagation(); window._deleteInstructionFileById('${file.id}')" title="حذف التعليمة">
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
+              </button>
+            ` : ''}
           </div>
         `;
         container.appendChild(card);
@@ -82,12 +104,16 @@
       if (iconEl) iconEl.textContent = file.icon || '📄';
       const nameInput = document.getElementById('inst-editor-name');
       if (nameInput) { nameInput.value = file.name || ''; nameInput.readOnly = !!file.isCore; }
-      const descInput = document.getElementById('inst-editor-desc');
-      if (descInput) descInput.value = file.desc || '';
       const kwInput = document.getElementById('inst-editor-keywords');
       if (kwInput) kwInput.value = (file.keywords || []).join(', ');
       const contentTextarea = document.getElementById('inst-editor-content');
-      if (contentTextarea) contentTextarea.value = file.content || '';
+      if (contentTextarea) {
+        let val = file.content || '';
+        try {
+          val = JSON.stringify(JSON.parse(val), null, 2);
+        } catch(e) {}
+        contentTextarea.value = val;
+      }
       const enabledCheckbox = document.getElementById('inst-editor-enabled');
       if (enabledCheckbox) enabledCheckbox.checked = !!file.enabled;
       const deleteBtn = document.getElementById('inst-delete-btn');
@@ -106,7 +132,6 @@
       const file = this.files.find(f => f.id === this.activeEditingId);
       if (!file) return;
       const name = document.getElementById('inst-editor-name')?.value.trim();
-      const desc = document.getElementById('inst-editor-desc')?.value.trim();
       const keywordsRaw = document.getElementById('inst-editor-keywords')?.value.trim();
       const content = document.getElementById('inst-editor-content')?.value.trim();
       const enabled = document.getElementById('inst-editor-enabled')?.checked;
@@ -114,13 +139,19 @@
         if (window.MessageRenderer) window.MessageRenderer.showToast('يرجى كتابة اسم الملف والتعليمات', 'warning');
         return;
       }
+      // Strict JSON Validation
+      try {
+        const parsed = JSON.parse(content);
+        file.content = JSON.stringify(parsed, null, 2);
+      } catch (e) {
+        if (window.MessageRenderer) window.MessageRenderer.showToast('⚠️ التعليمات يجب أن تكون بتنسيق JSON صالح (Strict JSON Format)', 'error');
+        return;
+      }
       if (!file.isCore) file.name = name;
-      file.desc = desc;
       file.keywords = keywordsRaw ? keywordsRaw.split(',').map(s => s.trim().toLowerCase()).filter(Boolean) : [];
-      file.content = content;
       file.enabled = enabled;
       this.save();
-      if (window.MessageRenderer) window.MessageRenderer.showToast(`✅ تم حفظ ملف "${file.name}" بنجاح!`, 'success');
+      if (window.MessageRenderer) window.MessageRenderer.showToast(`✅ تم حفظ "${file.name}" بصيغة JSON بنجاح!`, 'success');
       this.renderList();
     },
 
@@ -134,32 +165,55 @@
         if (checkbox) checkbox.checked = file.enabled;
       }
       this.renderList();
-      if (window.MessageRenderer) window.MessageRenderer.showToast(`${file.enabled ? '🟢 تم تفعيل' : '⚪ تم تعطيل'} ملف "${file.name}"`, 'info');
+      if (window.MessageRenderer) window.MessageRenderer.showToast(`${file.enabled ? '🟢 تم تفعيل' : '⚪ تم تعطيل'} "${file.name}"`, 'info');
     },
 
     addNew() {
-      const id = 'custom_' + Date.now();
-      const newFile = { id, name: 'ملف تعليمات جديد', icon: '📝', desc: 'تعليمات متخصصة لسياق محدد', isCore: false, enabled: true, keywords: [], content: 'اكتب التوجيهات الخاصة بهذا الملف هنا...' };
+      const newFile = {
+        id: 'custom_' + Date.now(),
+        name: 'New Custom Rule',
+        icon: '⚡',
+        desc: '',
+        isCore: false,
+        enabled: true,
+        keywords: [],
+        content: JSON.stringify({
+          "rule_name": "example_rule",
+          "guidelines": [
+            "direct and concise",
+            "strict formatting"
+          ]
+        }, null, 2)
+      };
       this.files.push(newFile);
       this.save();
-      this.openEditor(id);
-      if (window.MessageRenderer) window.MessageRenderer.showToast('📄 تم إنشاء ملف تعليمات جديد', 'info');
+      this.renderList();
+      this.openEditor(newFile.id);
+      if (window.MessageRenderer) window.MessageRenderer.showToast('➕ تم إنشاء ملف تعليمات JSON جديد', 'success');
+    },
+
+    deleteById(fileId) {
+      const file = this.files.find(f => f.id === fileId);
+      if (!file || file.isCore) return;
+      if (confirm(`هل أنت متأكد من حذف تعليمة "${file.name}"؟`)) {
+        this.files = this.files.filter(f => f.id !== fileId);
+        this.save();
+        if (this.activeEditingId === fileId) {
+          this.closeEditor();
+        } else {
+          this.renderList();
+        }
+        if (window.MessageRenderer) window.MessageRenderer.showToast(`🗑️ تم حذف "${file.name}"`, 'info');
+      }
     },
 
     deleteActive() {
       if (!this.activeEditingId) return;
-      const file = this.files.find(f => f.id === this.activeEditingId);
-      if (!file || file.isCore) return;
-      if (confirm(`هل أنت متأكد من حذف ملف "${file.name}"؟`)) {
-        this.files = this.files.filter(f => f.id !== this.activeEditingId);
-        this.save();
-        this.closeEditor();
-        if (window.MessageRenderer) window.MessageRenderer.showToast('🗑️ تم حذف الملف', 'info');
-      }
+      this.deleteById(this.activeEditingId);
     },
 
     async resetDefaults() {
-      if (confirm('هل تريد استعادة كافة ملفات التعليمات الافتراضية؟')) {
+      if (confirm('هل تريد استعادة كافة ملفات التعليمات الافتراضية بصيغة JSON؟')) {
         try {
           const res = await fetch('./instructions.json?t=' + Date.now());
           if (res.ok) {
@@ -173,6 +227,25 @@
           if (window.MessageRenderer) window.MessageRenderer.showToast('تعذر جلب الملفات: ' + e.message, 'error');
         }
       }
+    },
+
+    buildSystemPrompt(userText) {
+      const active = this.files.filter(f => f.enabled);
+      if (!active.length) return '';
+      const promptParts = [];
+      active.forEach(file => {
+        if (file.isCore) {
+          promptParts.push(file.content);
+        } else if (!file.keywords || !file.keywords.length) {
+          promptParts.push(`\n=== Instruction: ${file.name} ===\n${file.content}`);
+        } else {
+          const match = file.keywords.some(kw => userText && userText.toLowerCase().includes(kw));
+          if (match) {
+            promptParts.push(`\n=== Instruction: ${file.name} ===\n${file.content}`);
+          }
+        }
+      });
+      return promptParts.join('\n\n');
     },
 
     assemblePrompt(userText = '', attachments = []) {
@@ -219,4 +292,5 @@
   };
 
   window.InstructionManager = InstructionManager;
+  window._deleteInstructionFileById = (id) => InstructionManager.deleteById(id);
 })();
