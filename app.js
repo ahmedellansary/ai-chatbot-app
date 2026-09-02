@@ -870,9 +870,13 @@
     },
 
     _thinkingTimer: null,
-    showTyping(initialText = 'Analyzing...') {
+    _stripDots(text) {
+      return String(text || '').replace(/\s*\.+\s*$/, '').trim();
+    },
+    showTyping(initialText = 'Analyzing') {
       const container = $('chat-container');
       if (!container) return;
+      const base = this._stripDots(initialText) || 'Analyzing';
 
       let typing = $('typing-indicator');
       if (!typing) {
@@ -880,15 +884,16 @@
         typing.id = 'typing-indicator';
         typing.className = 'message-row ai typing-indicator';
         typing.innerHTML = `
-          <div class="typing-bubble">
-            <span class="typing-icon">✦</span>
-            <span id="thinking-word" class="thinking-word">${this.escapeHtml(initialText)}</span>
+          <div class="typing-bubble" dir="ltr">
+            <span class="typing-icon" aria-hidden="true">✦</span>
+            <span id="thinking-word" class="thinking-word">${this.escapeHtml(base)}</span>
+            <span class="thinking-dots" aria-hidden="true"><i></i><i></i><i></i></span>
           </div>
         `;
         container.appendChild(typing);
       } else {
         const wordEl = document.getElementById('thinking-word');
-        if (wordEl) wordEl.textContent = initialText;
+        if (wordEl) wordEl.textContent = base;
       }
       this.scrollToBottom();
     },
@@ -896,7 +901,7 @@
     setThinkingStage(text) {
       const wordEl = document.getElementById('thinking-word');
       if (wordEl) {
-        wordEl.textContent = text;
+        wordEl.textContent = this._stripDots(text) || 'Thinking';
         this.scrollToBottom();
       }
     },
