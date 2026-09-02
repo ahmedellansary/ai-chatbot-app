@@ -351,7 +351,7 @@
           messages,
           stream: true,
           temperature: 0.3,
-          max_tokens: 8192
+          max_tokens: isGroq ? 4096 : 8192
         }),
         signal
       });
