@@ -9,13 +9,13 @@
   <meta name="apple-mobile-web-app-title" content="X.v1 Dev">
 
   <title>X.v1 — Developer Portal & Codebase Studio</title>
-  <link rel="manifest" href="./dev-manifest.json?v=171">
+  <link rel="manifest" href="./dev-manifest.json?v=172">
   <!-- Modular Dev CSS (load before fallback) -->
-  <link rel="stylesheet" href="./css/dev-base.css?v=171">
-  <link rel="stylesheet" href="./css/dev-chat.css?v=171">
-  <link rel="stylesheet" href="./css/dev-input.css?v=171">
-  <link rel="stylesheet" href="./css/dev-modal.css?v=171">
-  <link rel="stylesheet" href="./dev_style.css?v=171">
+  <link rel="stylesheet" href="./css/dev-base.css?v=172">
+  <link rel="stylesheet" href="./css/dev-chat.css?v=172">
+  <link rel="stylesheet" href="./css/dev-input.css?v=172">
+  <link rel="stylesheet" href="./css/dev-modal.css?v=172">
+  <link rel="stylesheet" href="./dev_style.css?v=172">
   <link rel="icon" type="image/png" href="./icons/dev-icon-192.png?v=52">
   <link rel="apple-touch-icon" href="./icons/dev-icon-192.png?v=52">
   <link rel="apple-touch-icon" sizes="512x512" href="./icons/dev-icon-512.png?v=52">
@@ -116,7 +116,7 @@
       <div class="header-right">
         <div class="repo-status-badge">
           <span class="status-dot"></span>
-          <span class="repo-badge-text" id="dev-status-badge-text">Dev (V171) 02-09-2026 8:45AM</span>
+          <span class="repo-badge-text" id="dev-status-badge-text">Dev (V172) 02-09-2026 8:50AM</span>
         </div>
         <script>
           (function() {
@@ -364,11 +364,6 @@
 
         <!-- ═══ Tab 1: Themes & Appearance ═══ -->
         <div id="dev-tab-themes" class="settings-tab-pane active">
-          <div style="font-weight: 600; font-size: 13.5px; color: #fff; margin-bottom: 2px;">
-            <span>🎨</span> <span>اختر الثيم اللوني للاستوديو:</span>
-          </div>
-          <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">يتم تطبيق الثيم فورياً وحفظه تلقائياً في المتصفح.</p>
-          
           <div class="theme-selector-grid">
             <button type="button" class="theme-card-btn active" data-theme="obsidian" onclick="window._setAppTheme('obsidian')">
               <div class="theme-preview-dot obsidian"></div>
@@ -403,11 +398,6 @@
 
         <!-- ═══ Tab 2: Typography & Sizes ═══ -->
         <div id="dev-tab-typography" class="settings-tab-pane hidden">
-          <div style="font-weight: 600; font-size: 13.5px; color: #fff; margin-bottom: 2px;">
-            <span>🔤</span> <span>تخصيص الخطوط وحجم العرض:</span>
-          </div>
-          <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">اختر نوع الخط وحجمه المناسب للقراءة وكتابة الأكواد.</p>
-
           <div style="display: flex; flex-direction: column; gap: 14px;">
             <!-- Font Family -->
             <div>
@@ -443,11 +433,10 @@
 
         <!-- ═══ Tab 3: System Prompt / Instructions ═══ -->
         <div id="dev-tab-prompt" class="settings-tab-pane hidden">
-          <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
             <span style="font-weight:600; font-size:13.5px; color:#fff;">Developer System Prompt:</span>
-            <button class="icon-btn" onclick="window._resetDefaultDevPrompt()" style="font-size:11.5px; padding:4px 8px;">Reset Default</button>
+            <button class="settings-action-btn" onclick="window._resetDefaultDevPrompt()">Reset Default</button>
           </div>
-          <p style="font-size:12px; color:var(--text-muted); margin-top:2px;">Direct instructions governing the AI Codebase Engineer's behavior and patching rules.</p>
           <textarea id="dev-prompt-textarea" class="dev-textarea" style="background:#08080b; border:1px solid var(--border-subtle); border-radius:10px; padding:12px; min-height:220px; width:100%; margin-top:6px; font-family:var(--font-mono); font-size:12.5px; line-height:1.5;" rows="9"></textarea>
           <button class="dev-btn-primary" onclick="window._saveDevPrompt()" style="align-self:flex-start; margin-top:8px;">
             <span>💾</span>
@@ -494,14 +483,14 @@
   <div id="toast-container"></div>
 </div>
 
-<script src="./config.js?v=171"></script>
-<script src="./auth.js?v=171"></script>
-<script src="./github.js?v=171"></script>
-<script src="./models.js?v=171"></script>
-<script src="./ui-helpers.js?v=171"></script>
-<script src="./modules/dev-state.js?v=171"></script>
-<script src="./modules/dev-chat-engine.js?v=171"></script>
-<script src="./modules/dev-ui-engine.js?v=171"></script>
-<script src="./dev.js?v=171"></script>
+<script src="./config.js?v=172"></script>
+<script src="./auth.js?v=172"></script>
+<script src="./github.js?v=172"></script>
+<script src="./models.js?v=172"></script>
+<script src="./ui-helpers.js?v=172"></script>
+<script src="./modules/dev-state.js?v=172"></script>
+<script src="./modules/dev-chat-engine.js?v=172"></script>
+<script src="./modules/dev-ui-engine.js?v=172"></script>
+<script src="./dev.js?v=172"></script>
 </body>
 </html>
