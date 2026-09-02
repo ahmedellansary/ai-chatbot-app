@@ -2161,6 +2161,137 @@
   };
 
   // ─────────────────────────────────────────────────────────────────
+  // Modern Audio Player & Code Card Controllers
+  // ─────────────────────────────────────────────────────────────────
+  window._togglePlayAudio = function(btn) {
+    const card = btn.closest('.modern-audio-card');
+    if (!card) return;
+    let audio = card.querySelector('audio.hidden-audio');
+    if (!audio) {
+      audio = new Audio(card.dataset.src);
+      audio.className = 'hidden-audio';
+      card.appendChild(audio);
+    }
+    const playIcon = btn.querySelector('.play-icon');
+    const pauseIcon = btn.querySelector('.pause-icon');
+    const fill = card.querySelector('.audio-progress-fill');
+    const curTime = card.querySelector('.current-time');
+    const totTime = card.querySelector('.total-time');
+
+    if (!audio._boundEvents) {
+      audio._boundEvents = true;
+      audio.addEventListener('loadedmetadata', () => {
+        if (totTime && audio.duration) {
+          const m = Math.floor(audio.duration / 60);
+          const s = Math.floor(audio.duration % 60);
+          totTime.textContent = `${m}:${s < 10 ? '0' : ''}${s}`;
+        }
+      });
+      audio.addEventListener('timeupdate', () => {
+        if (!audio.duration) return;
+        const pct = (audio.currentTime / audio.duration) * 100;
+        if (fill) fill.style.width = `${pct}%`;
+        if (curTime) {
+          const m = Math.floor(audio.currentTime / 60);
+          const s = Math.floor(audio.currentTime % 60);
+          curTime.textContent = `${m}:${s < 10 ? '0' : ''}${s}`;
+        }
+        if (totTime && audio.duration) {
+          const rem = Math.max(0, audio.duration - audio.currentTime);
+          const rm = Math.floor(rem / 60);
+          const rs = Math.floor(rem % 60);
+          totTime.textContent = `-${rm}:${rs < 10 ? '0' : ''}${rs}`;
+        }
+      });
+      audio.addEventListener('ended', () => {
+        if (playIcon) playIcon.style.display = 'block';
+        if (pauseIcon) pauseIcon.style.display = 'none';
+        if (fill) fill.style.width = '0%';
+        if (curTime) curTime.textContent = '0:00';
+      });
+    }
+
+    if (audio.paused) {
+      document.querySelectorAll('audio.hidden-audio').forEach(a => { if (a !== audio) a.pause(); });
+      document.querySelectorAll('.modern-audio-card .pause-icon').forEach(p => p.style.display = 'none');
+      document.querySelectorAll('.modern-audio-card .play-icon').forEach(p => p.style.display = 'block');
+
+      audio.play().then(() => {
+        if (playIcon) playIcon.style.display = 'none';
+        if (pauseIcon) pauseIcon.style.display = 'block';
+      }).catch(e => console.warn('[Audio Play]', e));
+    } else {
+      audio.pause();
+      if (playIcon) playIcon.style.display = 'block';
+      if (pauseIcon) pauseIcon.style.display = 'none';
+    }
+  };
+
+  window._seekAudio = function(wrap, event) {
+    const card = wrap.closest('.modern-audio-card');
+    if (!card) return;
+    const audio = card.querySelector('audio.hidden-audio');
+    if (!audio || !audio.duration) return;
+    const rect = wrap.getBoundingClientRect();
+    const clickX = event.clientX - rect.left;
+    const pct = Math.max(0, Math.min(1, clickX / rect.width));
+    audio.currentTime = pct * audio.duration;
+  };
+
+  window._changeAudioSpeed = function(btn) {
+    const card = btn.closest('.modern-audio-card');
+    if (!card) return;
+    const audio = card.querySelector('audio.hidden-audio');
+    if (!audio) return;
+    const speeds = [1, 1.25, 1.5, 2];
+    const current = audio.playbackRate || 1;
+    const nextIdx = (speeds.indexOf(current) + 1) % speeds.length;
+    const nextSpeed = speeds[nextIdx];
+    audio.playbackRate = nextSpeed;
+    btn.textContent = `${nextSpeed}x`;
+  };
+
+  window._skipAudio = function(btn, seconds) {
+    const card = btn.closest('.modern-audio-card');
+    if (!card) return;
+    const audio = card.querySelector('audio.hidden-audio');
+    if (!audio) return;
+    audio.currentTime = Math.max(0, Math.min(audio.duration || 9999, audio.currentTime + seconds));
+  };
+
+  window._toggleMuteAudio = function(btn) {
+    const card = btn.closest('.modern-audio-card');
+    if (!card) return;
+    const audio = card.querySelector('audio.hidden-audio');
+    if (!audio) return;
+    audio.muted = !audio.muted;
+    btn.style.color = audio.muted ? '#ef4444' : '';
+  };
+
+  window._downloadAudio = function(btn) {
+    const card = btn.closest('.modern-audio-card');
+    if (!card) return;
+    const src = card.dataset.src;
+    if (!src) return;
+    const a = document.createElement('a');
+    a.href = src;
+    a.download = `audio_${Date.now()}.mp3`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    MessageRenderer.showToast('📥 جاري تحميل الملف الصوتي...', 'info');
+  };
+
+  window._toggleCodeView = function(btn) {
+    const card = btn.closest('.dev-terminal-card');
+    if (!card) return;
+    const body = card.querySelector('.terminal-card-body');
+    if (!body) return;
+    const isCollapsed = body.classList.toggle('collapsed');
+    btn.textContent = isCollapsed ? 'Expand' : 'Collapse';
+  };
+
+  // ─────────────────────────────────────────────────────────────────
   // 11. BOOTSTRAP & LIFECYCLE INITIALIZATION
   // ─────────────────────────────────────────────────────────────────
   function generateId() {
