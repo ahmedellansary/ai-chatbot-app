@@ -2296,11 +2296,31 @@ html, body {
 }
 
 .settings-modal-body {
-  padding: 18px;
+  padding: 16px;
   overflow-y: auto;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: 16px;
+  align-items: flex-start;
+}
+.settings-modal-body .settings-tab-pane {
+  flex: 1;
+  min-width: 0;
+}
+@media (max-width: 600px) {
+  .settings-modal-body {
+    flex-direction: column;
+  }
+  .settings-modal-tabs-bar {
+    flex-direction: row;
+    width: 100%;
+    overflow-x: auto;
+  }
+  .settings-tab-btn {
+    flex: 1;
+    justify-content: center;
+    white-space: nowrap;
+  }
 }
 
 .settings-section {
@@ -2839,22 +2859,23 @@ html, body {
 /* ─── Modern Settings Tabbed Interface ─── */
 .settings-modal-tabs-bar {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: stretch;
   gap: 6px;
-  padding: 4px;
+  padding: 6px;
   background: rgba(0, 0, 0, 0.35);
   border: 1px solid var(--border-subtle);
   border-radius: 10px;
-  margin-bottom: 14px;
+  width: 150px;
+  flex-shrink: 0;
+  height: fit-content;
 }
 
 .settings-tab-btn {
-  flex: 1;
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 7px;
-  padding: 8px 12px;
+  gap: 8px;
+  padding: 9px 12px;
   font-size: 12.5px;
   font-weight: 600;
   color: var(--text-muted);
@@ -2863,6 +2884,8 @@ html, body {
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s ease;
+  text-align: left;
+  justify-content: flex-start;
 }
 
 .settings-tab-btn:hover {
