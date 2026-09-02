@@ -427,7 +427,7 @@
   // ─────────────────────────────────────────────────────────────────
   // 6. MARKDOWN & UI MESSAGE RENDERER (MessageRenderer)
   // ─────────────────────────────────────────────────────────────────
-  const MessageRenderer = {
+  const MessageRenderer = window.MessageRenderer || {
     escapeHtml(text) {
       return String(text ?? '')
         .replace(/&/g, '&amp;')
