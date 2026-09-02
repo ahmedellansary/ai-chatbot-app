@@ -39,7 +39,45 @@
       var title = conv.title || 'جلسة تطوير';
       var briefing = '📋 بريفنج جلسة المطور (' + title + '):\n- طلب التطوير الأساسي: ' + firstUser.slice(0, 200) + '\n- عدد التبادلات: ' + turns + '\n- آخر مخرجات: ' + recentAi.slice(0, 380);
       if (briefing.length > cfg.maxBriefingChars) briefing = briefing.slice(0, cfg.maxBriefingChars) + '...';
-      return briefing;
+    assembleDevPrompt: function (tier, basePrompt, liveRepoFiles) {
+      if (tier === void 0) tier = 'MID';
+      if (basePrompt === void 0) basePrompt = null;
+      if (liveRepoFiles === void 0) liveRepoFiles = [];
+      var normalizedTier = (tier === 'FAST') ? 'FAST' : ((tier === 'HIGH' || tier === 'DEEP') ? 'HIGH' : 'MID');
+      var promptStr = basePrompt || (window._devState && window._devState.devPrompt) || '';
+      var resolvedContent = '';
+      try {
+        var parsed = JSON.parse(promptStr);
+        if (parsed.tiers && parsed.tiers[normalizedTier]) {
+          resolvedContent = typeof parsed.tiers[normalizedTier] === 'string'
+            ? parsed.tiers[normalizedTier]
+            : JSON.stringify(parsed.tiers[normalizedTier], null, 2);
+        } else if (parsed.content) {
+          try {
+            var inner = JSON.parse(parsed.content);
+            if (inner.tiers && inner.tiers[normalizedTier]) {
+              resolvedContent = JSON.stringify(inner.tiers[normalizedTier], null, 2);
+            } else {
+              resolvedContent = parsed.content;
+            }
+          } catch(e) {
+            resolvedContent = parsed.content;
+          }
+        } else {
+          resolvedContent = promptStr;
+        }
+      } catch(e) {
+        resolvedContent = promptStr;
+      }
+      if (!resolvedContent) {
+        resolvedContent = 'X.v1 Developer Studio — Chief Architect & Senior Engineer';
+      }
+      if (liveRepoFiles && liveRepoFiles.length > 0 && !resolvedContent.includes('LIVE GITHUB REPO DIRECTORY MAP')) {
+        resolvedContent += '\n\n═══════════════════════════════════════════════════════════════\n🗺️ LIVE GITHUB REPO DIRECTORY MAP (Auto-Synced on Startup):\n═══════════════════════════════════════════════════════════════\nActive Repository Files in main branch:\n' + 
+          liveRepoFiles.map(function(f) { return '- ' + f; }).join('\n') + 
+          '\n\nUse this live file directory to know exactly which file to inspect and propose modifications for when requested by the user.';
+      }
+      return resolvedContent;
     },
 
     buildFallbackCascade: function (primaryAgent, estimatedTokens) {
@@ -151,10 +189,12 @@
       state.isStreaming = true;
       state.abortController = new AbortController();
       var selectedAgent = DevState.getSelectedAgent();
-      var est = Math.ceil(((textForPayload && textForPayload.length || 0) + (state.devPrompt && state.devPrompt.length || 0)) / 3.5);
+      var tier = (state && state.currentMode) ? state.currentMode : 'MID';
+      var rawDevPrompt = this.assembleDevPrompt(tier, state.devPrompt, state.liveRepoFiles);
+      var est = Math.ceil(((textForPayload && textForPayload.length || 0) + (rawDevPrompt && rawDevPrompt.length || 0)) / 3.5);
       var _devTierCfg = this.getAdaptiveConfigForDev(selectedAgent, est);
       var _devBriefing = this.generateDevBriefing(conv, selectedAgent, est);
-      var systemPrompt = state.devPrompt || 'أنت مهندس برمجيات محترف ومطور تطبيق الشات ومستودع GitHub.';
+      var systemPrompt = rawDevPrompt;
       if (_devBriefing) {
         systemPrompt = systemPrompt + '\n\n═══════════════════════════════════════════════════════════════\n' + _devBriefing + '\n═══════════════════════════════════════════════════════════════\n(خلاصة ذكية للجلسة الكاملة — استخدمها كسياق كأنك حاضر من البداية. آخر ' + _devTierCfg.recentCount + ' رسائل هي النص الحرفي الأحدث)';
       }
