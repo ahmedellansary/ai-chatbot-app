@@ -314,6 +314,7 @@ function getSelectedDevModel() {
 if (typeof window !== 'undefined') {
   window.MODELS = MODELS;
   window.DEV_MODELS = DEV_MODELS;
+  window.DEV_TIER_MODELS = DEV_TIER_MODELS;
   window.ModelEngine = {
     callOpenRouter,
     callGroq,
