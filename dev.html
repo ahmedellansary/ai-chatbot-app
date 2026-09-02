@@ -9,13 +9,13 @@
   <meta name="apple-mobile-web-app-title" content="X.v1 Dev">
 
   <title>X.v1 — Developer Portal & Codebase Studio</title>
-  <link rel="manifest" href="./dev-manifest.json?v=186">
+  <link rel="manifest" href="./dev-manifest.json?v=187">
   <!-- Modular Dev CSS (load before fallback) -->
-  <link rel="stylesheet" href="./css/dev-base.css?v=186">
-  <link rel="stylesheet" href="./css/dev-chat.css?v=186">
-  <link rel="stylesheet" href="./css/dev-input.css?v=186">
-  <link rel="stylesheet" href="./css/dev-modal.css?v=186">
-  <link rel="stylesheet" href="./dev_style.css?v=186">
+  <link rel="stylesheet" href="./css/dev-base.css?v=187">
+  <link rel="stylesheet" href="./css/dev-chat.css?v=187">
+  <link rel="stylesheet" href="./css/dev-input.css?v=187">
+  <link rel="stylesheet" href="./css/dev-modal.css?v=187">
+  <link rel="stylesheet" href="./dev_style.css?v=187">
   <link rel="icon" type="image/png" href="./icons/dev-icon-192.png?v=52">
   <link rel="apple-touch-icon" href="./icons/dev-icon-192.png?v=52">
   <link rel="apple-touch-icon" sizes="512x512" href="./icons/dev-icon-512.png?v=52">
@@ -116,7 +116,7 @@
       <div class="header-right">
         <div class="repo-status-badge">
           <span class="status-dot"></span>
-          <span class="repo-badge-text" id="dev-status-badge-text">Dev (V186) 02-09-2026 9:44AM</span>
+          <span class="repo-badge-text" id="dev-status-badge-text">Dev (V187) 02-09-2026 9:55AM</span>
         </div>
         <script>
           (function() {
@@ -182,16 +182,23 @@
               </svg>
             </button>
 
-            <!-- Model Selector Pill & Popup Dropdown -->
+            <!-- Tier Mode Selector Pill & Popup Dropdown -->
             <div style="position: relative;">
-              <button class="claude-model-pill" id="model-pill-trigger" title="Select Model">
-                <span id="selected-agent-icon" style="font-size: 13px;">👨‍💻</span>
-                <span id="selected-agent-label">GPT OSS 120B</span>
+              <button class="claude-model-pill" id="model-pill-trigger" title="Select Tier Level">
+                <span id="selected-agent-label">Balanced</span>
                 <svg viewBox="0 0 12 12" width="10" height="10" fill="currentColor"><path d="M2 4l4 4 4-4z"/></svg>
               </button>
 
               <div class="model-dropdown" id="model-dropdown-menu">
-                <!-- Rendered dynamically by DevUIEngine -->
+                <button class="dropdown-opt" data-tier="HIGH" onclick="window._setDevTier('HIGH')">
+                  <div class="opt-title">HIGH</div>
+                </button>
+                <button class="dropdown-opt active" data-tier="MID" onclick="window._setDevTier('MID')">
+                  <div class="opt-title">Balanced</div>
+                </button>
+                <button class="dropdown-opt" data-tier="FAST" onclick="window._setDevTier('FAST')">
+                  <div class="opt-title">FAST</div>
+                </button>
               </div>
             </div>
 
@@ -472,10 +479,13 @@
   <div id="toast-container"></div>
 </div>
 
-<!-- Consolidated High-Performance Script Bundle -->
-<script src="./config.js?v=186"></script>
-<script src="./auth.js?v=186"></script>
-<script src="./models.js?v=186"></script>
-<script src="./dev.js?v=186"></script>
+<!-- Developer Studio Engine Bundle -->
+<script src="./config.js?v=187"></script>
+<script src="./auth.js?v=187"></script>
+<script src="./models.js?v=187"></script>
+<script src="./modules/dev-state.js?v=187"></script>
+<script src="./modules/dev-chat-engine.js?v=187"></script>
+<script src="./modules/dev-ui-engine.js?v=187"></script>
+<script src="./dev.js?v=187"></script>
 </body>
 </html>
