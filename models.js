@@ -132,10 +132,11 @@ async function callOpenRouter(model, messages, signal) {
   const timeoutId = setTimeout(() => {
     timedOut = true;
     controller.abort();
-  }, 7000);
+  }, 15000);
   const combinedSignal = signal ? AbortSignal.any([signal, controller.signal]) : controller.signal;
 
   try {
+    console.log(`[Model Router] callOpenRouter start: ${model.name} (provider=openrouter)`);
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers,
@@ -143,6 +144,8 @@ async function callOpenRouter(model, messages, signal) {
       signal: combinedSignal
     });
     clearTimeout(timeoutId);
+
+    console.log(`[Model Router] callOpenRouter response: ${model.name} status=${response.status}`);
 
     if (response.status === 429) {
       rotateOpenRouterKey();
@@ -156,7 +159,11 @@ async function callOpenRouter(model, messages, signal) {
     return response;
   } catch(e) {
     clearTimeout(timeoutId);
-    if (timedOut) throw new Error('MODEL_TIMEOUT');
+    if (timedOut) {
+      console.warn(`[Model Router] callOpenRouter timed out: ${model.name}`);
+      throw new Error('MODEL_TIMEOUT');
+    }
+    console.warn(`[Model Router] callOpenRouter error: ${model.name} -> ${e && e.message}`);
     throw e;
   }
 }
@@ -186,10 +193,11 @@ async function callGroq(model, messages, signal) {
   const timeoutId = setTimeout(() => {
     timedOut = true;
     controller.abort();
-  }, 7000);
+  }, 15000);
   const combinedSignal = signal ? AbortSignal.any([signal, controller.signal]) : controller.signal;
 
   try {
+    console.log(`[Model Router] callGroq start: ${model.name} (provider=groq)`);
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers,
@@ -204,6 +212,8 @@ async function callGroq(model, messages, signal) {
     });
     clearTimeout(timeoutId);
 
+    console.log(`[Model Router] callGroq response: ${model.name} status=${response.status}`);
+
     if (response.status === 429) {
       rotateGroqKey();
       throw new Error('RATE_LIMIT');
@@ -216,7 +226,11 @@ async function callGroq(model, messages, signal) {
     return response;
   } catch(e) {
     clearTimeout(timeoutId);
-    if (timedOut) throw new Error('MODEL_TIMEOUT');
+    if (timedOut) {
+      console.warn(`[Model Router] callGroq timed out: ${model.name}`);
+      throw new Error('MODEL_TIMEOUT');
+    }
+    console.warn(`[Model Router] callGroq error: ${model.name} -> ${e && e.message}`);
     throw e;
   }
 }
@@ -225,11 +239,19 @@ async function* readStream(response) {
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = '';
+  let streamTimedOut = false;
+  const streamTimeoutMs = 20000;
+  const streamTimer = setTimeout(() => {
+    streamTimedOut = true;
+    try { reader.cancel(new Error('STREAM_TIMEOUT')); } catch {}
+  }, streamTimeoutMs);
 
   try {
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
+
+      if (streamTimedOut) throw new Error('STREAM_TIMEOUT');
 
       buffer += decoder.decode(value, { stream: true });
       const lines = buffer.split('\n');
@@ -237,7 +259,17 @@ async function* readStream(response) {
 
       for (const line of lines) {
         const trimmed = line.trim();
-        if (!trimmed || !trimmed.startsWith('data: ')) continue;
+        // Handle heartbeats or non-SSE lines (some providers emit status lines like "OPENROUTER PROCESSING")
+        if (trimmed && !trimmed.startsWith('data: ')) {
+          try {
+            // Update UI thinking stage periodically without appending to message body
+            if (typeof window !== 'undefined' && window.MessageRenderer && typeof window.MessageRenderer.setThinkingStage === 'function') {
+              const elapsed = Math.floor((Date.now() - (window.__model_stream_start_ts || Date.now())) / 1000);
+              try { window.MessageRenderer.setThinkingStage(`Processing... ${elapsed}s`); } catch (e) {}
+            }
+          } catch (e) {}
+          continue;
+        }
         const data = trimmed.slice(6);
         if (data === '[DONE]') return;
         try {
@@ -245,6 +277,8 @@ async function* readStream(response) {
           if (parsed.error) throw new Error(parsed.error.message || 'Stream error');
           const delta = parsed.choices?.[0]?.delta?.content;
           if (delta) {
+            // mark stream activity timestamp for heartbeat display
+            try { if (typeof window !== 'undefined') window.__model_stream_last_chunk_ts = Date.now(); } catch(e){}
             yield delta;
           }
         } catch (e) {
@@ -253,14 +287,18 @@ async function* readStream(response) {
       }
     }
   } finally {
-    reader.releaseLock();
+    clearTimeout(streamTimer);
+    try { reader.releaseLock(); } catch {}
   }
 }
 
 async function* chatWithFallback(tier, messages, signal, onModelChange) {
-  const models = MODELS[tier] || MODELS.MID;
+  const normalizedTier = String(tier || 'MID').toUpperCase();
+  const models = Array.isArray(MODELS[normalizedTier]) ? MODELS[normalizedTier] : MODELS.MID;
   let usedFallback = false;
 
+  // IMPORTANT: fallback remains inside the selected tier only.
+  // HIGH -> HIGH models only, MID -> MID models only, FAST -> FAST models only.
   for (let i = 0; i < models.length; i++) {
     const model = models[i];
     const isFallback = i > 0;
@@ -277,7 +315,7 @@ async function* chatWithFallback(tier, messages, signal, onModelChange) {
 
     let succeeded = false;
 
-    // Try available keys for the model first before falling back to next model
+    // Try all available keys for this specific model before moving to the next model in the same tier.
     for (let attempt = 0; attempt < keyCount; attempt++) {
       try {
         const response = model.provider === 'groq'
@@ -291,29 +329,32 @@ async function* chatWithFallback(tier, messages, signal, onModelChange) {
         return;
       } catch (err) {
         if (signal && signal.aborted) throw err;
-        console.warn(`[Model Router] ${model.name} (Key ${attempt + 1}/${keyCount}) failed:`, err.message);
+        const msg = (err && err.message) ? err.message : String(err);
+        console.warn(`[Model Router] ${model.name} (Key ${attempt + 1}/${keyCount}) failed:`, msg);
 
-        // If request is too large, timed out, or not available, immediately fall back to the next model in cascade
-        if (/413|too large|content too large|limit \d+|MODEL_TIMEOUT|only available on/i.test(err.message)) {
-          break;
-        }
-
-        // If rate limit / quota, rotate to next key of the SAME model
-        if (err.message === 'RATE_LIMIT' || /429|rate limit|rpm/i.test(err.message)) {
+        // Provider timeout / saturated / unavailable: rotate key and retry same model.
+        if (/413|too large|content too large|limit \d+|MODEL_TIMEOUT|STREAM_TIMEOUT|timed out|only available on/i.test(msg)) {
           if (model.provider === 'groq') rotateGroqKey();
           else rotateOpenRouterKey();
-          continue; // Next key on the same model
-        } else {
-          // If offline / bad request / server error, switch to next model in tier
-          break;
+          continue;
         }
+
+        // Rate limit: rotate within the same model and same tier.
+        if (msg === 'RATE_LIMIT' || /429|rate limit|rpm/i.test(msg)) {
+          if (model.provider === 'groq') rotateGroqKey();
+          else rotateOpenRouterKey();
+          continue;
+        }
+
+        // Any other failure tries the next model in the same selected tier only.
+        break;
       }
     }
 
     if (succeeded) return;
   }
 
-  throw new Error(`كل موديلز ومفاتيح مستوى ${tier} توقفت مؤقتاً. جرب مرة أخرى.`);
+  throw new Error(`كل موديلز مستوى ${normalizedTier} توقفت مؤقتاً. جرب مرة أخرى.`);
 }
 
 function normalizeCatalog(data) {
