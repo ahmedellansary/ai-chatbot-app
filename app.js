@@ -1168,6 +1168,10 @@
     updateSendBtnState() {
       const inputEl = $('user-input');
       const btn = $('send-btn');
+      const inputContainer = document.querySelector('#input-section .input-container') || document.querySelector('.input-container');
+      if (inputContainer) {
+        inputContainer.classList.toggle('thinking', Boolean(state.isStreaming));
+      }
       if (!btn) return;
       const textVal = inputEl ? inputEl.value : '';
       const hasText = textVal.trim().length > 0;
