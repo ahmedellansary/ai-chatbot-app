@@ -11,13 +11,13 @@
   <meta name="apple-mobile-web-app-title" content="X.v1">
 
   <title>X.v1</title>
-  <link rel="manifest" href="./manifest.json?v=173">
+  <link rel="manifest" href="./manifest.json?v=174">
   <!-- Modular CSS (load before fallback) -->
-  <link rel="stylesheet" href="./css/base.css?v=173">
-  <link rel="stylesheet" href="./css/chat.css?v=173">
-  <link rel="stylesheet" href="./css/input.css?v=173">
-  <link rel="stylesheet" href="./css/modal.css?v=173">
-  <link rel="stylesheet" href="./style.css?v=173">
+  <link rel="stylesheet" href="./css/base.css?v=174">
+  <link rel="stylesheet" href="./css/chat.css?v=174">
+  <link rel="stylesheet" href="./css/input.css?v=174">
+  <link rel="stylesheet" href="./css/modal.css?v=174">
+  <link rel="stylesheet" href="./style.css?v=174">
   <link rel="icon" type="image/png" href="./icons/icon-192.png?v=49">
   <link rel="apple-touch-icon" href="./icons/icon-192.png?v=49">
   <link rel="apple-touch-icon" sizes="512x512" href="./icons/icon-512.png?v=49">
@@ -69,7 +69,7 @@
         <span>Settings</span>
       </button>
       <div id="app-version-badge" style="font-size:10.5px; color:var(--text-dim); font-family:var(--font-mono); text-align:center; padding:8px 0 2px; border-top:1px solid var(--border-subtle); margin-top:8px; letter-spacing:0.02em;">
-        <span id="app-version-text">v173</span> • <span id="app-last-update">جاري...</span>
+        <span id="app-version-text">v174</span> • <span id="app-last-update">جاري...</span>
       </div>
     </div>
   </aside>
@@ -87,7 +87,7 @@
       </button>
       <div id="chat-top-badge" class="repo-status-badge" style="position:absolute; left:50%; transform:translateX(-50%);">
         <span class="status-dot"></span>
-        <span class="repo-badge-text" id="chat-status-text" style="font-weight:700; letter-spacing:0.02em;">X (V173) —</span>
+        <span class="repo-badge-text" id="chat-status-text" style="font-weight:700; letter-spacing:0.02em;">X (V174) —</span>
       </div>
       <script>
         (function() {
@@ -364,31 +364,23 @@
           <div style="display: flex; flex-direction: column; gap: 14px;">
             <!-- Font Family -->
             <div>
-              <label style="font-size: 12.5px; font-weight: 600; color: #e5e7eb; display: block; margin-bottom: 6px;">نوع الخط (Font Family):</label>
+              <label style="font-size: 12px; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 6px;">Font Family</label>
               <div class="custom-pill-selector-row">
-                <button type="button" class="custom-pill-btn active" data-font="inter" onclick="window._setAppFontFamily('inter')">Modern Inter</button>
-                <button type="button" class="custom-pill-btn" data-font="cairo" onclick="window._setAppFontFamily('cairo')">Cairo (عربي أنيق)</button>
-                <button type="button" class="custom-pill-btn" data-font="tajawal" onclick="window._setAppFontFamily('tajawal')">Tajawal (تجوّل)</button>
-                <button type="button" class="custom-pill-btn" data-font="mono" onclick="window._setAppFontFamily('mono')">Code Mono</button>
+                <button type="button" class="custom-pill-btn active" data-font="inter" onclick="window._setAppFontFamily('inter')">Inter</button>
+                <button type="button" class="custom-pill-btn" data-font="cairo" onclick="window._setAppFontFamily('cairo')">Cairo</button>
+                <button type="button" class="custom-pill-btn" data-font="tajawal" onclick="window._setAppFontFamily('tajawal')">Tajawal</button>
+                <button type="button" class="custom-pill-btn" data-font="mono" onclick="window._setAppFontFamily('mono')">Mono</button>
               </div>
             </div>
 
             <!-- Font Size -->
             <div>
-              <label style="font-size: 12.5px; font-weight: 600; color: #e5e7eb; display: block; margin-bottom: 6px;">حجم الخط (Font Size):</label>
+              <label style="font-size: 12px; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 6px;">Font Size</label>
               <div class="custom-pill-selector-row">
-                <button type="button" class="custom-pill-btn" data-size="sm" onclick="window._setAppFontSize('sm')">صغير (13.5px)</button>
-                <button type="button" class="custom-pill-btn active" data-size="md" onclick="window._setAppFontSize('md')">افتراضي (15px)</button>
-                <button type="button" class="custom-pill-btn" data-size="lg" onclick="window._setAppFontSize('lg')">كبير (16.5px)</button>
-                <button type="button" class="custom-pill-btn" data-size="xl" onclick="window._setAppFontSize('xl')">عريض (18px)</button>
-              </div>
-            </div>
-
-            <!-- Live Text Preview Box -->
-            <div class="typography-preview-box">
-              <div style="font-size: 11px; color: var(--text-dim); margin-bottom: 4px; font-weight: 600;">معاينة حية لرسائل المحادثة:</div>
-              <div class="typography-preview-text">
-                مرحباً بك! أنا المساعد الذكي X.v1، جاهز للإجابة على استفساراتك وتحليل البيانات باحترافية وسرعة فائقة.
+                <button type="button" class="custom-pill-btn" data-size="sm" onclick="window._setAppFontSize('sm')">Small</button>
+                <button type="button" class="custom-pill-btn active" data-size="md" onclick="window._setAppFontSize('md')">Medium</button>
+                <button type="button" class="custom-pill-btn" data-size="lg" onclick="window._setAppFontSize('lg')">Large</button>
+                <button type="button" class="custom-pill-btn" data-size="xl" onclick="window._setAppFontSize('xl')">XL</button>
               </div>
             </div>
           </div>
@@ -453,35 +445,28 @@
 
         <!-- ═══ Tab 4: System & Cache & Usage ═══ -->
         <div id="settings-tab-system" class="settings-tab-pane hidden">
-          <!-- API Keys Section (Multi-Key Rotation, Tier-Isolated) -->
+          <!-- API Keys Section -->
           <div class="settings-section" id="api-keys-section">
             <div class="settings-section-title">
               <span>🔑</span>
-              <span>API Keys (Multi-Key, Tier-Isolated)</span>
+              <span>API Keys</span>
             </div>
-            <p class="settings-section-desc" style="font-size:11.5px;">أدخل أكثر من مفتاح لنفس الشركة مفصولة بفاصلة — تتم المزامنة أوتو، كل مستوى HIGH/MID/FAST يستخدم موديلزه من الأقوى للأضعف بدون تبديل بين المستويات.</p>
-            <div style="display:flex; flex-direction:column; gap:10px; margin-top:8px;">
-              <div>
-                <label style="font-size:11.5px; font-weight:600; color:var(--text-muted);">OpenRouter Keys (comma separated)</label>
-                <input type="password" id="input-openrouter-keys" class="settings-textarea" style="min-height:auto; height:42px; font-family:var(--font-mono); font-size:12px;" placeholder="sk-or-v1-..., sk-or-v1-...">
+            <div style="display:flex; flex-direction:column; gap:8px; margin-top:6px;">
+              <input type="password" id="input-openrouter-keys" class="settings-textarea" style="min-height:auto; height:38px; font-family:var(--font-mono); font-size:12px;" placeholder="OpenRouter Keys (مفصولة بفاصلة)">
+              <input type="password" id="input-groq-keys" class="settings-textarea" style="min-height:auto; height:38px; font-family:var(--font-mono); font-size:12px;" placeholder="Groq Keys (مفصولة بفاصلة)">
+              <div style="display:flex; gap:8px; margin-top:2px;">
+                <button class="settings-save-btn" onclick="window._saveApiKeys()" style="flex:1;">💾 حفظ</button>
+                <button class="settings-action-btn" onclick="window._clearApiKeys()" style="flex:0; padding:6px 14px;">مسح</button>
               </div>
-              <div>
-                <label style="font-size:11.5px; font-weight:600; color:var(--text-muted);">Groq Keys (comma separated)</label>
-                <input type="password" id="input-groq-keys" class="settings-textarea" style="min-height:auto; height:42px; font-family:var(--font-mono); font-size:12px;" placeholder="gsk_..., gsk_...">
-              </div>
-              <div style="display:flex; gap:8px;">
-                <button class="settings-save-btn" onclick="window._saveApiKeys()" style="flex:1;">💾 حفظ المفاتيح</button>
-                <button class="settings-action-btn" onclick="window._clearApiKeys()" style="flex:0;">مسح</button>
-              </div>
-              <div id="api-keys-status" style="font-size:11px; color:var(--text-dim); min-height:16px;"></div>
+              <div id="api-keys-status" style="font-size:11px; color:var(--text-dim); min-height:14px;"></div>
             </div>
           </div>
 
-          <!-- Usage Section (Auto — Real Data) -->
-          <div class="settings-section usage-section" id="usage-section">
+          <!-- Usage Section -->
+          <div class="settings-section usage-section" id="usage-section" style="margin-top: 8px;">
             <div class="settings-section-title">
               <span>📊</span>
-              <span>API Usage & Metrics</span>
+              <span>Usage</span>
               <span id="usage-live-dot" class="usage-live-dot" title="Auto-synced"></span>
             </div>
             <div class="usage-grid">
@@ -491,7 +476,7 @@
                   <div class="usage-stat"><span class="usage-num" id="or-tokens">—</span><span class="usage-label">Tokens</span></div>
                   <div class="usage-stat"><span class="usage-num" id="or-reqs">—</span><span class="usage-label">Reqs</span></div>
                 </div>
-                <div class="usage-sub" id="or-sub">Fetching metrics...</div>
+                <div class="usage-sub" id="or-sub">Fetching...</div>
               </div>
               <div class="usage-card groq">
                 <div class="usage-card-head"><span>Groq</span><span class="usage-badge local">Tracked</span></div>
@@ -509,27 +494,17 @@
           </div>
 
           <!-- Storage & Cache Section -->
-          <div class="settings-section" style="margin-top: 10px; padding-top: 12px; border-top: 1px solid var(--border-subtle);">
-            <div class="settings-section-title">
-              <span>🧹</span>
-              <span>Storage & Cache Management</span>
-            </div>
-            <p class="settings-section-desc">Clear Service Worker cache and refresh runtime assets while preserving conversations.</p>
-            <button class="footer-btn settings-clear-btn" onclick="window._clearAppCache()">
+          <div class="settings-section" style="margin-top: 8px; padding-top: 10px; border-top: 1px solid var(--border-subtle);">
+            <button class="footer-btn settings-clear-btn" onclick="window._clearAppCache()" style="width:100%;">
               <span>🧹</span>
               <span>Clear Cache & Reload</span>
             </button>
           </div>
 
           <!-- Developer Studio Portal Link -->
-          <div class="settings-section" style="margin-top: 10px; padding-top: 12px; border-top: 1px solid var(--border-subtle);">
-            <div class="settings-section-title">
-              <span>🛠️</span>
-              <span>Developer Studio</span>
-            </div>
-            <p class="settings-section-desc">Access standalone Developer Studio to inspect and edit repository files directly.</p>
-            <a href="./dev.html" target="_blank" class="footer-btn" style="color: #fbbf24; text-decoration: none; border: 1px solid rgba(251, 191, 36, 0.3); border-radius: 8px; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between;">
-              <span>🛠️ Open Developer Studio (X.v1 Dev)</span>
+          <div class="settings-section" style="margin-top: 8px; padding-top: 10px; border-top: 1px solid var(--border-subtle);">
+            <a href="./dev.html" target="_blank" class="footer-btn" style="color: #fbbf24; text-decoration: none; border: 1px solid rgba(251, 191, 36, 0.3); border-radius: 8px; padding: 9px 12px; display: flex; align-items: center; justify-content: space-between; font-size:12.5px;">
+              <span>🛠️ Developer Studio (X.v1 Dev)</span>
               <span>↗</span>
             </a>
           </div>
@@ -579,17 +554,17 @@
 </div>
 
 <!-- Unified Application Script Bundle (Phase 3 Refactor) -->
-<script src="./config.js?v=173"></script>
-<script src="./auth.js?v=173"></script>
-<script src="./github.js?v=173"></script>
-<script src="./models.js?v=173"></script>
-<script src="./ui-helpers.js?v=173"></script>
-<script src="./modules/usage-tracker.js?v=173"></script>
-<script src="./modules/message-renderer.js?v=173"></script>
-<script src="./modules/instruction-manager.js?v=173"></script>
-<script src="./modules/state-controller.js?v=173"></script>
-<script src="./modules/chat-engine.js?v=173"></script>
-<script src="./modules/ui-engine.js?v=173"></script>
-<script src="./app.js?v=173"></script>
+<script src="./config.js?v=174"></script>
+<script src="./auth.js?v=174"></script>
+<script src="./github.js?v=174"></script>
+<script src="./models.js?v=174"></script>
+<script src="./ui-helpers.js?v=174"></script>
+<script src="./modules/usage-tracker.js?v=174"></script>
+<script src="./modules/message-renderer.js?v=174"></script>
+<script src="./modules/instruction-manager.js?v=174"></script>
+<script src="./modules/state-controller.js?v=174"></script>
+<script src="./modules/chat-engine.js?v=174"></script>
+<script src="./modules/ui-engine.js?v=174"></script>
+<script src="./app.js?v=174"></script>
 </body>
 </html>
