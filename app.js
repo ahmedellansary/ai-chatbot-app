@@ -750,7 +750,7 @@
       if (!InstructionManager.files || !InstructionManager.files.length) {
         await InstructionManager.load();
       }
-      const basePrompt = InstructionManager.assemblePrompt(userText, attachments);
+      const basePrompt = InstructionManager.assemblePrompt(userText, attachments, tier);
       const briefing = this.generateBriefing(conv, tier);
       if (!briefing) return basePrompt;
       return `${basePrompt}\n\n═══════════════════════════════════════════════════════════════\n${briefing}\n═══════════════════════════════════════════════════════════════\n(هذه خلاصة ذكية للمحادثة الكاملة — استخدمها كسياق كأنك كنت حاضراً من البداية. آخر ${this.getAdaptiveConfig(tier).recentCount} رسائل التالية هي النص الحرفي الأحدث)`;
@@ -1841,7 +1841,7 @@
     deleteById: () => {},
     deleteActive: () => {},
     resetDefaults: async () => {},
-    assemblePrompt: () => 'You are X.v1, an advanced AI assistant.'
+    assemblePrompt: (u, a, t) => 'You are X.v1 Claude Intelligence Engine.'
   };
 
   // Global window bridges for Modular Instruction Files Manager & Settings
