@@ -1016,11 +1016,6 @@
     const badgeEl = $('dev-status-badge-text');
     if (!badgeEl) return;
 
-    const cachedBadge = localStorage.getItem('DEV_LAST_SYNC_BADGE');
-    if (cachedBadge && badgeEl.textContent.includes('Loading')) {
-      badgeEl.textContent = cachedBadge;
-    }
-
     const formatDateTime = (d) => {
       const pad = (n) => String(n).padStart(2, '0');
       const day = pad(d.getDate());
@@ -1034,47 +1029,64 @@
       return `${day}-${month}-${year} ${hours}:${minutes}${ampm}`;
     };
 
-    let verNum = '123';
-    try {
-      const swRes = await fetch('./sw.js?t=' + Date.now());
-      if (swRes.ok) {
-        const swText = await swRes.text();
-        const match = swText.match(/xv1-chat-v(\d+)/i);
-        if (match) verNum = match[1];
-      }
-    } catch {}
-
-    const repoOwner = 'ahmedellansary';
-    const repoName = 'ai-chatbot-app';
-    const headers = { 'Accept': 'application/vnd.github.v3+json' };
-    try {
-      if (typeof DevGitHubService !== 'undefined' && DevGitHubService.getToken()) {
-        headers['Authorization'] = `Bearer ${DevGitHubService.getToken()}`;
-      }
-    } catch {}
-
-    try {
-      const res = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/commits?per_page=1&t=${Date.now()}`, {
-        headers
-      });
-      if (res.ok) {
-        const commits = await res.json();
-        if (commits && commits.length > 0) {
-          const rawDate = commits[0].commit.committer.date || commits[0].commit.author.date;
-          const commitDate = new Date(rawDate);
-          const badgeText = `Dev (V${verNum}) ${formatDateTime(commitDate)}`;
-          badgeEl.textContent = badgeText;
-          localStorage.setItem('DEV_LAST_SYNC_BADGE', badgeText);
-          return;
-        }
-      }
-    } catch (e) {
-      console.warn('[Dynamic Version Badge]', e);
+    // 1. Instant Render from Cache or Runtime
+    let verNum = '125';
+    const cachedBadge = localStorage.getItem('DEV_LAST_SYNC_BADGE');
+    if (cachedBadge) {
+      badgeEl.textContent = cachedBadge;
+    } else {
+      badgeEl.textContent = `Dev (V${verNum}) ${formatDateTime(new Date())}`;
     }
 
-    const fallbackText = `Dev (V${verNum}) ${formatDateTime(new Date())}`;
-    badgeEl.textContent = fallbackText;
-    localStorage.setItem('DEV_LAST_SYNC_BADGE', fallbackText);
+    // 2. Non-blocking Background Sync from GitHub
+    (async () => {
+      try {
+        const swRes = await fetch('./sw.js?t=' + Date.now());
+        if (swRes.ok) {
+          const swText = await swRes.text();
+          const match = swText.match(/xv1-chat-v(\d+)/i);
+          if (match) verNum = match[1];
+        }
+      } catch {}
+
+      const repoOwner = 'ahmedellansary';
+      const repoName = 'ai-chatbot-app';
+      const headers = { 'Accept': 'application/vnd.github.v3+json' };
+      try {
+        if (typeof DevGitHubService !== 'undefined' && DevGitHubService.getToken()) {
+          headers['Authorization'] = `Bearer ${DevGitHubService.getToken()}`;
+        }
+      } catch {}
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3500);
+
+      try {
+        const res = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/commits?per_page=1&t=${Date.now()}`, {
+          headers,
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+
+        if (res.ok) {
+          const commits = await res.json();
+          if (commits && commits.length > 0) {
+            const rawDate = commits[0].commit.committer.date || commits[0].commit.author.date;
+            const commitDate = new Date(rawDate);
+            const badgeText = `Dev (V${verNum}) ${formatDateTime(commitDate)}`;
+            badgeEl.textContent = badgeText;
+            localStorage.setItem('DEV_LAST_SYNC_BADGE', badgeText);
+            return;
+          }
+        }
+      } catch (e) {
+        // Silently fallback without getting stuck
+      }
+
+      const freshBadge = `Dev (V${verNum}) ${formatDateTime(new Date())}`;
+      badgeEl.textContent = freshBadge;
+      localStorage.setItem('DEV_LAST_SYNC_BADGE', freshBadge);
+    })();
   }
 
   // ─────────────────────────────────────────────────────────────────
