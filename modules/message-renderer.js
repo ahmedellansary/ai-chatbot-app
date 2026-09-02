@@ -43,23 +43,118 @@
     html = html.replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) => {
       const label = (lang || 'code').toLowerCase();
       const trimmed = code.trim();
+      let langTitle = 'Code';
+      let icon = '>_';
+
+      if (label === 'bash' || label === 'sh' || label === 'shell' || label === 'cmd' || label === 'powershell') {
+        langTitle = 'Bash Command';
+        icon = '>_';
+      } else if (label === 'js' || label === 'javascript') {
+        langTitle = 'JavaScript';
+        icon = '⚡';
+      } else if (label === 'python' || label === 'py') {
+        langTitle = 'Python';
+        icon = '🐍';
+      } else if (label === 'html') {
+        langTitle = 'HTML';
+        icon = '🌐';
+      } else if (label === 'css') {
+        langTitle = 'CSS';
+        icon = '🎨';
+      } else if (label === 'json') {
+        langTitle = 'JSON';
+        icon = '📦';
+      } else if (label === 'sql') {
+        langTitle = 'SQL';
+        icon = '🗄️';
+      } else if (label && label !== 'code') {
+        langTitle = label.toUpperCase();
+        icon = '📄';
+      }
+
       const isWebCode = label === 'html' || label === 'svg' || (label === 'javascript' && (trimmed.includes('<') || trimmed.includes('document.')));
       const encodedCode = encodeURIComponent(trimmed);
       let runBtn = '';
       if (isWebCode) {
         runBtn = `<button class="sandbox-launch-btn" onclick="window._runSandbox(decodeURIComponent('${encodedCode}'))">▶️ تشغيل المحاكاة</button>`;
       }
-      return `<div class="code-window">
-        <div class="code-header-bar">
-          <span>${label}</span>
-          <div style="display:flex;gap:6px;align-items:center;">
+
+      const firstLine = trimmed.split('\n')[0] || '';
+      const preview = firstLine.length > 55 ? firstLine.slice(0, 52) + '...' : firstLine;
+      const linesCount = trimmed.split('\n').length;
+      const shouldCollapse = linesCount > 18;
+
+      return `\n<div class="dev-terminal-card">
+        <div class="terminal-card-header">
+          <div class="terminal-header-left">
+            <span class="terminal-icon-badge">${icon}</span>
+            <span class="terminal-lang-title">${langTitle}</span>
+            <span class="terminal-cmd-preview">${preview}</span>
+          </div>
+          <div class="terminal-header-right">
             ${runBtn}
-            <button class="copy-btn" onclick="window._copyCode(this)">نسخ</button>
+            ${shouldCollapse ? '<button type="button" class="terminal-action-btn view-btn" onclick="window._toggleCodeView(this)">Expand</button>' : ''}
+            <button type="button" class="terminal-action-btn copy-btn" onclick="window._copyCode(this)">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+              <span>Copy</span>
+            </button>
           </div>
         </div>
-        <pre><code>${trimmed}</code></pre>
-      </div>`;
+        <div class="terminal-card-body ${shouldCollapse ? 'collapsed' : ''}">
+          <pre><code class="language-${label}">${trimmed}</code></pre>
+        </div>
+        <div class="terminal-card-footer">
+          <div class="terminal-footer-status">
+            <span class="terminal-status-pill">Exit Code: 0</span>
+          </div>
+          <div class="terminal-footer-meta">
+            <span>${linesCount} lines</span>
+          </div>
+        </div>
+      </div>\n`;
     });
+    html = html.replace(/\[audio:(https?:\/\/[^\s|\]]+)(?:\|([^|\]]+))?(?:\|([^\]]+))?\]/gi, (m, src, desc, tag) => {
+      const tagTitle = (tag || 'ElevenLabs AI Sound').trim();
+      const descText = (desc || 'Generated Audio Track').trim();
+      const cleanSrc = src.trim();
+      return `\n<div class="modern-audio-card" data-src="${cleanSrc}">
+        <div class="audio-card-header">
+          <div class="audio-tag-badge">
+            <span class="audio-dot"></span>
+            <span>${tagTitle}</span>
+          </div>
+        </div>
+        <div class="audio-card-desc">${descText}</div>
+        <div class="audio-progress-row">
+          <span class="audio-time current-time">0:00</span>
+          <div class="audio-progress-bar-wrap" onclick="window._seekAudio(this, event)">
+            <div class="audio-progress-fill"></div>
+          </div>
+          <span class="audio-time total-time">--:--</span>
+        </div>
+        <div class="audio-controls-row">
+          <button type="button" class="audio-ctrl-btn speed-btn" onclick="window._changeAudioSpeed(this)" title="Playback Speed">1x</button>
+          <button type="button" class="audio-ctrl-btn" onclick="window._skipAudio(this, -15)" title="Replay 15s">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path><text x="8" y="15" font-size="7" fill="currentColor" font-weight="bold" font-family="sans-serif">15</text></svg>
+          </button>
+          <button type="button" class="audio-play-btn" onclick="window._togglePlayAudio(this)" title="Play / Pause">
+            <svg class="play-icon" viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"></polygon></svg>
+            <svg class="pause-icon" style="display:none;" viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"></rect><rect x="14" y="4" width="4" height="16" rx="1"></rect></svg>
+          </button>
+          <button type="button" class="audio-ctrl-btn" onclick="window._skipAudio(this, 15)" title="Forward 15s">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path><text x="8" y="15" font-size="7" fill="currentColor" font-weight="bold" font-family="sans-serif">15</text></svg>
+          </button>
+          <button type="button" class="audio-ctrl-btn volume-btn" onclick="window._toggleMuteAudio(this)" title="Mute / Unmute">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+          </button>
+          <button type="button" class="audio-ctrl-btn download-btn" onclick="window._downloadAudio(this)" title="تحميل الملف الصوتي">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          </button>
+        </div>
+        <audio class="hidden-audio" src="${cleanSrc}" preload="metadata"></audio>
+      </div>\n`;
+    });
+
     html = html.replace(/\[(?:الخبير التحليلي|الخبير|Architect)\]\s*([\s\S]*?)(?=\[(?:الناقد|المنسق|Critic|Synthesizer)\]|$)/gi, (m, content) => {
       return `<div class="roundtable-persona architect"><div class="roundtable-badge"><span>🧠</span> <span>الخبير التحليلي (Architect)</span></div><div class="roundtable-body">${content.trim()}</div></div>`;
     });
