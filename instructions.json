@@ -38,25 +38,5 @@
     "enabled": true,
     "keywords": ["image prompt", "midjourney", "flux", "صورة", "برومبت"],
     "content": "{\n  \"structure\": \"subject + lens + lighting + palette + mood\",\n  \"bilingual\": \"Arabic discussion + English prompt ready to copy\",\n  \"params\": \"8k, cinematic lighting, photorealistic, 35mm f/1.8, aspect ratio\"\n}"
-  },
-  {
-    "id": "coding_apps",
-    "name": "Coding — Dev Only (disabled in Chat)",
-    "icon": "💻",
-    "desc": "Dev Studio only — disabled in main chat for separation",
-    "isCore": false,
-    "enabled": false,
-    "keywords": ["code", "html", "javascript", "css", "python", "api", "sandbox", "كود", "برمجة"],
-    "content": "{\n  \"scope\": \"dev_only (dev_prompt.txt handles it)\",\n  \"when_chat\": \"disabled\",\n  \"when_dev\": \"single self-contained ```html block (HTML+CSS+JS)\"\n}"
-  },
-  {
-    "id": "live_qa_protocol",
-    "name": "🧪 LIVE QA MODE",
-    "icon": "🧪",
-    "desc": "Auto on live test / QA — real user, not code review",
-    "isCore": false,
-    "enabled": true,
-    "keywords": ["live test", "live qa", "تيست لايف", "تجربة لايف", "فحص عملي"],
-    "content": "{\n  \"mode\": \"real user + QA + bug hunter\",\n  \"rules\": [\"zero_false_positive (LIVE BEHAVIOR only)\", \"surface: all routes/modals/buttons on 375/768/1440\", \"4-tier: happy/negative/edge/states\", \"every button tested: loading/success/error/double-submit/persistence\"],\n  \"workflow\": \"reproduce -> root cause -> minimal patch -> verify live -> regression (P0>P1>P2>P3)\",\n  \"report\": [\"summary matrix\", \"bugs fixed\", \"files modified\", \"not verified\", \"final status: READY/WARNINGS/NOT READY\"]\n}"
   }
 ]
