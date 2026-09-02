@@ -1489,15 +1489,21 @@
       const input = $('user-input');
       const sendBtn = $('send-btn');
 
-      let _inputRaf = null;
+      const triggerSend = () => {
+        const text = input ? input.value.trim() : '';
+        const hasAtt = state.attachments && state.attachments.length > 0;
+        if ((!text && !hasAtt) || state.isStreaming) return;
+        if (input) input.value = '';
+        this.adjustTextareaHeight();
+        this.updateSendBtnState();
+        ChatEngine.sendMessage(text);
+      };
+
       const onInput = () => {
         window.__userInteracted = true;
-        if (_inputRaf) cancelAnimationFrame(_inputRaf);
-        _inputRaf = requestAnimationFrame(() => {
-          this.adjustTextareaHeight();
-          this.updateInputDirection();
-          this.updateSendBtnState();
-        });
+        this.adjustTextareaHeight();
+        this.updateInputDirection();
+        this.updateSendBtnState();
       };
 
       input?.addEventListener('input', onInput);
@@ -1507,7 +1513,7 @@
       input?.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
           e.preventDefault();
-          sendBtn?.click();
+          triggerSend();
           return;
         }
         if (e.key === 'Enter' && e.shiftKey) {
@@ -1517,13 +1523,7 @@
 
       sendBtn?.addEventListener('click', (e) => {
         e.preventDefault();
-        const text = input ? input.value.trim() : '';
-        const hasAtt = state.attachments && state.attachments.length > 0;
-        if ((!text && !hasAtt) || state.isStreaming) return;
-        if (input) input.value = '';
-        this.adjustTextareaHeight();
-        this.updateSendBtnState();
-        ChatEngine.sendMessage(text);
+        triggerSend();
       });
 
       this.setupPullToRefresh();
