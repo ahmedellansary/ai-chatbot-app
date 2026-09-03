@@ -11,8 +11,8 @@
   <meta name="apple-mobile-web-app-title" content="X.v1">
 
   <title>X.v1</title>
-  <link rel="manifest" href="./manifest.json?v=260">
-  <link rel="stylesheet" href="./style.css?v=260">
+  <link rel="manifest" href="./manifest.json?v=261">
+  <link rel="stylesheet" href="./style.css?v=261">
   <link rel="icon" type="image/png" href="./icons/icon-192.png?v=49">
   <link rel="apple-touch-icon" href="./icons/icon-192.png?v=49">
   <link rel="apple-touch-icon" sizes="512x512" href="./icons/icon-512.png?v=49">
@@ -122,7 +122,7 @@
         <span>Settings</span>
       </button>
       <div id="app-version-badge" style="font-size:10.5px; color:var(--text-dim); font-family:var(--font-mono); text-align:center; padding:8px 0 2px; border-top:1px solid var(--border-subtle); margin-top:8px; letter-spacing:0.02em;">
-        <span id="app-version-text">v260</span> • <span id="app-last-update">جاري...</span>
+        <span id="app-version-text">v261</span> • <span id="app-last-update">جاري...</span>
       </div>
     </div>
   </aside>
@@ -140,7 +140,7 @@
       </button>
       <div id="chat-top-badge" class="repo-status-badge" style="position:absolute; left:50%; transform:translateX(-50%);">
         <span class="status-dot"></span>
-        <span class="repo-badge-text" id="chat-status-text" style="font-weight:700; letter-spacing:0.02em;">X (V260) —</span>
+        <span class="repo-badge-text" id="chat-status-text" style="font-weight:700; letter-spacing:0.02em;">X (V261) —</span>
       </div>
       <script>
         (function() {
@@ -362,7 +362,7 @@
         <div class="settings-modal-tabs-bar">
           <button type="button" class="settings-tab-btn active" data-tab="models" onclick="window._switchSettingsTab('models')">
             <span>🤖</span>
-            <span>النماذج</span>
+            <span>Models</span>
           </button>
           <button type="button" class="settings-tab-btn" data-tab="themes" onclick="window._switchSettingsTab('themes')">
             <span>🎨</span>
@@ -385,13 +385,13 @@
         <!-- ═══ Tab: Models — Sorted strongest→weakest, per-model usage === -->
         <div id="settings-tab-models" class="settings-tab-pane active">
           <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
-            <div style="font-size:13px; font-weight:800;">📊 النماذج المستخدمة</div>
-            <a href="./models.html" target="_blank" style="font-size:11px; color:var(--accent-color); text-decoration:none; border:1px solid var(--border-subtle); padding:4px 8px; border-radius:8px;">فتح صفحة كاملة ↗</a>
+            <div style="font-size:13px; font-weight:800;">📊 Models</div>
+            <a href="./models.html" target="_blank" style="font-size:11px; color:var(--accent-color); text-decoration:none; border:1px solid var(--border-subtle); padding:4px 8px; border-radius:8px;">Open full page ↗</a>
           </div>
-          <div style="font-size:11px; color:var(--text-dim); margin-bottom:8px;">مرتبة من الأقوى للأضعف — فعّل/ألغِ أي نموذج من الفول باك (يعود لمكانه الأصلي)</div>
+          <div style="font-size:11px; color:var(--text-dim); margin-bottom:8px;">Sorted strongest to weakest — toggle any model from fallback (returns to original position)</div>
           <div style="overflow:auto; max-height:320px; border:1px solid var(--border-subtle); border-radius:10px;">
             <table style="width:100%; border-collapse:collapse; font-size:12.5px;">
-              <thead><tr style="background:rgba(0,0,0,0.2);"><th style="padding:8px; text-align:right; width:32px;">✓</th><th style="padding:8px; text-align:right;">النموذج</th><th style="padding:8px; text-align:right;">المزود</th><th style="padding:8px; text-align:right;">الاستهلاك</th></tr></thead>
+              <thead><tr style="background:rgba(0,0,0,0.2);"><th style="padding:8px; text-align:left; width:32px;">✓</th><th style="padding:8px; text-align:left;">Model</th><th style="padding:8px; text-align:left;">Provider</th><th style="padding:8px; text-align:left;">Usage</th></tr></thead>
               <tbody id="models-tbody-inline"></tbody>
             </table>
           </div>
@@ -400,38 +400,14 @@
         <!-- ═══ Tab 1: Themes & Fonts ═══ -->
         <div id="settings-tab-themes" class="settings-tab-pane hidden">
           <div style="display:flex; flex-direction:column; gap:14px;">
-            <!-- Theme Selection -->
+            <!-- Theme Selection — simple circles -->
             <div>
               <label style="font-size: 12px; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 6px;">Theme</label>
-              <div class="theme-selector-grid">
-                <button type="button" class="theme-card-btn active" data-theme="obsidian" onclick="window._setAppTheme('obsidian')">
-                  <div class="theme-preview-dot obsidian"></div>
-                  <div class="theme-card-info">
-                    <span class="theme-title">Midnight Obsidian</span>
-                    <span class="theme-sub">الداكن الكلاسيكي (الحالي)</span>
-                  </div>
-                </button>
-                <button type="button" class="theme-card-btn" data-theme="emerald" onclick="window._setAppTheme('emerald')">
-                  <div class="theme-preview-dot emerald"></div>
-                  <div class="theme-card-info">
-                    <span class="theme-title">Emerald Matrix</span>
-                    <span class="theme-sub">الزمردي النيون (Cyber)</span>
-                  </div>
-                </button>
-                <button type="button" class="theme-card-btn" data-theme="amethyst" onclick="window._setAppTheme('amethyst')">
-                  <div class="theme-preview-dot amethyst"></div>
-                  <div class="theme-card-info">
-                    <span class="theme-title">Velvet Amethyst</span>
-                    <span class="theme-sub">الأرجواني الملكي (Royal)</span>
-                  </div>
-                </button>
-                <button type="button" class="theme-card-btn" data-theme="sapphire" onclick="window._setAppTheme('sapphire')">
-                  <div class="theme-preview-dot sapphire"></div>
-                  <div class="theme-card-info">
-                    <span class="theme-title">Oceanic Sapphire</span>
-                    <span class="theme-sub">الأزرق الكوني (Ocean)</span>
-                  </div>
-                </button>
+              <div style="display:flex; gap:12px; align-items:center;">
+                <button type="button" title="Obsidian" data-theme="obsidian" onclick="window._setAppTheme('obsidian')" style="width:28px; height:28px; border-radius:50%; background:#0a0a0f; border:2px solid var(--accent-color); cursor:pointer;"></button>
+                <button type="button" title="Emerald" data-theme="emerald" onclick="window._setAppTheme('emerald')" style="width:28px; height:28px; border-radius:50%; background:#06402B; border:2px solid transparent; cursor:pointer;"></button>
+                <button type="button" title="Amethyst" data-theme="amethyst" onclick="window._setAppTheme('amethyst')" style="width:28px; height:28px; border-radius:50%; background:#2a1040; border:2px solid transparent; cursor:pointer;"></button>
+                <button type="button" title="Sapphire" data-theme="sapphire" onclick="window._setAppTheme('sapphire')" style="width:28px; height:28px; border-radius:50%; background:#0f1e3a; border:2px solid transparent; cursor:pointer;"></button>
               </div>
             </div>
 
@@ -471,47 +447,13 @@
           <!-- Instruction Files Grid / List -->
           <div id="instruction-files-list" class="instruction-files-list"></div>
 
-          <!-- Active Instruction Editor Sub-panel (When a file is selected) -->
+          <!-- Active Instruction Editor Sub-panel — simplified -->
           <div id="instruction-editor-panel" class="instruction-editor-panel hidden">
-            <div class="inst-editor-header">
-              <div class="inst-editor-title-wrap">
-                <span id="inst-editor-icon" class="inst-editor-icon">📄</span>
-                <input type="text" id="inst-editor-name" class="inst-editor-name-input" placeholder="Instruction file name...">
-              </div>
-              <div class="inst-editor-tools">
-                <label class="inst-toggle-label">
-                  <input type="checkbox" id="inst-editor-enabled" class="inst-checkbox">
-                  <span>Enabled</span>
-                </label>
-              </div>
-            </div>
-
-            <div class="inst-editor-meta" style="margin-bottom:6px;">
-              <input type="text" id="inst-editor-keywords" class="inst-editor-meta-input" placeholder="Trigger keywords (comma separated)...">
-            </div>
-
-            <textarea
-              id="inst-editor-content"
-              class="settings-textarea inst-content-textarea"
-              style="font-family: var(--font-mono); font-size: 12px; line-height: 1.45;"
-              rows="8"
-              placeholder='{ "key": "value" }'
-            ></textarea>
-
-            <div class="inst-editor-footer">
-              <div class="inst-footer-left">
-                <button id="inst-delete-btn" class="inst-delete-btn hidden" onclick="window._deleteActiveInstructionFile()">
-                  <span>🗑️</span>
-                  <span>Delete File</span>
-                </button>
-              </div>
-              <div class="inst-footer-right">
-                <button class="btn-refresh-cancel" onclick="window._closeInstructionEditor()">Close Editor</button>
-                <button class="settings-save-btn" onclick="window._saveActiveInstructionFile()">
-                  <span>💾</span>
-                  <span>Save Changes</span>
-                </button>
-              </div>
+            <div style="display:flex; align-items:center; gap:8px; padding:10px 12px; background:rgba(255,255,255,0.04); border:1px solid var(--border-subtle); border-radius:10px;">
+              <span id="inst-editor-icon" style="font-size:16px;">📄</span>
+              <span id="inst-editor-title" style="flex:1; font-weight:700; font-size:13px;"></span>
+              <button onclick="navigator.clipboard.writeText(document.getElementById('inst-editor-title').textContent); if(window.MessageRenderer) window.MessageRenderer.showToast('Copied','success')" style="padding:4px 8px; font-size:11px; border:1px solid var(--border-subtle); border-radius:6px; background:transparent; cursor:pointer;" title="Copy">📋</button>
+              <button onclick="window._closeInstructionEditor()" style="padding:4px 8px; font-size:11px; border:none; background:transparent; cursor:pointer;">✕</button>
             </div>
           </div>
         </div>
@@ -540,11 +482,11 @@
 </div>
 
 <!-- Consolidated High-Performance Script Bundle -->
-<script src="./config.js?v=260"></script>
-<script src="./auth.js?v=260"></script>
-<script src="./models.js?v=260"></script>
-<script src="./github.js?v=260"></script>
-<script src="./instruction-manager.js?v=260"></script>
-<script src="./app.js?v=260"></script>
+<script src="./config.js?v=261"></script>
+<script src="./auth.js?v=261"></script>
+<script src="./models.js?v=261"></script>
+<script src="./github.js?v=261"></script>
+<script src="./instruction-manager.js?v=261"></script>
+<script src="./app.js?v=261"></script>
 </body>
 </html>
