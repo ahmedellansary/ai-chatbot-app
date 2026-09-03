@@ -592,17 +592,15 @@
             <div class="agent-step-body">${this.escapeHtml(s.summary || '')}</div>
           </div>
         `).join('');
-
+        const okCount = msg.multiAgentSteps.filter(s=>/✓|مكتمل|معتمد|Done|Approved/i.test(s.status)).length;
+        const warnCount = msg.multiAgentSteps.length - okCount;
         multiAgentHtml = `
-          <div class="multi-agent-box collapsed" id="box-${msg.id}">
-            <div class="multi-agent-header" onclick="window._toggleThinkingBox('${msg.id}')">
-              <div class="multi-agent-title">
-                <span>👥</span>
-                <span>تشاور الوكلاء (${msg.multiAgentSteps.length} وكلاء مشاركين)</span>
-              </div>
-              <div class="multi-agent-toggle-indicator">
-                <span id="indicator-${msg.id}">[إخفاء / عرض النقاش] ▾</span>
-              </div>
+          <div class="multi-agent-box" id="box-${msg.id}">
+            <div class="agent-committed-header" onclick="window._toggleThinkingBox('${msg.id}')">
+              <span style="color:var(--accent-color)">👥</span>
+              <span class="agent-committed-label">COMMITTED</span>
+              <span class="agent-committed-nums"><span class="agent-num ok">${okCount}</span><span class="agent-num warn">${warnCount}</span></span>
+              <span class="agent-toggle-icon" id="indicator-${msg.id}">▾</span>
             </div>
             <div class="multi-agent-content">
               ${stepsHtml}
@@ -611,18 +609,19 @@
         `;
       }
 
-      // Observer persistence — collapsed concise briefing after refresh
+      // Observer persistence — floating bullets + COMMITTED header, no numbers text, icon toggle
       let observerHtml = '';
       if (msg.observerReview) {
-        const brief = this.escapeHtml((msg.observerBrief || msg.observerReview).slice(0,140));
-        const isOk = /نعم|yes|✓|مُلتزم/i.test(msg.observerReview);
-        const color = isOk ? '#10b981' : '#f59e0b';
-        const label = isOk ? '✓ نعم — ملتزم' : '✗ لا — ' + brief.slice(0,60);
-        observerHtml = `<div class="observer-box collapsed" style="margin-top:10px; padding:0; border:none; background:transparent;"><div style="display:flex; align-items:center; gap:6px; padding:4px 0;"><span>👁️</span><span style="font-size:11px; color:${color}; background:rgba(16,185,129,0.08); padding:2px 6px; border-radius:6px;">${label}</span><span style="font-size:10px; color:var(--text-dim); margin-left:auto; cursor:pointer;" onclick="this.closest('.observer-box').classList.toggle('collapsed'); this.closest('.observer-box').querySelector('.observer-details').classList.toggle('hidden')">[عرض]</span></div><div class="observer-details hidden" style="margin-top:6px; font-size:12px; border:1px solid var(--border-subtle); border-radius:8px; padding:8px; background:rgba(255,255,255,0.02);">${this.parseMarkdown(msg.observerReview)}</div></div>`;
+        const lines = String(msg.observerReview).split(/\n/).map(s=>s.trim()).filter(Boolean);
+        const bullets = lines.map(l=> l.replace(/^\d+[\.\)\-]\s*/,'').trim()).filter(Boolean).slice(0,5);
+        const ok = bullets.filter(b=>/نعم|yes|✓|مُلتزم|Compliant/i.test(b)).length;
+        const warn = bullets.length - ok;
+        const bulletsHtml = bullets.length ? `<ul class="observer-bullets">${bullets.map(b=>`<li class="observer-bullet"><span class="observer-bullet-text">${this.escapeHtml(b)}</span></li>`).join('')}</ul>` : `<div style="font-size:12px;color:var(--text-dim)">${this.escapeHtml(String(msg.observerReview).slice(0,140))}</div>`;
+        observerHtml = `<div class="observer-box" data-review="${this.escapeHtml(msg.observerReview).slice(0,300)}"><div class="agent-committed-header" onclick="this.nextElementSibling.classList.toggle('hidden'); this.classList.toggle('collapsed')"><span>👁️</span><span class="agent-committed-label">COMMITTED</span><span class="agent-committed-nums"><span class="agent-num ok">${ok}</span><span class="agent-num warn">${warn}</span></span><span class="agent-toggle-icon">▾</span></div><div class="observer-details">${bulletsHtml}<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap"><button class="observer-apply-btn" onclick="window._applyObserverSuggestion(this.closest('.observer-box').dataset.review||'')">Apply</button><button class="llm-end-btn" onclick="window._endToLLM(this)">⚡ Send to LLM</button></div></div></div>`;
       }
 
       if (msg.role === 'user') {
-        row.innerHTML = `<div class="msg-content" ${dirAttr}>${parsed}${attachmentsHtml}</div>`;
+        row.innerHTML = `<div class="msg-content" ${dirAttr}>${parsed}${attachmentsHtml}</div><div class="user-actions-bar"><button class="user-copy-btn" onclick="window._copyMsgText(this)" title="نسخ"><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button></div>`;
       } else {
         row.innerHTML = `
           <div class="msg-content" ${dirAttr}>
@@ -1174,19 +1173,19 @@
           </div>
         `).join('');
 
+        const okC = steps.filter(s=>/✓|مكتمل|معتمد|Done|Approved/i.test(s.status)).length;
+        const warnC = steps.length - okC;
         const boxHtml = `
           <div class="multi-agent-box" id="box-${aiMsgId}">
-            <div class="multi-agent-header" onclick="window._toggleThinkingBox('${aiMsgId}')">
-              <div class="multi-agent-title">
-                <span>👥</span>
-                <span>تشاور الوكلاء (${steps.length} وكلاء مشاركين)</span>
-              </div>
-              <div class="multi-agent-toggle-indicator">
-                <span id="indicator-${aiMsgId}">[إخفاء / عرض النقاش] ▾</span>
-              </div>
+            <div class="agent-committed-header" onclick="window._toggleThinkingBox('${aiMsgId}'); this.classList.toggle('collapsed')">
+              <span style="color:var(--accent-color)">👥</span>
+              <span class="agent-committed-label">COMMITTED</span>
+              <span class="agent-committed-nums"><span class="agent-num ok">${okC}</span><span class="agent-num warn">${warnC}</span></span>
+              <span class="agent-toggle-icon" id="indicator-${aiMsgId}">▾</span>
             </div>
             <div class="multi-agent-content">
               ${stepsHtml}
+              <div style="display:flex;gap:8px;margin-top:8px"><button class="llm-end-btn" onclick="window._endToLLM(this)">⚡ Send to LLM</button></div>
             </div>
           </div>
         `;
@@ -1302,19 +1301,30 @@
       ];
 
       const renderObserver = (finalReview = '') => {
-        // Merged view: don't show stage names, show agent answer directly + small Apply button (English, same theme)
-        const reviewHtml = finalReview ? `<div class="observer-final" style="margin-top:6px; padding:8px; background:rgba(255,255,255,0.03); border:1px solid var(--border-subtle); border-radius:8px;">${MessageRenderer.parseMarkdown(finalReview)}</div>` : `<div style="font-size:12px; color:var(--text-dim); padding:6px 0;">${t('جاري المراجعة...','Reviewing...')}</div>`;
-        const applyBtn = finalReview ? `<button class="observer-apply-btn" style="font-size:11px; padding:4px 10px; border-radius:6px; background:var(--accent-color); color:#fff; border:1px solid var(--accent-color); cursor:pointer; margin-top:8px;">Apply suggestion</button>` : '';
+        // Floating bullets — no numbers — COMMITTED header with colored numbers, icon toggle, Apply only
+        const buildBullets = (txt)=> {
+          const lines = String(txt||'').split(/\n/).map(s=>s.trim()).filter(Boolean);
+          const bullets = lines.map(l=> l.replace(/^\d+[\.\)\-]\s*/,'').trim()).filter(Boolean).slice(0,5);
+          if(!bullets.length) return `<div style="font-size:12px;color:var(--text-dim)">${MessageRenderer.escapeHtml(String(txt||'').slice(0,140))}</div>`;
+          return `<ul class="observer-bullets">${bullets.map(b=>`<li class="observer-bullet"><span class="observer-bullet-text">${MessageRenderer.escapeHtml(b)}</span></li>`).join('')}</ul>`;
+        };
+        const okC = (txt)=> (String(txt).match(/نعم|yes|✓|مُلتزم|Compliant/gi)||[]).length;
+        const reviewHtml = finalReview ? buildBullets(finalReview) : `<div style="font-size:12px; color:var(--text-dim); padding:6px 0;">${t('جاري المراجعة...','Reviewing...')}</div>`;
+        const okN = finalReview ? okC(finalReview) : 0;
+        const warnN = finalReview ? (String(finalReview).split(/\n/).filter(Boolean).length - okN) : 0;
+        const applyBtn = finalReview ? `<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap"><button class="observer-apply-btn" onclick="window._applyObserverSuggestion(this.closest('.observer-box').dataset.review||'')">Apply</button><button class="llm-end-btn" onclick="window._endToLLM(this)" title="SSend to LLM">⚡ Send to LLM</button></div>` : '';
         const box = aiRow.querySelector('.observer-box') || document.createElement('div');
         box.className = 'observer-box';
         box.style.cssText = 'margin-top:10px; padding:0; border:none; background:transparent;';
+        if(finalReview) box.dataset.review = finalReview;
         box.innerHTML = `
-          <div style="display:flex; align-items:center; gap:6px; padding:4px 0; border-top:1px solid var(--border-subtle); margin-top:6px;">
-            <span>👁️</span><span style="font-size:11px; color:var(--text-dim);">Review</span>
-            <span style="font-size:10px; color:var(--text-dim); margin-left:auto;">${t('مراجعة لاحقة','Post-review')}</span>
+          <div class="agent-committed-header" onclick="this.nextElementSibling.classList.toggle('hidden'); this.classList.toggle('collapsed')">
+            <span>👁️</span><span class="agent-committed-label">COMMITTED</span><span class="agent-committed-nums"><span class="agent-num ok">${okN}</span><span class="agent-num warn">${Math.max(0,warnN)}</span></span><span class="agent-toggle-icon">▾</span>
           </div>
-          ${reviewHtml}
-          ${applyBtn}
+          <div class="observer-details">
+            ${reviewHtml}
+            ${applyBtn}
+          </div>
         `;
         if (!aiRow.querySelector('.observer-box')) {
           const contentEl = aiRow.querySelector('.msg-content');
@@ -1366,47 +1376,6 @@
           const msg = conv.messages.find(m=> m.id===aiMsgId);
           if(msg){ msg.observerReview = reviewText; msg.observerBrief = concise; msg.observerSteps = steps; if(window.StateController) window.StateController.save(); }
         } catch {}
-        // Render collapsed: hide details, show only briefing line with yes/no
-        const isCompliant = /نعم|yes|✓|مُلتزم/i.test(reviewText);
-        const brief = isCompliant ? t('✓ نعم — ملتزم', '✓ Yes — compliant') : t('✗ لا — ' + (reviewText.split('\n')[0]||'').slice(0,80), '✗ No — see details');
-        // Re-render collapsed + small apply button (same theme, same instruction-edit flow)
-        const box = aiRow.querySelector('.observer-box');
-        if(box){
-          box.classList.add('collapsed');
-          const briefEl = document.createElement('div');
-          briefEl.style.cssText='font-size:11px; color:'+(isCompliant?'#10b981':'#f59e0b')+'; margin-top:6px; padding:4px 8px; background:rgba(16,185,129,0.08); border-radius:6px; display:inline-block;';
-          briefEl.textContent = brief;
-          // Remove old flow dots animation
-          box.querySelectorAll('.flow-dot').forEach(d=> d.style.display='none');
-          const flow = box.querySelector('.thinking-flow');
-          if(flow) flow.style.display='none';
-          // Small apply button — same theme, same instruction-edit flow
-          const existingApply = box.querySelector('.observer-apply-btn');
-          if(existingApply) existingApply.remove();
-          const applyBtn = document.createElement('button');
-          applyBtn.className='observer-apply-btn';
-          applyBtn.style.cssText='font-size:11px; padding:4px 10px; border-radius:6px; background:var(--accent-color); color:#fff; border:1px solid var(--accent-color); cursor:pointer; margin-top:6px; margin-inline-start:6px;';
-          applyBtn.textContent = 'Apply suggestion';
-          applyBtn.onclick = () => {
-            const improvement = (reviewText.split('\n').find(l=> l.includes('تحسين') || l.toLowerCase().includes('improvement')) || reviewText.slice(-150)).trim();
-            const clean = improvement.replace(/^\d+\.\s*/, '').slice(0, 300);
-            if(window._applyObserverSuggestion) window._applyObserverSuggestion(clean);
-          };
-          // Show brief instead of full review — small button same theme, no motion after
-          const existingBrief = box.querySelector('.observer-brief');
-          if(existingBrief) existingBrief.remove();
-          const b = document.createElement('div');
-          b.className='observer-brief';
-          b.style.cssText='font-size:12px; margin-top:6px;';
-          b.textContent = concise || brief;
-          box.appendChild(b);
-          box.appendChild(applyBtn);
-          // Also show briefEl as inline badge
-          const existingBadge = box.querySelector('.observer-badge');
-          if(existingBadge) existingBadge.remove();
-          briefEl.className='observer-badge';
-          box.appendChild(briefEl);
-        }
         renderObserver(reviewText);
         // Ensure no glow/motion remains
         try{ document.querySelectorAll('.input-container.thinking').forEach(el=> el.classList.remove('thinking')); }catch{}
@@ -2305,6 +2274,24 @@
     const box = document.getElementById(`box-${msgId}`);
     if (!box) return;
     box.classList.toggle('collapsed');
+  };
+  window._sendToLLM = window._endToLLM = function(btn){
+    try{
+      const box = btn.closest('.observer-box, .multi-agent-box, .dev-observer-box');
+      const raw = box?.dataset?.review || box?.innerText || '';
+      // extract contradictions only: lines with لا/تناقض/no/contradiction/✗ or warn
+      const lines = String(raw).split(/\n/).map(s=>s.trim()).filter(Boolean);
+      let contras = lines.filter(l=> /لا|تناقض|تعارض|✗|contradiction|inconsistent|conflict/i.test(l) && !/نعم|مُلتزم|Compliant|✓/i.test(l.split('—')[0]));
+      if(!contras.length) contras = lines.filter(l=> /لا\s*—|✗|تناقض/i.test(l)).slice(0,3);
+      if(!contras.length) contras = lines.slice(1,3); // fallback: take middle lines
+      const q = contras.length ? `⚠️ تناقض مكتشف:\n- ${contras.join('\n- ')}\n\nهل تلاحظ هذه المشكلة؟ وضح وصحح.` : `هل ترى أي تناقض في الرد السابق؟ راجع: ${String(raw).slice(0,300)}`;
+      const input = document.getElementById('user-input');
+      if(!input) return;
+      input.value = q.slice(0,900);
+      input.dispatchEvent(new Event('input'));
+      input.focus();
+      if(window.MessageRenderer) window.MessageRenderer.showToast('↗ Contradictions sent to LLM','info');
+    }catch(e){}
   };
 
   // ─────────────────────────────────────────────────────────────────
