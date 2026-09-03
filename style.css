@@ -2448,19 +2448,19 @@ html, body {
   color: var(--text-muted);
 }
 
-/* ─── Settings Modal & Form ─── */
+/* ─── Settings Modal & Form — compact */
 .settings-card {
-  max-width: 580px;
+  max-width: 520px;
   height: auto;
-  max-height: 88vh;
+  max-height: 82vh;
 }
 
 .settings-modal-body {
-  padding: 16px 18px;
+  padding: 12px 14px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 10px;
   width: 100%;
 }
 .settings-modal-body .settings-tab-pane {
@@ -3101,7 +3101,7 @@ html, body {
 
 @media (max-width: 600px) {
   .settings-modal-body {
-    flex-direction: row-reverse;
+    flex-direction: row;
     gap: 10px;
   }
   .settings-modal-tabs-bar {
