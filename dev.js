@@ -583,6 +583,8 @@ When this request requires changing repository code, respond as a concise execut
       state.abortController = new AbortController();
       DevUIEngine.updateSendBtn();
       DevUIEngine.setThinking(true);
+      const isArDev = /[\u0600-\u06FF]/.test(userText);
+      DevUIEngine.showDevThinking(isArDev ? 'تحليل' : 'Analyzing');
       const _shouldObserve = !!state.isMultiAgentMode;
 
        const tier = state.currentMode || 'MID';
@@ -619,7 +621,7 @@ When this request requires changing repository code, respond as a concise execut
       let succeeded = false;
       let usedAgent = chosenAgent;
       let _thinkingCleared = false;
-      const _clearThinking = () => { if (!_thinkingCleared) { _thinkingCleared = true; DevUIEngine.setThinking(false); } };
+      const _clearThinking = () => { if (!_thinkingCleared) { _thinkingCleared = true; DevUIEngine.setThinking(false); DevUIEngine.hideDevThinking(); } };
 
       for (let i = 0; i < fallbackList.length; i++) {
         const currentAgent = fallbackList[i];
@@ -950,15 +952,13 @@ When this request requires changing repository code, respond as a concise execut
         { icon:'✨', title:t('اقتراح تحسين','Improvement'), status:t('انتظار','Waiting'), summary:t('بانتظار...','Awaiting...') }
       ];
       const render = (finalReview='') => {
-        const stepsHtml = steps.map(s=>`<div class="agent-step-item"><div class="agent-step-header"><span class="agent-step-name">${s.icon} ${DevChatEngine ? '' : ''}${s.title}</span><span class="agent-step-badge">${s.status}</span></div><div class="agent-step-body">${s.summary}</div></div>`).join('');
-        const reviewHtml = finalReview ? `<div style="margin-top:10px; padding:10px; background:rgba(255,255,255,0.04); border-radius:8px; border:1px solid var(--border-subtle);">${finalReview}</div>` : '';
+        const stepsHtml = steps.map(s=>`<div class="thinking-flow-item"><span class="flow-icon">${s.icon}</span><span class="flow-text">${s.title} — ${s.summary}</span><span class="flow-dot" style="${s.status.includes('✓')||s.status.includes('Done')?'opacity:0;':''}"></span></div>`).join('');
         let box = row.querySelector('.dev-observer-box');
-        if (!box) { box = document.createElement('div'); box.className='dev-observer-box multi-agent-box'; box.style.cssText='margin-top:12px; border:1px solid var(--border-subtle);'; row.querySelector('.msg-content')?.appendChild(box) || row.appendChild(box); }
-        // Use simple markdown for review
+        if (!box) { box = document.createElement('div'); box.className='dev-observer-box'; box.style.cssText='margin-top:10px; padding:0; border:none; background:transparent;'; row.querySelector('.msg-content')?.appendChild(box) || row.appendChild(box); }
         let parsedReview = '';
         try { const md = window.DevUIEngine ? window.DevUIEngine.parseMarkdown(finalReview) : finalReview; parsedReview = md; } catch { parsedReview = finalReview; }
-        const reviewSection = finalReview ? `<div style="margin-top:10px; padding:10px; background:rgba(255,255,255,0.04); border-radius:8px;">${parsedReview}</div>` : '';
-        box.innerHTML = `<div class="multi-agent-header" style="cursor:pointer;" onclick="this.nextElementSibling.classList.toggle('hidden')"><div class="multi-agent-title"><span>👁️</span><span>${t('المراقبون — مراجعة الكود','Observers — Code Review')}</span></div><span style="font-size:11px; color:var(--text-dim);">${t('عرض التفاصيل ▾','Details ▾')}</span></div><div class="multi-agent-content" style="padding:8px;">${stepsHtml}${reviewSection}<div style="font-size:10.5px; color:var(--text-dim); margin-top:6px;">${t('مراجعة لاحقة بعد رد المستوى — لا تحل محل الرد','Post-response review — does not replace answer')}</div></div>`;
+        const reviewSection = finalReview ? `<div style="margin-top:8px; padding:8px; background:transparent; border:none;">${parsedReview}</div>` : '';
+        box.innerHTML = `<div style="display:flex; align-items:center; gap:6px; cursor:pointer; padding:4px 0;" onclick="this.nextElementSibling.classList.toggle('hidden')"><span>👁️</span><span style="font-size:12.5px; font-weight:600;">${t('المراقبون — مراجعة الكود','Observers — Code Review')}</span><span style="font-size:11px; color:var(--text-dim); margin-left:auto;">${t('عرض التفاصيل ▾','Details ▾')}</span></div><div class="thinking-flow" style="margin-top:6px; padding:0; background:transparent; border:none;">${stepsHtml}${reviewSection}<div style="font-size:10.5px; color:var(--text-dim); margin-top:6px;">${t('مراجعة لاحقة بعد رد المستوى — لا تحل محل الرد','Post-response review — does not replace answer')}</div></div>`;
       };
       render();
       steps[0].status=t('✓ تمت المتابعة','✓ Tracked'); steps[0].summary=t(`تمت مراقبة رد ${tier}`,'Tracked '+tier); steps[1].status=t('نشط','Active'); render();
@@ -1404,6 +1404,53 @@ When this request requires changing repository code, respond as a concise execut
     setThinking(on) {
       const inputContainer = document.querySelector('#input-section .input-container') || document.querySelector('.input-container');
       if (inputContainer) inputContainer.classList.toggle('thinking', !!on);
+    },
+    _devThinkingTimers: [],
+    showDevThinking(initialWord = 'Analyzing') {
+      const container = $('chat-container');
+      if (!container) return;
+      const isAr = /[\u0600-\u06FF]/.test(initialWord) || /[\u0600-\u06FF]/.test(document.getElementById('user-input')?.value || '');
+      const base = initialWord || (isAr ? 'تحليل' : 'Analyzing');
+      let typing = document.getElementById('dev-typing-indicator');
+      if (!typing) {
+        typing = document.createElement('div');
+        typing.id = 'dev-typing-indicator';
+        typing.className = 'message-row ai typing-indicator';
+        typing.innerHTML = `<div class="typing-bubble" dir="ltr"><span class="typing-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg></span><span id="dev-thinking-word" class="thinking-word">${this.escapeHtml(base)}</span><span class="thinking-dots"><i></i><i></i><i></i></span></div><div id="dev-thinking-flow" class="thinking-flow"></div>`;
+        container.appendChild(typing);
+        container.scrollTop = container.scrollHeight;
+      }
+      const flowStages = isAr ? [
+        { icon:'🧠', text:'فهم النية — ماذا يريد المطور؟', delay:900 },
+        { icon:'🔍', text:'تحليل الكود والسياق', delay:2600 },
+        { icon:'🎯', text:'تقرير نوع التعديل', delay:5200 },
+        { icon:'✨', text:'صياغة الحل البرمجي', delay:8300 },
+        { icon:'✅', text:'مراجعة الأمان والجودة', delay:11800 }
+      ] : [
+        { icon:'🧠', text:'Understanding intent', delay:900 },
+        { icon:'🔍', text:'Analyzing code & context', delay:2600 },
+        { icon:'🎯', text:'Deciding patch type', delay:5200 },
+        { icon:'✨', text:'Crafting solution', delay:8300 },
+        { icon:'✅', text:'Security review', delay:11800 }
+      ];
+      this._devThinkingTimers = [];
+      flowStages.forEach(s => {
+        const t = setTimeout(() => {
+          const flow = document.getElementById('dev-thinking-flow');
+          if (!flow) return;
+          const item = document.createElement('div');
+          item.className = 'thinking-flow-item';
+          item.innerHTML = `<span class="flow-icon">${s.icon}</span><span class="flow-text">${this.escapeHtml(s.text)}</span><span class="flow-dot"></span>`;
+          flow.appendChild(item);
+          const ca = $('chat-area'); if (ca) ca.scrollTop = ca.scrollHeight;
+        }, s.delay);
+        this._devThinkingTimers.push(t);
+      });
+    },
+    hideDevThinking() {
+      if (this._devThinkingTimers) { this._devThinkingTimers.forEach(t=>clearTimeout(t)); this._devThinkingTimers=[]; }
+      const el = document.getElementById('dev-typing-indicator');
+      if (el) el.remove();
     },
     updateSendBtn() {
       const input = $('user-input');
