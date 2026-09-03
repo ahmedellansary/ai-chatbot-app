@@ -76,7 +76,7 @@
   // 3. STATE & PERSISTENCE CONTROLLER (StateController)
   // ─────────────────────────────────────────────────────────────────
   const state = {
-    currentMode: (function(){ try{ const saved = localStorage.getItem('xv1_current_mode'); return (saved === 'HIGH' || saved === 'HARD') ? 'BALANCE2' : (saved || 'MID'); }catch{ return 'MID'; }})(),
+    currentMode: (function(){ try{ const saved = localStorage.getItem('xv1_current_mode'); if (saved === 'BALANCE2') return 'HIGH'; if (saved === 'HARD') return 'HIGH'; return (saved === 'HIGH' ? 'HIGH' : (saved || 'MID')); }catch{ return 'MID'; }})(),
     currentModel: null,
     devModelKey: null,
     modelCatalog: [],
@@ -820,7 +820,7 @@
     },
 
     getAdaptiveConfig(tier) {
-      if (tier === 'FAST' || tier === 'BALANCE2') return { recentCount: 6, maxBriefingChars: 600 };
+      if (tier === 'FAST' || tier === 'HIGH') return { recentCount: 6, maxBriefingChars: 600 };
       return { recentCount: 10, maxBriefingChars: 1200 };
     },
 
@@ -1037,21 +1037,32 @@
         MessageRenderer.hideTyping();
         if (err.name !== 'AbortError') {
           debugPrint(err, `Chat request failed (${state.currentMode || 'MID'})`);
+          // Generic giant-model error handling: always print error in chat after thinking phase, never freeze
+          const errText = (err && err.message) ? String(err.message) : 'خطأ غير معروف';
           if (!fullContent.trim()) {
-            aiMsgObj.content = `⚠️ تعذر استلام الرد من النموذج: ${err.message || 'خطأ في الاتصال'}. يمكنك إعادة المحاولة فوراً.`;
+            aiMsgObj.content = `⚠️ تعذر استلام الرد من نماذج ${state.currentMode || 'MID'}: ${errText}\n\nيمكنك المحاولة مرة أخرى أو التبديل لوضع Balanced/FAST.`;
             aiMsgObj.isError = true;
-            MessageRenderer.appendMessage(aiMsgObj);
+            // Ensure the placeholder bubble exists and is replaced with error bubble
+            try { MessageRenderer.appendMessage(aiMsgObj); } catch (e) { console.warn('[render error msg failed]', e); }
+            try { StateController.save(); } catch {}
+          } else {
+            // Partial content arrived before error — keep what we have and append error note
+            aiMsgObj.content = fullContent + `\n\n---\n⚠️ انقطع الاتصال أثناء الاستجابة: ${errText}`;
+            try { StateController.save(); } catch {}
           }
-          MessageRenderer.showToast('❌ ' + err.message, 'error');
+          MessageRenderer.showToast('❌ ' + errText.slice(0,180), 'error');
         }
       } finally {
+        // Guaranteed unlock — prevents page freeze for giant-model tiers (HIGH)
         MessageRenderer.hideTyping();
         state.isStreaming = false;
         state.abortController = null;
         state.sendInFlight = false;
         state.sendLock = false;
+        state.cacheOperationInFlight = false;
         UIEngine.updateSendBtnState();
         MessageRenderer.scrollToBottom();
+        try { StateController.save(); } catch {}
       }
     }
   };
