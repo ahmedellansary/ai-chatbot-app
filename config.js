@@ -39,7 +39,8 @@
 
   function _getAppConfigKey(method) {
     try {
-      if (window.AppConfig && typeof window.AppConfig[method] === 'function') {
+      // Prevent infinite recursion when AppConfig is UnifiedConfig itself
+      if (window.AppConfig && window.AppConfig !== window.ConfigVault && window.AppConfig !== window.UnifiedConfig && typeof window.AppConfig[method] === 'function') {
         const v = window.AppConfig[method]();
         if (v) return v;
       }
