@@ -2087,6 +2087,25 @@
         MessageRenderer.showToast('🔊 وضع الصوت التفاعلي جاهز', 'info');
         if (recognition) micBtn?.click();
       });
+      // Voice Call button — continuous call motion
+      const callBtn=$('voice-call-btn');
+      let callActive=false;
+      callBtn?.addEventListener('click', ()=>{
+        callActive=!callActive;
+        callBtn.classList.toggle('active',callActive);
+        if(!recognition){ MessageRenderer.showToast('المتصفح لا يدعم المكالمة','error'); callActive=false; callBtn.classList.remove('active'); return; }
+        try{
+          if(callActive){
+            recognition.continuous=true;
+            recognition.start();
+            MessageRenderer.showToast('📞 Call started — تكلم','info');
+          }else{
+            recognition.continuous=false;
+            try{recognition.stop();}catch{}
+            MessageRenderer.showToast('📞 Call ended','info');
+          }
+        }catch(e){ callActive=false; callBtn.classList.remove('active'); }
+      });
     },
 
     setupEmergencyControls() {
