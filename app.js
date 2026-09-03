@@ -86,6 +86,8 @@
     isStreaming: false,
     sendInFlight: false,
     sendLock: false,
+    cacheOperationInFlight: false,
+    refreshInFlight: false,
     abortController: null,
     lastModifiedFile: 'index.html',
     attachments: [],
@@ -132,6 +134,10 @@
     },
 
     newConversation() {
+      if (state.isStreaming || state.sendInFlight || state.sendLock) {
+        MessageRenderer.showToast('⏳ انتظر انتهاء الرد الحالي قبل بدء محادثة جديدة', 'info');
+        return this.getActiveConv();
+      }
       const id = generateId();
       const conv = {
         id,
@@ -153,6 +159,10 @@
     loadConversation(id) {
       const conv = state.conversations.find(c => c.id === id);
       if (!conv) return;
+      if (state.isStreaming && id !== state.activeConvId) {
+        MessageRenderer.showToast('⏳ انتظر انتهاء الرد الحالي قبل تغيير المحادثة', 'info');
+        return;
+      }
 
       state.activeConvId = id;
       try { localStorage.setItem('activeConvId', id); } catch {}
@@ -839,7 +849,7 @@
 
     async sendMessage(userText) {
       const hasAttachments = state.attachments && state.attachments.length > 0;
-      if (state.isStreaming || state.sendInFlight || (!userText.trim() && !hasAttachments)) return;
+      if (state.isStreaming || state.sendInFlight || state.cacheOperationInFlight || (!userText.trim() && !hasAttachments)) return;
       state.sendInFlight = true;
 
       if (!state.activeConvId) StateController.newConversation();
@@ -1344,7 +1354,9 @@
       const canSend = (hasText || hasAtt) &&
         !state.isStreaming &&
         !state.sendInFlight &&
-        !state.sendLock;
+        !state.sendLock &&
+        !state.cacheOperationInFlight &&
+        !state.refreshInFlight;
 
       if (canSend) {
         btn.classList.add('active');
@@ -1938,6 +1950,10 @@
   };
 
   window._retryMsg = (msgId) => {
+    if (state.isStreaming || state.sendInFlight || state.sendLock) {
+      MessageRenderer.showToast('⏳ انتظر انتهاء الرد الحالي قبل إعادة المحاولة', 'info');
+      return;
+    }
     const conv = StateController.getActiveConv();
     if (!conv) return;
     const idx = conv.messages.findIndex(m => m.id === msgId);
@@ -1959,40 +1975,6 @@
   window._closeSlides = () => SkillsEngine.closeSlides();
   window._exportSlidesHTML = () => SkillsEngine.exportSlidesHTML();
 
-
-  window._clearAppCache = async function() {
-    try {
-      const preservedConversations = localStorage.getItem('conversations');
-      const preservedAuth = localStorage.getItem('DEV_MODE_AUTH_HASH');
-      const preservedGroq = localStorage.getItem('GROQ_API_KEY');
-      const preservedOr = localStorage.getItem('OPENROUTER_API_KEY');
-      const preservedGh = localStorage.getItem('GITHUB_TOKEN');
-
-      if (typeof caches !== 'undefined' && caches.keys) {
-        const cacheNames = await caches.keys();
-        await Promise.all(cacheNames.map(name => caches.delete(name)));
-      }
-
-      if (typeof sessionStorage !== 'undefined') {
-        sessionStorage.clear();
-      }
-
-      localStorage.clear();
-      if (preservedConversations) localStorage.setItem('conversations', preservedConversations);
-      if (preservedAuth) localStorage.setItem('DEV_MODE_AUTH_HASH', preservedAuth);
-      if (preservedGroq) localStorage.setItem('GROQ_API_KEY', preservedGroq);
-      if (preservedOr) localStorage.setItem('OPENROUTER_API_KEY', preservedOr);
-      if (preservedGh) localStorage.setItem('GITHUB_TOKEN', preservedGh);
-
-      MessageRenderer.showToast('✅ تم تنظيف الكاش بنجاح مع الحفاظ على كافة المحادثات!', 'success');
-      setTimeout(() => {
-        window.location.reload();
-      }, 600);
-    } catch (e) {
-      console.warn('[Cache] Clear error:', e);
-      window.location.reload();
-    }
-  };
 
   // ─────────────────────────────────────────────────────────────────
   // 10. MODULAR INSTRUCTION FILES MANAGER — Delegated to modules/instruction-manager.js
@@ -2294,8 +2276,11 @@
     }
   }
 
+  let modelCatalogLoadPromise = null;
   async function loadModelCatalog() {
-    try {
+    if (modelCatalogLoadPromise) return modelCatalogLoadPromise;
+    modelCatalogLoadPromise = (async () => {
+      try {
       const cached = localStorage.getItem('model_catalog');
       if (cached) {
         const parsed = JSON.parse(cached);
@@ -2315,10 +2300,16 @@
           return;
         }
       }
-    } catch (e) {
-      console.warn('[Model Catalog Load Failed]', e.message || e);
+      } catch (e) {
+        console.warn('[Model Catalog Load Failed]', e.message || e);
+      }
+      state.modelCatalog = ModelEngine.normalizeCatalog(MODELS);
+    })();
+    try {
+      return await modelCatalogLoadPromise;
+    } finally {
+      modelCatalogLoadPromise = null;
     }
-    state.modelCatalog = ModelEngine.normalizeCatalog(MODELS);
   }
 
   function registerServiceWorker() {
@@ -2366,6 +2357,12 @@
   }
 
   window._refreshApp = async function() {
+    if (state.refreshInFlight) return;
+    if (state.isStreaming || state.sendInFlight || state.sendLock) {
+      MessageRenderer.showToast('⏳ لا يمكن تحديث التطبيق أثناء معالجة رسالة', 'info');
+      return;
+    }
+    state.refreshInFlight = true;
     if ('serviceWorker' in navigator) {
       try {
         const regs = await navigator.serviceWorker.getRegistrations();
@@ -2389,6 +2386,12 @@
   };
 
   window._clearAppCache = async function() {
+    if (state.cacheOperationInFlight) return;
+    if (state.isStreaming || state.sendInFlight || state.sendLock) {
+      MessageRenderer.showToast('⏳ لا يمكن مسح الكاش أثناء إرسال أو معالجة رسالة', 'info');
+      return;
+    }
+    state.cacheOperationInFlight = true;
     if (window.MessageRenderer) {
       window.MessageRenderer.showToast('🧹 جاري مسح الكاش والتحديث الشامل...', 'info');
     }
@@ -2406,6 +2409,8 @@
       localStorage.removeItem('XV1_APP_VERSION');
     } catch (e) {
       console.warn('[ClearCache]', e);
+      state.cacheOperationInFlight = false;
+      throw e;
     }
     setTimeout(() => {
       window.location.reload(true);
@@ -2413,6 +2418,12 @@
   };
 
   window._secretSyncAndClearGate = async function() {
+    if (state.cacheOperationInFlight) return;
+    if (state.isStreaming || state.sendInFlight || state.sendLock) {
+      MessageRenderer.showToast('⏳ لا يمكن تحديث الملفات أثناء معالجة رسالة', 'info');
+      return;
+    }
+    state.cacheOperationInFlight = true;
     const pinInput = $('gate-pin-input');
     const syncBtn = $('gate-sync-btn');
     if (pinInput) {
@@ -2434,6 +2445,7 @@
     } catch (e) {
       console.warn('[SecretSync]', e);
     } finally {
+      state.cacheOperationInFlight = false;
       setTimeout(() => {
         if (syncBtn) syncBtn.classList.remove('spinning');
       }, 500);
