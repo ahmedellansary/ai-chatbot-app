@@ -487,7 +487,13 @@
 
     scrollToBottom() {
       const chatArea = $('chat-area');
-      if (chatArea) chatArea.scrollTop = chatArea.scrollHeight;
+      if (!chatArea) return;
+      // rAF-batched to avoid clash with user manual scroll + thinking timers (1-2s window)
+      if (this._scrollRaf) cancelAnimationFrame(this._scrollRaf);
+      this._scrollRaf = requestAnimationFrame(() => {
+        chatArea.scrollTop = chatArea.scrollHeight;
+        this._scrollRaf = null;
+      });
     },
 
     parseMarkdown(text) {
@@ -1397,11 +1403,15 @@
     adjustTextareaHeight() {
       const inputEl = $('user-input');
       if (!inputEl) return;
-      inputEl.style.height = 'auto';
-      const scrollH = inputEl.scrollHeight;
-      const targetH = Math.min(Math.max(scrollH, 26), 190);
-      inputEl.style.height = targetH + 'px';
-      inputEl.style.overflowY = scrollH > 190 ? 'auto' : 'hidden';
+      if (this._taRaf) cancelAnimationFrame(this._taRaf);
+      this._taRaf = requestAnimationFrame(() => {
+        inputEl.style.height = 'auto';
+        const scrollH = inputEl.scrollHeight;
+        const targetH = Math.min(Math.max(scrollH, 26), 190);
+        inputEl.style.height = targetH + 'px';
+        inputEl.style.overflowY = scrollH > 190 ? 'auto' : 'hidden';
+        this._taRaf = null;
+      });
     },
 
     showWelcomeScreen() {
@@ -1631,11 +1641,16 @@
         });
       };
 
+      let _inputRaf = null;
       const onInput = () => {
         window.__userInteracted = true;
-        this.adjustTextareaHeight();
-        this.updateInputDirection();
-        this.updateSendBtnState();
+        if (_inputRaf) cancelAnimationFrame(_inputRaf);
+        _inputRaf = requestAnimationFrame(() => {
+          this.adjustTextareaHeight();
+          this.updateInputDirection();
+          this.updateSendBtnState();
+          _inputRaf = null;
+        });
       };
 
       input?.addEventListener('input', onInput);
@@ -1686,22 +1701,28 @@
         }
       };
 
+      let _pullRaf = null;
+      let _pullPending = null;
       const onTouchMove = (e) => {
         if (!isTracking || e.touches.length !== 1) return;
-        const y = e.touches[0].clientY;
-        const diff = y - startY;
-
-        if (diff > 8) {
-          currentPull = diff;
-          const visualPull = Math.min(diff * 0.45, 75);
-          indicator.classList.add('visible');
-          indicator.style.opacity = '1';
-          indicator.style.transform = `translate3d(-50%, ${visualPull - 25}px, 0) scale(1)`;
-          if (spinner) spinner.style.transform = `rotate(${diff * 2.8}deg)`;
-        } else {
-          indicator.classList.remove('visible');
-          indicator.style.opacity = '0';
-        }
+        _pullPending = { y: e.touches[0].clientY };
+        if (_pullRaf) return;
+        _pullRaf = requestAnimationFrame(() => {
+          const y = _pullPending.y;
+          const diff = y - startY;
+          if (diff > 8) {
+            currentPull = diff;
+            const visualPull = Math.min(diff * 0.45, 75);
+            indicator.classList.add('visible');
+            indicator.style.opacity = '1';
+            indicator.style.transform = `translate3d(-50%, ${visualPull - 25}px, 0) scale(1)`;
+            if (spinner) spinner.style.transform = `rotate(${diff * 2.8}deg)`;
+          } else {
+            indicator.classList.remove('visible');
+            indicator.style.opacity = '0';
+          }
+          _pullRaf = null;
+        });
       };
 
       const onTouchEnd = () => {
@@ -2267,9 +2288,18 @@
   window.$$ = $$;
   window.state = state;
 
+  let _vpRaf = null;
+  let _vpLast = 0;
   function lockViewportHeight() {
-    const h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-    document.documentElement.style.setProperty('--app-height', `${h}px`);
+    const now = Date.now();
+    if (now - _vpLast < 120) return; // debounce 120ms — prevents scroll+keyboard thrash at 1-2s
+    _vpLast = now;
+    if (_vpRaf) cancelAnimationFrame(_vpRaf);
+    _vpRaf = requestAnimationFrame(() => {
+      const h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+      document.documentElement.style.setProperty('--app-height', `${h}px`);
+      _vpRaf = null;
+    });
   }
 
   async function loadSystemPrompt() {
