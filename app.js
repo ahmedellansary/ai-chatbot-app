@@ -1299,26 +1299,19 @@
       ];
 
       const renderObserver = (finalReview = '') => {
-        const stepsHtml = steps.map(s => `
-          <div class="thinking-flow-item" dir="${isAr ? 'rtl' : 'ltr'}" style="text-align:${isAr ? 'right' : 'left'};">
-            <span class="flow-icon">${s.icon}</span>
-            <span class="flow-text">${MessageRenderer.escapeHtml(s.title)} — ${MessageRenderer.escapeHtml(s.summary)}</span>
-          </div>
-        `).join('');
-        const reviewHtml = finalReview ? `<div class="observer-final" style="margin-top:8px; padding:8px; background:transparent; border:none;">${MessageRenderer.parseMarkdown(finalReview)}</div>` : '';
+        // Merged view: don't show stage names, show agent answer directly + small Apply button (English, same theme)
+        const reviewHtml = finalReview ? `<div class="observer-final" style="margin-top:6px; padding:8px; background:rgba(255,255,255,0.03); border:1px solid var(--border-subtle); border-radius:8px;">${MessageRenderer.parseMarkdown(finalReview)}</div>` : `<div style="font-size:12px; color:var(--text-dim); padding:6px 0;">${t('جاري المراجعة...','Reviewing...')}</div>`;
+        const applyBtn = finalReview ? `<button class="observer-apply-btn" style="font-size:11px; padding:4px 10px; border-radius:6px; background:var(--accent-color); color:#fff; border:1px solid var(--accent-color); cursor:pointer; margin-top:8px;">Apply suggestion</button>` : '';
         const box = aiRow.querySelector('.observer-box') || document.createElement('div');
         box.className = 'observer-box';
         box.style.cssText = 'margin-top:10px; padding:0; border:none; background:transparent;';
         box.innerHTML = `
-          <div style="display:flex; align-items:center; gap:6px; cursor:pointer; padding:4px 0;" onclick="this.nextElementSibling.classList.toggle('hidden')">
-            <span>👁️</span><span style="font-size:12.5px; font-weight:600;">${t('المراقبون — مراجعة الجودة', 'Observers — Quality Review')}</span>
-            <span style="font-size:11px; color:var(--text-dim); margin-left:auto;">${t('عرض التفاصيل ▾', 'Details ▾')}</span>
+          <div style="display:flex; align-items:center; gap:6px; padding:4px 0; border-top:1px solid var(--border-subtle); margin-top:6px;">
+            <span>👁️</span><span style="font-size:11px; color:var(--text-dim);">Review</span>
+            <span style="font-size:10px; color:var(--text-dim); margin-left:auto;">${t('مراجعة لاحقة','Post-review')}</span>
           </div>
-          <div class="thinking-flow" style="margin-top:6px; padding:0; background:transparent; border:none;">
-            ${stepsHtml}
-            ${reviewHtml}
-            <div style="font-size:10.5px; color:var(--text-dim); margin-top:6px;">${t('مراجعة لاحقة بعد رد المستوى المختار — لا تحل محل الرد الأصلي', 'Post-response review — does not replace original answer')}</div>
-          </div>
+          ${reviewHtml}
+          ${applyBtn}
         `;
         if (!aiRow.querySelector('.observer-box')) {
           const contentEl = aiRow.querySelector('.msg-content');
@@ -1390,7 +1383,7 @@
           const applyBtn = document.createElement('button');
           applyBtn.className='observer-apply-btn';
           applyBtn.style.cssText='font-size:11px; padding:4px 10px; border-radius:6px; background:var(--accent-color); color:#fff; border:1px solid var(--accent-color); cursor:pointer; margin-top:6px; margin-inline-start:6px;';
-          applyBtn.textContent = isAr ? 'تطبيق الاقتراح' : 'Apply suggestion';
+          applyBtn.textContent = 'Apply suggestion';
           applyBtn.onclick = () => {
             const improvement = (reviewText.split('\n').find(l=> l.includes('تحسين') || l.toLowerCase().includes('improvement')) || reviewText.slice(-150)).trim();
             const clean = improvement.replace(/^\d+\.\s*/, '').slice(0, 300);
@@ -2274,6 +2267,16 @@
     }
   };
   
+  window._closeSettingsModal = function() {
+    const modal = $('settings-modal');
+    if (modal) modal.classList.add('hidden');
+  };
+  // Close on outside click
+  document.addEventListener('click', (e) => {
+    const modal = $('settings-modal');
+    if (modal && !modal.classList.contains('hidden') && e.target === modal) window._closeSettingsModal();
+  });
+
   window._toggleInstructionFile = (id) => InstructionManager.toggle(id);
   window._addNewInstructionFile = () => InstructionManager.addNew();
   window._saveActiveInstructionFile = () => InstructionManager.saveActive();
