@@ -401,20 +401,26 @@
       return `
 
 ═══════════════════════════════════════════════════════════════
-CODE CHANGE RESPONSE PROTOCOL
+CODE CHANGE RESPONSE PROTOCOL — ZERO CHAT CLUTTER
 ═══════════════════════════════════════════════════════════════
-When this request requires changing repository code, respond as a concise execution log:
-1. Start with one short sentence stating the exact scope.
-2. Add one status line per real step using this format:
-   ◌ Read \`filename\` — lines or relevant section when known
-   ● Analyzing — root cause or implementation decision
-   ◌ Editing \`filename\` — precise change
-   ◌ Testing — exact validation performed or still required
-   ● Done — one-line result
-3. Mention only files and line ranges actually inspected or changed. Never invent tool calls, files, line numbers, test results, or a successful deployment.
-4. Keep the execution log in the user's language. Keep technical filenames, commands, and commit messages in English.
-5. If a code patch is required, append the complete deploy JSON block after the execution log. Do not dump the full file outside that block.
-`;
+You must follow this EXACT compact output structure:
+1. THINKING STAGES: Put all intermediate steps, file checks, and diagnosis INSIDE <think>...</think> tags.
+   Format steps as short single-line bullets:
+   • 🔍 تشخيص المشكلة في الملف المعني
+   • ⚡ فحص الكود الحقيقي
+   • 🛠️ تجهيز التعديل الجراحي
+2. CHAT TEXT: Outside of <think>, write EXACTLY 1 to 2 brief, direct sentences explaining what was updated.
+   - NO greetings, NO warnings, NO marketing fluff, NO markdown headings (no ###), and NO big vertical gaps.
+   - NEVER write full code or raw code blocks (\`\`\`javascript, \`\`\`css, \`\`\`html) in the chat text!
+3. DEPLOY BLOCK: Output the JSON deploy block at the very end of your response:
+\`\`\`json
+{
+  "file": "exact_filename (e.g. dev.js)",
+  "content": "100% complete working file content",
+  "message": "Concise git commit message in English"
+}
+\`\`\`
+STRICT RULE: The complete file code MUST exist ONLY inside the JSON block. It will be loaded directly into the Live Preview window for the user to inspect and test.`;
     },
 
     buildFallbackCascade(primaryAgent, estimatedTokens = 0) {
@@ -914,14 +920,19 @@ When this request requires changing repository code, respond as a concise execut
     },
 
     async handleDevProposal(content, msgRow) {
-      const jsonMatch = content.match(/```json\s*(\{[\s\S]*?\})\s*```/) || content.match(/(\{[\s\S]*"file"[\s\S]*"content"[\s\S]*\})/);
-      if (!jsonMatch || !msgRow) return;
+      if (!msgRow || !content) return;
+      const jsonMatch = content.match(/```json\s*(\{[\s\S]*?\})\s*```/) || content.match(/(\{[\s\S]*"(?:file|deploy|files)"[\s\S]*"content"[\s\S]*\})/);
+      if (!jsonMatch) return;
 
       try {
         const data = JSON.parse(jsonMatch[1]);
-        if (data.file && data.content) {
+        const file = data.file || data.path || data.deploy?.files?.[0]?.path || data.deploy?.files?.[0]?.file || data.files?.[0]?.path || data.files?.[0]?.file;
+        const patchContent = data.content || data.deploy?.files?.[0]?.content || data.files?.[0]?.content;
+        const message = data.message || data.deploy?.files?.[0]?.message || data.files?.[0]?.message || 'Ready to commit & deploy to GitHub';
+
+        if (file && patchContent) {
           const propId = generateId();
-          state.pendingModifications[propId] = data;
+          state.pendingModifications[propId] = { file, content: patchContent, message };
 
           const existingCard = msgRow.querySelector('.dev-proposal-box');
           if (existingCard) existingCard.remove();
@@ -932,9 +943,9 @@ When this request requires changing repository code, respond as a concise execut
           card.innerHTML = `
             <div class="dev-proposal-title">
               <span>🛠️</span>
-              <span>Ready to Patch: <code>${escapeHtml(data.file)}</code></span>
+              <span>Ready to Patch: <code>${escapeHtml(file)}</code></span>
             </div>
-            <div class="dev-proposal-desc">📝 <strong>Summary:</strong> ${escapeHtml(data.message || 'Ready to commit & deploy to GitHub')}</div>
+            <div class="dev-proposal-desc">📝 <strong>Summary:</strong> ${escapeHtml(message)}</div>
             <div class="dev-proposal-btns">
               <button class="dev-btn-action preview" onclick="window._previewProposal('${propId}')">
                 <span>👁️</span>
@@ -956,10 +967,10 @@ When this request requires changing repository code, respond as a concise execut
             <!-- Collapsible Mini Code Drawer inside Proposal Card -->
             <div class="dev-patch-drawer hidden" id="drawer-${propId}">
               <div class="patch-drawer-header">
-                <span>📄 Modified Code (${escapeHtml(data.file)})</span>
+                <span>📄 Modified Code (${escapeHtml(file)})</span>
                 <button class="btn-copy-patch" onclick="window._copyPatchContent('${propId}')">📋 Copy Code</button>
               </div>
-              <pre class="patch-drawer-code"><code>${escapeHtml(data.content)}</code></pre>
+              <pre class="patch-drawer-code"><code>${escapeHtml(patchContent)}</code></pre>
             </div>
           `;
           msgRow.appendChild(card);
@@ -1763,11 +1774,77 @@ Reply in 3 strict brief lines only:
       if (!text) return '';
       let out = text;
 
-      // Automatically strip proposal JSON blocks so raw code never floods chat stream
-      out = out.replace(/```json\s*\{[\s\S]*?"file"[\s\S]*?"content"[\s\S]*?\}\s*```/g, '');
-      out = out.replace(/\{[\s\S]*?"file"\s*:\s*["'][^"']+["'][\s\S]*?"content"\s*:[\s\S]*?\}/g, '');
+      // 1. Automatically strip all forms of deploy/proposal JSON so raw JSON never floods chat
+      out = out.replace(/```json\s*\{[\s\S]*?"(?:file|deploy|files|content)"[\s\S]*?\}\s*```/gi, '');
+      out = out.replace(/\{[\s\S]*?"(?:file|deploy|files)"\s*:[\s\S]*?"content"\s*:[\s\S]*?\}/gi, '');
 
-      // Ultra-Modern Terminal / Code Card
+      // 2. Parse <think>...</think> into Sleek Dynamic Thinking Tabs
+      out = out.replace(/<think>([\s\S]*?)<\/think>/gi, (m, thinkContent) => {
+        const rawLines = thinkContent.trim().split('\n')
+          .map(l => l.replace(/^[•\-\*◌●\d\.]+\s*/, '').trim())
+          .filter(l => l.length > 2 && l.length < 120);
+        
+        const steps = rawLines.length > 0 ? rawLines.slice(0, 5) : ['تشخيص المشكلة', 'فحص الملفات الحية', 'إعداد التعديل الجراحي'];
+        
+        const tabsHtml = steps.map((s, idx) => `
+          <div class="dev-thinking-tab reached" style="animation-delay: ${idx * 0.1}s">
+            <span class="flow-dot"></span>
+            <span class="tab-label">${this.escapeHtml(s)}</span>
+          </div>
+        `).join('');
+
+        return `
+<div class="dev-thinking-container collapsed">
+  <div class="dev-thinking-summary" onclick="this.parentElement.classList.toggle('collapsed')">
+    <div class="summary-left">
+      <span class="thinking-brain-icon">🧠</span>
+      <span class="thinking-headline">تفكير المطور (${steps.length} خطوات مكتملة)</span>
+    </div>
+    <span class="thinking-chevron">▾</span>
+  </div>
+  <div class="dev-thinking-tabs-flow">
+    ${tabsHtml}
+  </div>
+</div>`;
+      });
+
+      // 3. Handle in-flight open <think> during active streaming
+      out = out.replace(/<think>([\s\S]*?)$/gi, (m, inFlight) => {
+        const lines = inFlight.trim().split('\n')
+          .map(l => l.replace(/^[•\-\*◌●\d\.]+\s*/, '').trim())
+          .filter(l => l.length > 2 && l.length < 120);
+        
+        const currentStep = lines[lines.length - 1] || 'جاري التفكير البرمجي وفحص المعمارية...';
+        
+        return `
+<div class="dev-thinking-container active-streaming">
+  <div class="dev-thinking-summary">
+    <div class="summary-left">
+      <span class="thinking-brain-icon pulse">🧠</span>
+      <span class="thinking-headline">${this.escapeHtml(currentStep)}</span>
+    </div>
+    <span class="streaming-dot-pulse"><i></i><i></i><i></i></span>
+  </div>
+</div>`;
+      });
+
+      // 4. Clean up repetitive AI warning preamble
+      out = out.replace(/^⚠️\s*تنبيه:[^\n]+\n*/gi, '');
+
+      // 5. Suppress huge full-file code dumps when accompanied by proposals
+      const hasProposal = /```json|pendingModifications|"file"\s*:|"deploy"\s*:|"content"\s*:/i.test(text);
+      if (hasProposal || text.length > 1200) {
+        out = out.replace(/```(?:js|javascript|html|css|json)?\n([\s\S]{120,})```/gi, (m, code) => {
+          const lines = code.trim().split('\n').length;
+          return `
+<div class="dev-patch-suppressed-pill">
+  <span class="patch-icon">📄</span>
+  <span class="patch-text">تم تجهيز كود التعديل (${lines} سطر) — متاح مباشرة في نافذة المعاينة بالأسفل</span>
+</div>`;
+        });
+      }
+
+      // 6. Ultra-Modern Terminal / Code Card for small snippets (commands, short examples)
       out = out.replace(/```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g, (m, lang, code) => {
         const trimmed = code.trim();
         const escaped = this.escapeHtml(trimmed);
