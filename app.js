@@ -2121,48 +2121,6 @@
         MessageRenderer.showToast('🔊 وضع الصوت التفاعلي جاهز', 'info');
         if (recognition) micBtn?.click();
       });
-      // Voice Call — fullscreen motion + sounds + floating stop
-      function playTone(freq, dur, vol=0.25){
-        try{ const ctx=new (window.AudioContext||window.webkitAudioContext)(); const o=ctx.createOscillator(); const g=ctx.createGain(); o.frequency.value=freq; o.type='sine'; g.gain.value=vol; o.connect(g); g.connect(ctx.destination); o.start(); g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime+dur); setTimeout(()=>{o.stop(); ctx.close();}, dur*1000+100);}catch{}
-      }
-      const callOverlay=$('voice-call-overlay'), callStatus=$('call-status'), callStopBtn=$('call-stop-btn');
-      const callBtn=$('voice-call-btn');
-      let callActive=false;
-      function setCallUI(active, txt){
-        if(callOverlay) callOverlay.classList.toggle('hidden', !active);
-        if(callStatus) callStatus.textContent = txt || (active ? '📞 متصل — تكلم' : '📞 جاري الاتصال...');
-        document.body.style.overflow = active ? 'hidden' : '';
-        if(callBtn) callBtn.classList.toggle('active', active);
-        if(callOverlay) callOverlay.classList.toggle('speaking', active);
-      }
-      callStopBtn?.addEventListener('click', ()=>{
-        playTone(300,0.3); setCallUI(false); callActive=false; try{recognition.continuous=false; recognition.stop(); speechSynthesis.cancel();}catch{} MessageRenderer.showToast('📞 Call ended','info');
-      });
-      callBtn?.addEventListener('click', ()=>{
-        if(callActive){ callStopBtn?.click(); return; }
-        if(!recognition){ MessageRenderer.showToast('المتصفح لا يدعم المكالمة','error'); return; }
-        callActive=true; setCallUI(true,'📞 جاري الاتصال...'); playTone(440,0.35); setTimeout(()=>playTone(660,0.25),400);
-        setTimeout(()=>{
-          if(!callActive) return;
-          playTone(880,0.2); setCallUI(true,'📞 متصل — تكلم'); MessageRenderer.showToast('📞 Call started','info');
-          try{ recognition.continuous=true; recognition.start(); }catch{}
-        },900);
-        // auto speak next AI response
-        const obs = new MutationObserver(()=>{
-          const last = document.querySelector('.message-row.ai:last-child .msg-content');
-          if(last && callActive && !speechSynthesis.speaking){
-            const txt=last.innerText.slice(0,1200);
-            if(txt && txt.length>10){ speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(txt); u.lang=/[\u0600-\u06FF]/.test(txt)?'ar-EG':'en-US'; u.onstart=()=>callOverlay?.classList.add('speaking'); u.onend=()=>callOverlay?.classList.remove('speaking'); speechSynthesis.speak(u); }
-          }
-        });
-        obs.observe(document.getElementById('chat-container'),{childList:true, subtree:true});
-        callOverlay._obs=obs;
-      });
-      // when speech starts, add speaking motion
-      if(window.speechSynthesis){
-        const origSpeak=speechSynthesis.speak.bind(speechSynthesis);
-        speechSynthesis.speak=function(u){ callOverlay?.classList.add('speaking'); u.addEventListener('end',()=>callOverlay?.classList.remove('speaking')); return origSpeak(u); };
-      }
     },
 
     setupEmergencyControls() {
