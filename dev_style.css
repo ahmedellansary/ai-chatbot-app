@@ -3029,6 +3029,11 @@ pre code {
 .observer-bullet{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,.22);font-size:13px;line-height:1.5;color:var(--text-main)}
 .observer-bullet::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--accent-dev);box-shadow:0 0 8px var(--accent-dev-glow);margin-top:6px;flex-shrink:0}
 .observer-apply-btn{padding:6px 14px;border-radius:999px;background:var(--accent-dev);color:#000;border:1px solid var(--accent-dev);font-size:12px;font-weight:700;cursor:pointer}
+.llm-end-btn{padding:6px 14px;border-radius:999px;background:var(--accent-dev);color:#000;border:1px solid var(--accent-dev);font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.llm-end-btn:hover{filter:brightness(1.07)}
+.llm-send-apply-btn{padding:6px 14px;border-radius:999px;background:var(--accent-dev);color:#000;border:1px solid var(--accent-dev);font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.multi-agent-box{background:transparent !important;border:none !important;box-shadow:none !important}
+.agent-step-item{background:transparent !important;border:none !important;box-shadow:none !important;padding:4px 0 !important}
 .llm-end-btn{padding:6px 14px;border-radius:999px;background:transparent;color:var(--text-main);border:1px solid var(--border-subtle);font-size:12px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
 .llm-end-btn:hover{background:var(--bg-card-hover);border-color:var(--accent-dev);color:var(--accent-dev)}
 .agent-committed-header{display:flex;align-items:center;gap:8px;padding:6px 10px;border-bottom:1px solid var(--border-subtle);cursor:pointer;user-select:none}
