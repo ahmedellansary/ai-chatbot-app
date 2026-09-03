@@ -69,8 +69,8 @@ const MODELS = {
     { id: 'thinkingmachines/inkling-small:free', name: 'Inkling Small 276B', provider: 'openrouter' },
     { id: 'poolside/laguna-s-2.1:free', name: 'Laguna S 2.1 (118B)', provider: 'openrouter' }
   ],
-  BALANCE2: [
-    { id: 'nvidia/nemotron-3-ultra-550b-a55b', name: 'Nemotron 3 Ultra 550B (Balance 2)', provider: 'openrouter' },
+  HIGH: [
+    { id: 'nvidia/nemotron-3-ultra-550b-a55b', name: 'Nemotron 3 Ultra 550B (High)', provider: 'openrouter' },
     { id: 'cohere/north-mini-code:free', name: 'North Mini Code (30B)', provider: 'openrouter' },
     { id: 'inclusionai/ling-3.0-flash-fin:free', name: 'Ling 3.0 Flash Fin', provider: 'openrouter' },
     { id: 'thinkingmachines/inkling-small:free', name: 'Inkling Small 276B', provider: 'openrouter' },
@@ -110,6 +110,9 @@ const DEV_TIER_MODELS = {
 
 const DEV_MODELS = DEV_TIER_MODELS.HIGH;
 
+// Backward compat alias — old localStorage values used BALANCE2
+MODELS.BALANCE2 = MODELS.HIGH;
+
 function fetchWithHardTimeout(url, options, timeoutMs) {
   let timeoutId;
   const timeout = new Promise((_, reject) => {
@@ -146,7 +149,7 @@ async function callOpenRouter(model, messages, signal) {
 
   let timedOut = false;
   const controller = new AbortController();
-  const requestTimeoutMs = isNemotronUltra ? 120000 : 14000;
+  const requestTimeoutMs = isNemotronUltra ? 25000 : 14000;
   const timeoutId = setTimeout(() => {
     timedOut = true;
     controller.abort();
@@ -162,19 +165,29 @@ async function callOpenRouter(model, messages, signal) {
     }, requestTimeoutMs);
     clearTimeout(timeoutId);
 
-    if (response.status === 429) {
+    if (response.status === 429 || response.status === 402) {
       rotateOpenRouterKey();
-      throw new Error('RATE_LIMIT');
+      const errBody = await response.json().catch(() => ({}));
+      const msg = errBody.error?.message || `HTTP ${response.status}`;
+      throw new Error(response.status === 402 ? `CREDITS_EXHAUSTED: ${msg}` : msg);
     }
 
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
-      throw new Error(err.error?.message || `HTTP ${response.status}`);
+      const msg = err.error?.message || `HTTP ${response.status}`;
+      if (/credit|402|insufficient/i.test(msg)) {
+        rotateOpenRouterKey();
+        throw new Error(`CREDITS_EXHAUSTED: ${msg}`);
+      }
+      throw new Error(msg);
     }
     return response;
   } catch(e) {
     clearTimeout(timeoutId);
     if (timedOut) throw new Error('MODEL_TIMEOUT');
+    if (/credit|402|insufficient|CREDITS_EXHAUSTED/i.test(e.message || '')) {
+      try { rotateOpenRouterKey(); } catch {}
+    }
     throw e;
   }
 }
@@ -262,8 +275,8 @@ async function* readStream(response, signal, model) {
       if (signal && signal.aborted) break;
       const isNemotronUltra = model?.id === 'nvidia/nemotron-3-ultra-550b-a55b';
       const timeoutMs = receivedFirstChunk
-        ? (isNemotronUltra ? 30000 : 8000)
-        : (isNemotronUltra ? 120000 : 12000);
+        ? (isNemotronUltra ? 18000 : 8000)
+        : (isNemotronUltra ? 25000 : 12000);
       const readResult = await readWithTimeout(timeoutMs);
       if (signal && signal.aborted) return;
       const { done, value } = readResult;
@@ -312,6 +325,7 @@ async function* chatWithFallback(tier, messages, signal, onModelChange) {
   const normalizedTier = String(tier || 'MID').toUpperCase();
   const models = Array.isArray(MODELS[normalizedTier]) ? MODELS[normalizedTier] : MODELS.MID;
   let usedFallback = false;
+  let lastError = null;
 
   // IMPORTANT: fallback remains inside the selected tier only.
   // HARD -> HARD models only, MID -> MID models only, FAST -> FAST models only.
@@ -346,6 +360,7 @@ async function* chatWithFallback(tier, messages, signal, onModelChange) {
       } catch (err) {
         if (signal && signal.aborted) throw err;
         const msg = (err && err.message) ? err.message : String(err);
+        lastError = msg;
         console.warn(`[Model Router] ${model.name} (Key ${attempt + 1}/${keyCount}) failed:`, msg);
 
         // If model timed out, stalled, or request too large: immediately switch to the next model in the tier
@@ -353,11 +368,12 @@ async function* chatWithFallback(tier, messages, signal, onModelChange) {
           break; // Next model in the SAME tier!
         }
 
-        // Rate limit: rotate key for the same model
-        if (msg === 'RATE_LIMIT' || /429|rate limit|rpm/i.test(msg)) {
+        // Credits exhausted or rate limit: rotate key and retry same model with next key
+        if (/CREDITS_EXHAUSTED|402|credit|insufficient|RATE_LIMIT|429|rate limit|rpm/i.test(msg)) {
           if (model.provider === 'groq') rotateGroqKey();
           else rotateOpenRouterKey();
-          continue; // Try next key for same model
+          if (attempt + 1 < keyCount) continue; // Try next key for same model
+          break; // No more keys — fall through to next model in tier
         }
 
         // Any other failure switches to the next model in the same tier
@@ -368,7 +384,8 @@ async function* chatWithFallback(tier, messages, signal, onModelChange) {
     if (succeeded) return;
   }
 
-  throw new Error(`كل موديلز مستوى ${normalizedTier} توقفت مؤقتاً. جرب مرة أخرى.`);
+  const details = lastError ? ` — آخر خطأ: ${String(lastError).slice(0,220)}` : '';
+  throw new Error(`كل موديلز مستوى ${normalizedTier} توقفت مؤقتاً${details}. جرب مرة أخرى أو اختر وضع آخر.`);
 }
 
 function normalizeCatalog(data) {
