@@ -740,13 +740,17 @@
         const timer = setTimeout(() => { this.setThinkingStage(stage.word); }, stage.delay);
         this._thinkingTimers.push(timer);
       });
+      // Ensure flow container alignment matches thinking language (strong model = English → LTR)
+      const flowEl = document.getElementById('thinking-flow');
+      if (flowEl) { flowEl.setAttribute('dir', isAr ? 'rtl' : 'ltr'); flowEl.style.textAlign = isAr ? 'right' : 'left'; }
       flowStages.forEach(s => {
         const timer = setTimeout(() => {
           const flow = document.getElementById('thinking-flow');
           if (!flow) return;
           const item = document.createElement('div');
           item.className = 'thinking-flow-item';
-          item.innerHTML = `<span class="flow-icon">${s.icon}</span><span class="flow-text">${this.escapeHtml(s.text)}</span><span class="flow-dot"></span>`;
+          // Only left bullet, no right icon — LTR for English thinking
+          item.innerHTML = `<span class="flow-icon">${s.icon}</span><span class="flow-text">${this.escapeHtml(s.text)}</span>`;
           flow.appendChild(item);
           this.scrollToBottom();
         }, s.delay);
@@ -1284,10 +1288,9 @@
 
       const renderObserver = (finalReview = '') => {
         const stepsHtml = steps.map(s => `
-          <div class="thinking-flow-item">
+          <div class="thinking-flow-item" dir="${isAr ? 'rtl' : 'ltr'}" style="text-align:${isAr ? 'right' : 'left'};">
             <span class="flow-icon">${s.icon}</span>
             <span class="flow-text">${MessageRenderer.escapeHtml(s.title)} — ${MessageRenderer.escapeHtml(s.summary)}</span>
-            <span class="flow-dot" style="${s.status.includes('✓') || s.status.includes('Done') ? 'opacity:0;' : ''}"></span>
           </div>
         `).join('');
         const reviewHtml = finalReview ? `<div class="observer-final" style="margin-top:8px; padding:8px; background:transparent; border:none;">${MessageRenderer.parseMarkdown(finalReview)}</div>` : '';
@@ -1319,10 +1322,10 @@
       steps[1].status = t('نشط', 'Active');
       renderObserver();
 
-      // Build review prompt for FAST tier — concise yes/no briefing
+      // Build review prompt for MID (Balanced) tier — reviewers from Balanced with usual fallback
       const reviewPrompt = isAr
-        ? `أنت مراقب جودة ذكي ومختصر. راجع الرد:\n\nسؤال: """${userText.slice(0, 800)}"""\nرد (${tier}): """${aiResponse.slice(0, 2500)}"""\n\nأجب بهذا الشكل المختصر فقط (بدون مقدمات):\n1. الالتزام: نعم/لا — السبب بجملة واحدة\n2. التناقض: نعم/لا — السبب\n3. المصادر (لو قصة حقيقية): موثوقة/تحتاج تحقق — السبب\n4. تحسين: جملة واحدة محددة\n`
-        : `You are concise reviewer. User: """${userText.slice(0, 800)}""" Response (${tier}): """${aiResponse.slice(0, 2500)}""" Reply as: 1. Compliance: yes/no — reason 2. Contradiction: yes/no — reason 3. Sources: reliable/needs check — reason 4. Improvement: one sentence`;
+        ? `أنت مراقب جودة ذكي ومختصر من مستوى Balanced. راجع الرد:\n\nسؤال: """${userText.slice(0, 800)}"""\nرد (${tier}): """${aiResponse.slice(0, 2500)}"""\n\nأجب بهذا الشكل المختصر فقط (بدون مقدمات):\n1. الالتزام: نعم/لا — السبب بجملة واحدة\n2. التناقض: نعم/لا — السبب\n3. المصادر (لو قصة حقيقية): موثوقة/تحتاج تحقق — السبب\n4. تحسين: جملة واحدة محددة\n`
+        : `You are concise reviewer from Balanced tier. User: """${userText.slice(0, 800)}""" Response (${tier}): """${aiResponse.slice(0, 2500)}""" Reply as: 1. Compliance: yes/no — reason 2. Contradiction: yes/no — reason 3. Sources: reliable/needs check — reason 4. Improvement: one sentence`;
 
       const reviewMessages = [
         { role: 'system', content: isAr ? 'أنت مراقب جودة محترف ومختصر.' : 'You are a concise quality reviewer.' },
@@ -1333,7 +1336,7 @@
       try {
         const ac = new AbortController();
         const tm = setTimeout(() => ac.abort(), 12000);
-        const stream = ModelEngine.chatWithFallback('FAST', reviewMessages, ac.signal, () => {});
+        const stream = ModelEngine.chatWithFallback('MID', reviewMessages, ac.signal, () => {});
         for await (const { chunk } of stream) {
           reviewText += chunk;
           // Update step 2-4 progressively
