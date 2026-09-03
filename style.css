@@ -3612,6 +3612,8 @@ html, body {
 .suggest-box-body{padding:10px 12px;font-size:13px;line-height:1.5;color:var(--text-main);display:flex;gap:8px;align-items:flex-start}
 .suggest-box-body::before{content:'';width:7px;height:7px;border-radius:50%;background:#10b981;box-shadow:0 0 8px rgba(16,185,129,0.5);margin-top:6px;flex-shrink:0}
 .suggest-box-actions{display:flex;gap:6px;padding:6px 10px;border-top:1px solid var(--border-subtle);background:rgba(255,255,255,0.02)}
+.actions-header{display:flex;align-items:center;gap:8px;padding:6px 10px;border-bottom:1px solid var(--border-subtle);cursor:pointer;direction:ltr;justify-content:flex-start;font-size:11px;font-weight:800;letter-spacing:.06em;color:var(--text-muted)}
+.actions-header .agent-num{font-size:10px;padding:1px 5px}
 .llm-send-apply-btn:hover{filter:brightness(1.07)}
 .multi-agent-box{background:transparent !important;border:none !important;box-shadow:none !important}
 .agent-step-item{background:transparent !important;border:none !important;box-shadow:none !important;padding:4px 0 !important}
