@@ -85,6 +85,7 @@
     systemPrompt: '',
     isStreaming: false,
     sendInFlight: false,
+    sendLock: false,
     abortController: null,
     lastModifiedFile: 'index.html',
     attachments: [],
@@ -838,7 +839,7 @@
 
     async sendMessage(userText) {
       const hasAttachments = state.attachments && state.attachments.length > 0;
-      if (state.isStreaming || state.sendInFlight || (!userText.trim() && !hasAttachments)) return;
+      if (state.isStreaming || state.sendInFlight || state.sendLock || (!userText.trim() && !hasAttachments)) return;
       state.sendInFlight = true;
 
       if (!state.activeConvId) StateController.newConversation();
@@ -887,6 +888,7 @@
         debugPrint(err, `Prompt preparation failed (${tier})`);
         UIEngine.updateSendBtnState();
         state.sendInFlight = false;
+        state.sendLock = false;
         return;
       }
       const apiMessages = [
@@ -923,6 +925,7 @@
           state.isStreaming = false;
           state.abortController = null;
           state.sendInFlight = false;
+          state.sendLock = false;
           UIEngine.updateSendBtnState();
           MessageRenderer.scrollToBottom();
         }
@@ -1028,6 +1031,7 @@
         state.isStreaming = false;
         state.abortController = null;
         state.sendInFlight = false;
+        state.sendLock = false;
         UIEngine.updateSendBtnState();
         MessageRenderer.scrollToBottom();
       }
@@ -1329,7 +1333,10 @@
       const textVal = inputEl ? inputEl.value : '';
       const hasText = textVal.trim().length > 0;
       const hasAtt = Array.isArray(state.attachments) && state.attachments.length > 0;
-      const canSend = (hasText || hasAtt) && !state.isStreaming;
+      const canSend = (hasText || hasAtt) &&
+        !state.isStreaming &&
+        !state.sendInFlight &&
+        !state.sendLock;
 
       if (canSend) {
         btn.classList.add('active');
@@ -1569,11 +1576,21 @@
       const triggerSend = () => {
         const text = input ? input.value.trim() : '';
         const hasAtt = state.attachments && state.attachments.length > 0;
-        if ((!text && !hasAtt) || state.isStreaming) return;
+        if ((!text && !hasAtt) || state.isStreaming || state.sendInFlight || state.sendLock) return;
+        state.sendLock = true;
         if (input) input.value = '';
         this.adjustTextareaHeight();
         this.updateSendBtnState();
-        ChatEngine.sendMessage(text);
+        Promise.resolve(ChatEngine.sendMessage(text)).catch(err => {
+          console.error('[Chat Send] Unhandled send failure:', err);
+          state.sendLock = false;
+          state.sendInFlight = false;
+          state.isStreaming = false;
+          this.updateSendBtnState();
+        }).finally(() => {
+          state.sendLock = false;
+          this.updateSendBtnState();
+        });
       };
 
       const onInput = () => {
@@ -1590,7 +1607,7 @@
       input?.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
           e.preventDefault();
-          setTimeout(triggerSend, 0);
+          triggerSend();
           return;
         }
         if (e.key === 'Enter' && e.shiftKey) {
@@ -1600,7 +1617,7 @@
 
       sendBtn?.addEventListener('click', (e) => {
         e.preventDefault();
-        setTimeout(triggerSend, 0);
+        triggerSend();
       });
 
       this.setupPullToRefresh();
