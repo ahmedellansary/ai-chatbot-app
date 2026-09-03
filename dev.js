@@ -43,25 +43,24 @@
   // ─────────────────────────────────────────────────────────────────
   const DEV_TIER_MODELS = (window.DEV_TIER_MODELS) || {
     HIGH: [
+      { id: 'openai/gpt-oss-120b', name: 'GPT OSS 120B Lead Architect', provider: 'groq' },
       { id: 'poolside/laguna-s-2.1:free', name: 'Laguna S 2.1 (118B Coding Agent)', provider: 'openrouter' },
-      { id: 'minimax/minimax-m3:free', name: 'MiniMax M3 Architect (1M)', provider: 'openrouter' },
-      { id: 'nvidia/nemotron-3-super-120b-a12b:free', name: 'Nemotron 3 Super 120B', provider: 'openrouter' },
-      { id: 'z-ai/glm-5.2:free', name: 'GLM 5.2 Reasoning (1M)', provider: 'openrouter' },
-      { id: 'minimax/minimax-m2.7:free', name: 'MiniMax M2.7 Reasoning', provider: 'openrouter' }
+      { id: 'meta-llama/llama-3.3-70b-instruct:free', name: 'Llama 3.3 70B Code Master', provider: 'openrouter' },
+      { id: 'cohere/north-mini-code:free', name: 'Cohere North Mini Code (30B)', provider: 'openrouter' },
+      { id: 'z-ai/glm-5.2:free', name: 'GLM 5.2 Reasoning (1M)', provider: 'openrouter' }
     ],
     MID: [
       { id: 'openai/gpt-oss-120b', name: 'GPT OSS 120B Lead Architect', provider: 'groq' },
       { id: 'qwen/qwen3.8-27b', name: 'Qwen 3.8 27B Fast Coder', provider: 'groq' },
+      { id: 'meta-llama/llama-3.3-70b-instruct:free', name: 'Llama 3.3 70B Code Master', provider: 'openrouter' },
       { id: 'poolside/laguna-s-2.1:free', name: 'Laguna S 2.1 (118B Coding Agent)', provider: 'openrouter' },
-      { id: 'cohere/north-mini-code:free', name: 'North Mini Code (30B)', provider: 'openrouter' },
-      { id: 'minimax/minimax-m2.7:free', name: 'MiniMax M2.7 Reasoning', provider: 'openrouter' }
+      { id: 'cohere/north-mini-code:free', name: 'Cohere North Mini Code (30B)', provider: 'openrouter' }
     ],
     FAST: [
       { id: 'qwen/qwen3.8-27b', name: 'Qwen 3.8 27B Fast Coder', provider: 'groq' },
-      { id: 'openai/gpt-oss-20b', name: 'GPT OSS 20B', provider: 'groq' },
-      { id: 'groq/compound', name: 'Groq Compound', provider: 'groq' },
-      { id: 'poolside/laguna-xs-2.1:free', name: 'Laguna XS 2.1 (33B)', provider: 'openrouter' },
-      { id: 'cohere/north-mini-code:free', name: 'North Mini Code', provider: 'openrouter' }
+      { id: 'openai/gpt-oss-20b', name: 'GPT OSS 20B Fast', provider: 'groq' },
+      { id: 'cohere/north-mini-code:free', name: 'North Mini Code (30B)', provider: 'openrouter' },
+      { id: 'poolside/laguna-xs-2.1:free', name: 'Laguna XS 2.1 (33B)', provider: 'openrouter' }
     ]
   };
 
@@ -97,13 +96,13 @@
       priority: 1
     },
     {
-      id: 'z-ai/glm-5.2:free',
+      id: 'meta-llama/llama-3.3-70b-instruct:free',
       provider: 'openrouter',
-      name: 'GLM 5.2 Reasoning (1M)',
-      icon: '🧠',
+      name: 'Llama 3.3 70B Code Master',
+      icon: '🦙',
       category: 'code',
-      params: '1M Context',
-      desc: 'عملاق التفكير الهندسي البرمجي بسياق 1M لإدارة وتطوير المشاريع الكاملة.',
+      params: '70B Instruct',
+      desc: 'محرك كود فائق الدقة في الالتزام بالتعليمات الهندسية والتعديلات الجراحية.',
       priority: 1
     },
     {
@@ -117,34 +116,14 @@
       priority: 1
     },
     {
-      id: 'minimax/minimax-m2.7:free',
+      id: 'z-ai/glm-5.2:free',
       provider: 'openrouter',
-      name: 'MiniMax M2.7 Reasoning',
-      icon: '🔬',
-      category: 'reasoning',
-      params: 'M2.7 Agent',
-      desc: 'تصحيح الأخطاء المباشر Live Debugging وتحليل الأسباب الجذرية.',
-      priority: 2
-    },
-    {
-      id: 'poolside/laguna-xs-2.1:free',
-      provider: 'openrouter',
-      name: 'Laguna XS 2.1 Fast (33B)',
-      icon: '⚡',
-      category: 'fast',
-      params: '33B FP8',
-      desc: 'نسخة الكود المدمجة فائقة السرعة للأوامر والتعديلات الفورية.',
-      priority: 3
-    },
-    {
-      id: 'groq/compound',
-      provider: 'groq',
-      name: 'Groq Compound Coder',
+      name: 'GLM 5.2 Reasoning (1M)',
       icon: '🧠',
-      category: 'fast',
-      params: 'Compound',
-      desc: 'وكيل البرمجة المركب الذكي يوجه طلبات التطوير تلقائياً.',
-      priority: 3
+      category: 'code',
+      params: '1M Context',
+      desc: 'عملاق التفكير الهندسي البرمجي بسياق 1M لإدارة وتطوير المشاريع الكاملة.',
+      priority: 1
     }
   ];
   try { window.DEV_AGENTS = DEV_AGENTS; window.DEV_TIER_MODELS = DEV_TIER_MODELS; } catch(e) {}
@@ -1014,8 +993,8 @@ STRICT RULE: The complete file code MUST exist ONLY inside the JSON block. It wi
 
         const actionsHtml = (!isRunning && finalSuggestion) ? `
           <div class="peer-actions-bar">
-            <button class="peer-action-btn apply-btn" onclick="window._applyObserverSuggestion('${escapeHtml(finalSuggestion).replace(/'/g, "\\'")}', this)">⚡ ${t('تطبيق الملاحظات', 'Apply Notes')}</button>
-            <button class="peer-action-btn retry-btn" onclick="window._sendToLLM(this)">🔄 ${t('إعادة التوجيه للمطور', 'Send to Dev')}</button>
+            <button class="peer-action-btn retry-btn" onclick="window._sendReviewToDev('${escapeHtml(finalSuggestion || bullets.join('\n')).replace(/'/g, "\\'")}', this)">🔄 ${t('إرسال الملاحظات للمطور للتطبيق', 'Send to Dev to Fix')}</button>
+            <button class="peer-action-btn apply-btn" onclick="window._applyObserverSuggestion('${escapeHtml(finalSuggestion).replace(/'/g, "\\'")}', this)">⚡ ${t('حفظ كتعليمة مخصصة', 'Save as Rule')}</button>
           </div>
         ` : '';
 
@@ -1044,8 +1023,9 @@ STRICT RULE: The complete file code MUST exist ONLY inside the JSON block. It wi
         ? `أنت مهندس برمجيات مراجع أقران (Senior Peer Code Reviewer) في بيئة المطور X.v1 Dev Studio.
 مهمتك: مراجعة الرد البرمجي التالي لكشف:
 1. التناقضات والهلوسة: ملفات بيئة المطور الحقيقية فقط هي: (dev.html, dev_style.css, dev.js) — اكشف أي هلوسة لملفات ملغاة (مثل modules/ أو css/).
-2. الأمان والـ DOM: الحفاظ على المعرفات وتجنب الأخطاء.
-3. التوجيه البرمجي الدقيق.
+2. سلامة الملف الكامل (Anti-Blind-Overwrite): حذر فوراً إذا حاول الموديل استبدال الملف الحقيقي (~3100 سطر) بكود تجريبي قصير (mock code).
+3. الأمان وجودة الـ DOM: الحفاظ على المعرفات وتجنب الثغرات.
+4. التوجيه البرمجي الدقيق بنقاط تنفيذية محددة.
 
 طلب المستخدم: """${userText.slice(0, 500)}"""
 رد المطور: """${aiResponse.slice(0, 2200)}"""
@@ -1132,6 +1112,23 @@ Reply in 3 strict brief lines only:
       if(mgr){ const newId='custom_'+Date.now(); mgr.files.push({id:newId, name:fileName, icon:'✨', desc:isAr?'اقتراح محسن من مراقب المطور':'Dev observer suggestion', isCore:false, enabled:true, keywords:['تحسين','observer'], content}); mgr.save(); if(mgr.renderList) mgr.renderList(); if(window.DevUIEngine) window.DevUIEngine.showToast?.(isAr?'✨ تم تطبيق الاقتراح':'✨ Applied','success'); }
     }catch(e){ console.warn('[ApplyDevSuggestion]',e); }
   };
+
+  window._sendReviewToDev = function(notes, btn) {
+    try {
+      const input = $('chat-input') || $('user-input');
+      if (!input) return;
+      const cleanNotes = String(notes || '').trim();
+      if (!cleanNotes) return;
+      input.value = `طبق التعديل البرمجي المطلوب مع معالجة وتطبيق جميع ملاحظات التدقيق التالية بدقة:\n${cleanNotes}`;
+      if (window.DevUIEngine) DevUIEngine.updateSendBtn?.();
+      const sendBtn = $('send-btn');
+      if (sendBtn) sendBtn.click();
+      if (window.DevUIEngine) DevUIEngine.showToast?.('🚀 تم توجيه الملاحظات للمطور لإصلاح وتطبيق الكود فوراً!', 'success');
+    } catch(e) {
+      console.warn('[SendReviewToDev]', e);
+    }
+  };
+
   async function updateDevVersionBadge() {
     const badgeEl = $('dev-status-badge-text');
     if (!badgeEl) return;
