@@ -726,6 +726,7 @@
     const err = error instanceof Error ? error : new Error(String(error ?? 'Unknown error'));
     const details = `${context}\n${err.name}: ${err.message}\n${err.stack || ''}`.trim();
     console.error(`[X.v1] ${details}`);
+    if (typeof window.printDebug === 'function') window.printDebug(err, context);
     const container = $('toast-container');
     if (!container) return;
     const toast = document.createElement('div');
