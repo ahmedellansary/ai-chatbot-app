@@ -193,6 +193,7 @@
     activeAgentId: localStorage.getItem('active_dev_agent_id') || 'openai/gpt-oss-120b',
     isMultiAgentMode: localStorage.getItem('is_dev_multi_agent_mode') === '1',
     currentFilter: 'all',
+    isThinking: false,
     isStreaming: false,
     abortController: null,
     pendingModifications: {},
@@ -580,6 +581,7 @@ When this request requires changing repository code, respond as a concise execut
       DevUIEngine.appendMessage(userMsg);
 
       state.isStreaming = true;
+      state.isThinking = true;
       state.abortController = new AbortController();
       DevUIEngine.updateSendBtn();
       DevUIEngine.setThinking(true);
@@ -621,7 +623,7 @@ When this request requires changing repository code, respond as a concise execut
       let succeeded = false;
       let usedAgent = chosenAgent;
       let _thinkingCleared = false;
-      const _clearThinking = () => { if (!_thinkingCleared) { _thinkingCleared = true; DevUIEngine.setThinking(false); DevUIEngine.hideDevThinking(); } };
+      const _clearThinking = () => { if (!_thinkingCleared) { _thinkingCleared = true; state.isThinking = false; DevUIEngine.setThinking(false); DevUIEngine.hideDevThinking(); } };
 
       for (let i = 0; i < fallbackList.length; i++) {
         const currentAgent = fallbackList[i];
@@ -987,6 +989,16 @@ When this request requires changing repository code, respond as a concise execut
     }
   };
   try { window.DevObserverEngine = DevObserverEngine; } catch(e) {}
+  window._applyObserverSuggestion = window._applyObserverSuggestion || function(text){
+    try{
+      const clean=String(text||'').trim().slice(0,500); if(!clean) return;
+      const isAr=/[\u0600-\u06FF]/.test(clean);
+      const fileName=isAr ? `اقتراح محسن — ${new Date().toLocaleDateString('ar-EG')}` : `Improved suggestion — ${new Date().toLocaleDateString()}`;
+      const content=JSON.stringify({suggestion:clean, appliedAt:new Date().toISOString(), source:'dev-observer'},null,2);
+      const mgr=window.InstructionManager;
+      if(mgr){ const newId='custom_'+Date.now(); mgr.files.push({id:newId, name:fileName, icon:'✨', desc:isAr?'اقتراح محسن من مراقب المطور':'Dev observer suggestion', isCore:false, enabled:true, keywords:['تحسين','observer'], content}); mgr.save(); if(mgr.renderList) mgr.renderList(); if(window.DevUIEngine) window.DevUIEngine.showToast?.(isAr?'✨ تم تطبيق الاقتراح':'✨ Applied','success'); }
+    }catch(e){ console.warn('[ApplyDevSuggestion]',e); }
+  };
   async function updateDevVersionBadge() {
     const badgeEl = $('dev-status-badge-text');
     if (!badgeEl) return;
