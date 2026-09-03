@@ -481,10 +481,17 @@ When this request requires changing repository code, respond as a concise execut
       const decoder = new TextDecoder();
       let buffer = '';
       let hasTokens = false;
+      const streamStart = Date.now();
 
       try {
         while (true) {
-          const { done, value } = await reader.read();
+          if (!hasTokens && Date.now() - streamStart > 10000) throw new Error('STREAM_STALL');
+          // per-read timeout 8s to avoid infinite stall on giant models
+          let timer;
+          const timeoutPromise = new Promise((_, rej) => { timer = setTimeout(() => rej(new Error('STREAM_STALL')), 8000); });
+          let readRes;
+          try { readRes = await Promise.race([reader.read(), timeoutPromise]); } finally { clearTimeout(timer); }
+          const { done, value } = readRes;
           if (done) break;
 
         buffer += decoder.decode(value, { stream: true });
@@ -1070,22 +1077,28 @@ When this request requires changing repository code, respond as a concise execut
         }
       };
 
+      let _pullRaf = null;
+      let _pullPending = null;
       const onTouchMove = (e) => {
         if (!isTracking || e.touches.length !== 1) return;
-        const y = e.touches[0].clientY;
-        const diff = y - startY;
-
-        if (diff > 8) {
-          currentPull = diff;
-          const visualPull = Math.min(diff * 0.45, 75);
-          indicator.classList.add('visible');
-          indicator.style.opacity = '1';
-          indicator.style.transform = `translate3d(-50%, ${visualPull - 25}px, 0) scale(1)`;
-          if (spinner) spinner.style.transform = `rotate(${diff * 2.8}deg)`;
-        } else {
-          indicator.classList.remove('visible');
-          indicator.style.opacity = '0';
-        }
+        _pullPending = { y: e.touches[0].clientY };
+        if (_pullRaf) return;
+        _pullRaf = requestAnimationFrame(() => {
+          const y = _pullPending.y;
+          const diff = y - startY;
+          if (diff > 8) {
+            currentPull = diff;
+            const visualPull = Math.min(diff * 0.45, 75);
+            indicator.classList.add('visible');
+            indicator.style.opacity = '1';
+            indicator.style.transform = `translate3d(-50%, ${visualPull - 25}px, 0) scale(1)`;
+            if (spinner) spinner.style.transform = `rotate(${diff * 2.8}deg)`;
+          } else {
+            indicator.classList.remove('visible');
+            indicator.style.opacity = '0';
+          }
+          _pullRaf = null;
+        });
       };
 
       const onTouchEnd = () => {
@@ -1445,7 +1458,12 @@ When this request requires changing repository code, respond as a concise execut
 
     scrollToBottom() {
       const area = $('chat-area');
-      if (area) area.scrollTop = area.scrollHeight;
+      if (!area) return;
+      if (this._scrollRaf) cancelAnimationFrame(this._scrollRaf);
+      this._scrollRaf = requestAnimationFrame(() => {
+        area.scrollTop = area.scrollHeight;
+        this._scrollRaf = null;
+      });
     },
 
     escapeHtml(str) {
@@ -2450,9 +2468,18 @@ When this request requires changing repository code, respond as a concise execut
     navigator.serviceWorker.register('./sw.js').catch(() => {});
   }
 
+  let _vpRaf = null;
+  let _vpLast = 0;
   function lockViewportHeight() {
-    const h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-    document.documentElement.style.setProperty('--app-height', `${h}px`);
+    const now = Date.now();
+    if (now - _vpLast < 120) return;
+    _vpLast = now;
+    if (_vpRaf) cancelAnimationFrame(_vpRaf);
+    _vpRaf = requestAnimationFrame(() => {
+      const h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+      document.documentElement.style.setProperty('--app-height', `${h}px`);
+      _vpRaf = null;
+    });
   }
 
   window.addEventListener('resize', lockViewportHeight);
