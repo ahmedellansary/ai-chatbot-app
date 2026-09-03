@@ -11,8 +11,8 @@
   <meta name="apple-mobile-web-app-title" content="X.v1">
 
   <title>X.v1</title>
-  <link rel="manifest" href="./manifest.json?v=232">
-  <link rel="stylesheet" href="./style.css?v=232">
+  <link rel="manifest" href="./manifest.json?v=234">
+  <link rel="stylesheet" href="./style.css?v=234">
   <link rel="icon" type="image/png" href="./icons/icon-192.png?v=49">
   <link rel="apple-touch-icon" href="./icons/icon-192.png?v=49">
   <link rel="apple-touch-icon" sizes="512x512" href="./icons/icon-512.png?v=49">
@@ -118,7 +118,7 @@
         <span>Settings</span>
       </button>
       <div id="app-version-badge" style="font-size:10.5px; color:var(--text-dim); font-family:var(--font-mono); text-align:center; padding:8px 0 2px; border-top:1px solid var(--border-subtle); margin-top:8px; letter-spacing:0.02em;">
-        <span id="app-version-text">v232</span> • <span id="app-last-update">جاري...</span>
+        <span id="app-version-text">v234</span> • <span id="app-last-update">جاري...</span>
       </div>
     </div>
   </aside>
@@ -136,7 +136,7 @@
       </button>
       <div id="chat-top-badge" class="repo-status-badge" style="position:absolute; left:50%; transform:translateX(-50%);">
         <span class="status-dot"></span>
-        <span class="repo-badge-text" id="chat-status-text" style="font-weight:700; letter-spacing:0.02em;">X (V232) —</span>
+        <span class="repo-badge-text" id="chat-status-text" style="font-weight:700; letter-spacing:0.02em;">X (V234) —</span>
       </div>
       <script>
         (function() {
@@ -241,6 +241,11 @@
               </div>
             </div>
 
+            <!-- Multi-Agent Toggle — icon only -->
+            <button class="claude-plus-btn multi-agent-toggle-pill" id="multi-agent-toggle-btn" onclick="window._toggleMultiAgentMode()" title="Multi-Agent Consensus" aria-label="Multi-Agent">
+              <span style="font-size:14px;">👥</span>
+            </button>
+
             <!-- Model Selector Pill -->
             <div style="position: relative;">
               <button class="claude-model-pill" id="model-pill-trigger">
@@ -249,8 +254,8 @@
               </button>
 
               <div class="model-dropdown" id="model-dropdown-menu">
-                <button class="dropdown-opt" data-mode="HARD">
-                  <div class="opt-title">HARD</div>
+                <button class="dropdown-opt" data-mode="HIGH">
+                  <div class="opt-title">HIGH</div>
                 </button>
                 <button class="dropdown-opt active" data-mode="MID">
                   <div class="opt-title">Balanced</div>
@@ -260,11 +265,6 @@
                 </button>
               </div>
             </div>
-
-            <!-- Multi-Agent Toggle — icon only -->
-            <button class="claude-plus-btn multi-agent-toggle-pill" id="multi-agent-toggle-btn" onclick="window._toggleMultiAgentMode()" title="Multi-Agent Consensus" aria-label="Multi-Agent">
-              <span style="font-size:14px;">👥</span>
-            </button>
           </div>
 
           <!-- Right Controls (Mic, Waveform & Send) -->
@@ -567,11 +567,11 @@
 </div>
 
 <!-- Consolidated High-Performance Script Bundle -->
-<script src="./config.js?v=232"></script>
-<script src="./auth.js?v=232"></script>
-<script src="./models.js?v=232"></script>
-<script src="./github.js?v=232"></script>
-<script src="./instruction-manager.js?v=232"></script>
-<script src="./app.js?v=232"></script>
+<script src="./config.js?v=234"></script>
+<script src="./auth.js?v=234"></script>
+<script src="./models.js?v=234"></script>
+<script src="./github.js?v=234"></script>
+<script src="./instruction-manager.js?v=234"></script>
+<script src="./app.js?v=234"></script>
 </body>
 </html>
