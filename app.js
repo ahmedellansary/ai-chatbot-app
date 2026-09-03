@@ -853,7 +853,16 @@
       state.abortController = new AbortController();
 
       const tier = state.currentMode || 'MID';
-      const systemPromptForCall = await this.buildSystemPrompt(textForPayload, currentAttachments, conv, tier);
+      let systemPromptForCall;
+      try {
+        systemPromptForCall = await this.buildSystemPrompt(textForPayload, currentAttachments, conv, tier);
+      } catch (err) {
+        state.isStreaming = false;
+        state.abortController = null;
+        debugPrint(err, `Prompt preparation failed (${tier})`);
+        UIEngine.updateSendBtnState();
+        return;
+      }
       const cfg = this.getAdaptiveConfig(tier);
       const recentMessages = conv.messages
         .filter(m => m.id !== userMsg.id)
