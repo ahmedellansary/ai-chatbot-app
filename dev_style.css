@@ -1221,12 +1221,9 @@ pre code {
   box-shadow: 0 8px 32px rgba(245, 158, 11, 0.12), 0 0 0 1px rgba(245, 158, 11, 0.25);
 }
 
-/* ✨ Simple 4-direction glow — thinking only (removed after first chunk) */
-.input-container.thinking {
-  border-color: var(--accent-dev) !important;
-  box-shadow: 0 0 0 1px var(--accent-dev), 0 0 10px var(--accent-dev-glow), 0 0 18px rgba(245,158,11,0.18), inset 0 0 6px rgba(245,158,11,0.07) !important;
-}
-.input-container.thinking::before { display: none; }
+/* Thinking glow removed per request */
+.input-container.thinking{border-color:var(--border-subtle) !important;box-shadow:0 8px 32px rgba(0,0,0,0.5) !important;animation:none !important}
+.input-container.thinking::before{display:none !important}
 
 .typing-bubble {
   background: transparent !important;
