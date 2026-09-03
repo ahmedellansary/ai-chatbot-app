@@ -1253,7 +1253,7 @@ When this request requires changing repository code, respond as a concise execut
         menu.innerHTML = TIERS.map(item => {
           const isActive = item.id === current;
           return `
-            <button type="button" class="dropdown-opt ${isActive ? 'active' : ''}" onclick="window._setDevTier('${item.id}')">
+            <button type="button" class="dropdown-opt ${isActive ? 'active' : ''}" onclick="window._selectDevTier('${item.id}')">
               <div class="opt-title">
                 <span>${item.label}</span>
                 ${isActive ? '<span style="color:#fbbf24; font-size:12px; font-weight:bold;">✓</span>' : ''}
