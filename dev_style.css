@@ -3069,8 +3069,15 @@ pre code {
 .actions-header{display:flex;align-items:center;gap:8px;padding:6px 10px;border-bottom:1px solid var(--border-subtle);cursor:pointer;direction:ltr;justify-content:flex-start;font-size:11px;font-weight:800;letter-spacing:.06em;color:var(--text-muted)}
 .multi-agent-box{background:transparent !important;border:none !important;box-shadow:none !important}
 .agent-step-item{background:transparent !important;border:none !important;box-shadow:none !important;padding:4px 0 !important}
-.llm-end-btn{padding:6px 14px;border-radius:999px;background:transparent;color:var(--text-main);border:1px solid var(--border-subtle);font-size:12px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
-.llm-end-btn:hover{background:var(--bg-card-hover);border-color:var(--accent-dev);color:var(--accent-dev)}
+.voice-call-overlay{position:fixed;inset:0;background:radial-gradient(ellipse at center, var(--accent-dev-glow) 0%, var(--bg-app) 70%);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;transition:opacity .25s}
+.voice-call-overlay.hidden{opacity:0;pointer-events:none}
+.call-motion-bg{position:absolute;inset:0;background:linear-gradient(120deg, var(--accent-dev-glow), transparent, var(--accent-dev-glow));background-size:200% 200%;animation:callMove 3s ease infinite;opacity:0.35}
+.call-waveform{display:flex;align-items:center;gap:6px;height:48px}
+.call-waveform span{width:6px;height:12px;background:var(--accent-dev);border-radius:999px;animation:wavePulse 1s ease-in-out infinite}
+.call-waveform span:nth-child(2){animation-delay:.15s;height:22px}
+.call-waveform span:nth-child(3){animation-delay:.3s;height:32px}
+.call-waveform span:nth-child(4){animation-delay:.45s;height:22px}
+.call-stop-btn{position:fixed;bottom:32px;left:50%;transform:translateX(-50%);padding:12px 22px;border-radius:999px;background:rgba(239,68,68,0.9);color:#fff;border:1px solid rgba(239,68,68,1);font-weight:700;cursor:pointer;box-shadow:0 8px 24px rgba(239,68,68,0.4);z-index:2}
 .agent-committed-header{display:flex;align-items:center;gap:8px;padding:6px 10px;border-bottom:1px solid var(--border-subtle);cursor:pointer;user-select:none;direction:ltr;justify-content:flex-start;text-align:left}
 .agent-committed-label{font-size:11px;font-weight:800;letter-spacing:.06em;color:var(--text-muted)}
 .agent-committed-nums{display:flex;gap:4px}
