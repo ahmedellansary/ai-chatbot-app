@@ -500,6 +500,9 @@
     parseMarkdown(text) {
       if (!text) return '';
       let html = this.escapeHtml(text);
+      // Allow highlight spans by importance — unescape only hl-* classes
+      html = html.replace(/&lt;span class=&quot;(hl-(?:important|critical|success|info|keyword))&quot;&gt;/g, '<span class="$1">');
+      html = html.replace(/&lt;\/span&gt;/g, '</span>');
 
       // Fenced code blocks
       html = html.replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) => {
