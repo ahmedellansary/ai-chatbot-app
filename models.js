@@ -70,7 +70,7 @@ const MODELS = {
     { id: 'poolside/laguna-s-2.1:free', name: 'Laguna S 2.1 (118B)', provider: 'openrouter' }
   ],
   BALANCE2: [
-    { id: 'nvidia/nemotron-3-ultra-550b-a55b:free', name: 'Nemotron 3 Ultra 550B (Balance 2)', provider: 'openrouter' },
+    { id: 'nvidia/nemotron-3-ultra-550b-a55b', name: 'Nemotron 3 Ultra 550B (Balance 2)', provider: 'openrouter' },
     { id: 'cohere/north-mini-code:free', name: 'North Mini Code (30B)', provider: 'openrouter' },
     { id: 'inclusionai/ling-3.0-flash-fin:free', name: 'Ling 3.0 Flash Fin', provider: 'openrouter' },
     { id: 'thinkingmachines/inkling-small:free', name: 'Inkling Small 276B', provider: 'openrouter' },
@@ -127,20 +127,30 @@ async function callOpenRouter(model, messages, signal) {
     'X-Title': 'X.v1 AI Chat'
   };
 
+  const isNemotronUltra = model.id === 'nvidia/nemotron-3-ultra-550b-a55b';
   const bodyPayload = {
     model: model.id,
     messages,
     stream: true,
-    temperature: 0.7,
-    max_tokens: 8192
+    temperature: isNemotronUltra ? 0.2 : 0.7,
+    max_tokens: isNemotronUltra ? 4096 : 8192
   };
+  if (isNemotronUltra) {
+    bodyPayload.reasoning = { effort: 'low', exclude: true };
+    bodyPayload.provider = {
+      order: ['deepinfra', 'baseten', 'venice'],
+      allow_fallbacks: true,
+      require_parameters: true
+    };
+  }
 
   let timedOut = false;
   const controller = new AbortController();
+  const requestTimeoutMs = isNemotronUltra ? 120000 : 14000;
   const timeoutId = setTimeout(() => {
     timedOut = true;
     controller.abort();
-  }, 14000);
+  }, requestTimeoutMs);
   const combinedSignal = signal ? AbortSignal.any([signal, controller.signal]) : controller.signal;
 
   try {
@@ -149,7 +159,7 @@ async function callOpenRouter(model, messages, signal) {
       headers,
       body: JSON.stringify(bodyPayload),
       signal: combinedSignal
-    }, 14000);
+    }, requestTimeoutMs);
     clearTimeout(timeoutId);
 
     if (response.status === 429) {
@@ -229,7 +239,7 @@ async function callGroq(model, messages, signal) {
   }
 }
 
-async function* readStream(response, signal) {
+async function* readStream(response, signal, model) {
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = '';
@@ -250,7 +260,10 @@ async function* readStream(response, signal) {
   try {
     while (true) {
       if (signal && signal.aborted) break;
-      const timeoutMs = receivedFirstChunk ? 8000 : 12000;
+      const isNemotronUltra = model?.id === 'nvidia/nemotron-3-ultra-550b-a55b';
+      const timeoutMs = receivedFirstChunk
+        ? (isNemotronUltra ? 30000 : 8000)
+        : (isNemotronUltra ? 120000 : 12000);
       const readResult = await readWithTimeout(timeoutMs);
       if (signal && signal.aborted) return;
       const { done, value } = readResult;
@@ -325,7 +338,7 @@ async function* chatWithFallback(tier, messages, signal, onModelChange) {
           ? await callGroq(model, messages, signal)
           : await callOpenRouter(model, messages, signal);
 
-        for await (const chunk of readStream(response, signal)) {
+        for await (const chunk of readStream(response, signal, model)) {
           yield { chunk, model, usedFallback };
         }
         succeeded = true;
