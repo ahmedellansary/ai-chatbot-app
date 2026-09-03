@@ -755,7 +755,7 @@ STRICT RULE: The local engine automatically merges your surgical patches directl
         DevState.save();
 
         // Check for code proposal JSON
-        await this.handleDevProposal(fullContent, document.querySelector(`[data-id="${aiMsgId}"]`));
+        await this.handleDevProposal(fullContent, document.querySelector(`[data-id="${aiMsgId}"]`), userText);
       } else {
         const errorMsg = 'تعذر الرد من جميع النماذج حالياً بسبب ضغط مؤقت في مزودي الخدمة. يرجى إعادة المحاولة.';
         const errRow = document.querySelector(`[data-id="${aiMsgId}"] .msg-content`);
@@ -904,17 +904,40 @@ STRICT RULE: The local engine automatically merges your surgical patches directl
         conv.messages.push(aiMsgObj);
         DevState.save();
 
-        await this.handleDevProposal(finalOutput, msgRow);
+        await this.handleDevProposal(finalOutput, msgRow, userText);
       } catch (err) {
         if (err.name === 'AbortError') return;
         throw err;
       }
     },
 
-    async handleDevProposal(content, msgRow) {
+    async handleDevProposal(content, msgRow, userText = '') {
       if (!msgRow || !content) return;
       const jsonMatch = content.match(/```json\s*(\{[\s\S]*?\})\s*```/) || content.match(/(\{[\s\S]*"(?:file|deploy|files)"[\s\S]*"(?:content|patches|search)"[\s\S]*\})/);
-      if (!jsonMatch) return;
+      if (!jsonMatch) {
+        if (userText && this.isCodeChangeRequest(userText)) {
+          const existingCard = msgRow.querySelector('.dev-proposal-box');
+          if (existingCard) existingCard.remove();
+          const card = document.createElement('div');
+          card.className = 'dev-proposal-box blocked';
+          card.innerHTML = `
+            <div class="dev-proposal-title">
+              <span>⚠️</span>
+              <span>Pending Code Patch: <code>dev.js</code></span>
+              <span class="dev-peer-badge warn" style="margin-inline-start:auto;">Incomplete Output</span>
+            </div>
+            <div class="circuit-breaker-banner">لم يقم الموديل بتوليد كود التعديل البرمجي المطلوب واكتفى بالرد النصي. اضغط أدناه لإلزامه بتوليد الكود الجراحي فوراً.</div>
+            <div class="dev-proposal-btns">
+              <button class="dev-btn-action retry-btn" onclick="window._sendReviewToDev('يجب توليد التعديل بصيغة JSON Block يحتوي على patches (Search & Replace) لتطبيق الميزة المطلوبة فوراً.', this)" title="طلب توليد الكود الجراحي">
+                <span>🔄</span>
+                <span>Generate Patch</span>
+              </button>
+            </div>
+          `;
+          msgRow.appendChild(card);
+        }
+        return;
+      }
 
       try {
         const data = JSON.parse(jsonMatch[1]);
@@ -1080,7 +1103,7 @@ STRICT RULE: The local engine automatically merges your surgical patches directl
         box = document.createElement('div');
         box.className = 'dev-observer-box';
         box.style.cssText = 'margin-top:10px; padding:0; border:none; background:transparent;';
-        row.querySelector('.msg-content')?.appendChild(box) || row.appendChild(box);
+        row.appendChild(box);
       }
 
       const renderUI = (bullets = [], statusText = '', isRunning = false, warnCount = 0, finalSuggestion = '') => {
