@@ -820,7 +820,7 @@
     },
 
     getAdaptiveConfig(tier) {
-      if (tier === 'FAST') return { recentCount: 6, maxBriefingChars: 600 };
+      if (tier === 'FAST' || tier === 'BALANCE2') return { recentCount: 6, maxBriefingChars: 600 };
       return { recentCount: 10, maxBriefingChars: 1200 };
     },
 
@@ -1887,11 +1887,12 @@
   };
 
   window._suggest = (text) => {
+    if (state.isStreaming || state.sendInFlight || state.sendLock) return;
     StateController.newConversation();
     const input = $('user-input');
     if (input) input.value = text;
     UIEngine.updateSendBtnState();
-    ChatEngine.sendMessage(text);
+    ChatEngine.sendMessage(text).catch(err => console.error('[Suggestion Send]', err));
   };
 
   window._startDevPrompt = (text) => {
@@ -1961,7 +1962,7 @@
       const userText = conv.messages[idx - 1].content;
       conv.messages.splice(idx, 1);
       MessageRenderer.renderAllMessages(conv.messages);
-      ChatEngine.sendMessage(userText);
+      ChatEngine.sendMessage(userText).catch(err => console.error('[Retry Send]', err));
     }
   };
 
