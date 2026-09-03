@@ -721,6 +721,52 @@
     }
   };
 
+  // Surface runtime failures without hiding the full diagnostic details.
+  function debugPrint(error, context = 'Runtime error') {
+    const err = error instanceof Error ? error : new Error(String(error ?? 'Unknown error'));
+    const details = `${context}\n${err.name}: ${err.message}\n${err.stack || ''}`.trim();
+    console.error(`[X.v1] ${details}`);
+    const container = $('toast-container');
+    if (!container) return;
+    const toast = document.createElement('div');
+    toast.className = 'toast error';
+    toast.style.cssText = 'display:flex;align-items:center;gap:8px;max-width:min(520px,calc(100vw - 24px));';
+    const label = document.createElement('span');
+    label.textContent = `${context}: ${err.message || 'خطأ غير معروف'}`;
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = 'التفاصيل';
+    button.style.cssText = 'margin-inline-start:auto;white-space:nowrap;';
+    button.onclick = () => {
+      const modal = document.createElement('div');
+      modal.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;padding:16px;';
+      const panel = document.createElement('div');
+      panel.style.cssText = 'background:#17171b;color:#f4f4f5;width:min(760px,100%);max-height:80vh;overflow:auto;border:1px solid #444;border-radius:12px;padding:16px;direction:ltr;text-align:left;';
+      const pre = document.createElement('pre');
+      pre.style.cssText = 'white-space:pre-wrap;word-break:break-word;font:12px/1.5 monospace;margin:0;';
+      pre.textContent = details;
+      const close = document.createElement('button');
+      close.type = 'button';
+      close.textContent = 'Close';
+      close.style.cssText = 'margin-top:12px;padding:6px 12px;';
+      close.onclick = () => modal.remove();
+      panel.append(pre, close);
+      modal.appendChild(panel);
+      modal.onclick = event => { if (event.target === modal) modal.remove(); };
+      document.body.appendChild(modal);
+    };
+    toast.append(label, button);
+    container.appendChild(toast);
+    setTimeout(() => toast.remove(), 10000);
+  }
+  window.debugPrint = debugPrint;
+  window.addEventListener('error', event => {
+    if (event.error) debugPrint(event.error, 'JavaScript error');
+  });
+  window.addEventListener('unhandledrejection', event => {
+    debugPrint(event.reason, 'Unhandled promise');
+  });
+
   // ─────────────────────────────────────────────────────────────────
   // 7. CHAT CONTROLLER & STREAM ORCHESTRATOR — Extracted to modules/chat-engine.js
   // ─────────────────────────────────────────────────────────────────
@@ -924,6 +970,7 @@
       } catch (err) {
         MessageRenderer.hideTyping();
         if (err.name !== 'AbortError') {
+          debugPrint(err, `Chat request failed (${state.currentMode || 'MID'})`);
           if (!fullContent.trim()) {
             aiMsgObj.content = `⚠️ تعذر استلام الرد من النموذج: ${err.message || 'خطأ في الاتصال'}. يمكنك إعادة المحاولة فوراً.`;
             aiMsgObj.isError = true;
