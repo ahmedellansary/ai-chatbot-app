@@ -1473,15 +1473,30 @@ When this request requires changing repository code, respond as a concise execut
         container.scrollTop = container.scrollHeight;
       }
       const tierDev = (window._devState && window._devState.currentMode) || (window.state && window.state.currentMode) || 'MID';
+      const isHighD = tierDev === 'HIGH';
       const fastD = tierDev === 'FAST';
-      const flowStages = isAr ? (fastD ? [
+      const flowStages = isAr ? (isHighD ? [
+        { icon:'🧠', text:'فهم النية الحقيقية', delay:500 },
+        { icon:'📂', text:'جمع السياق والملفات', delay:1100 },
+        { icon:'📋', text:'تخطيط هيكل الرد', delay:1800 },
+        { icon:'✍️', text:'صياغة أولية', delay:2500 },
+        { icon:'🔍', text:'نقد ذاتي', delay:3200 },
+        { icon:'✨', text:'صقل نهائي', delay:4000 }
+      ] : fastD ? [
         { icon:'🧠', text:'فهم النية', delay:400 },
         { icon:'✨', text:'صياغة الحل', delay:900 }
       ] : [
         { icon:'🧠', text:'فهم النية', delay:500 },
         { icon:'📂', text:'مراجعة الملفات الحية', delay:1200 },
         { icon:'✨', text:'صياغة الحل', delay:2000 }
-      ]) : (fastD ? [
+      ]) : (isHighD ? [
+        { icon:'🧠', text:'Intent', delay:500 },
+        { icon:'📂', text:'Gather context', delay:1100 },
+        { icon:'📋', text:'Plan', delay:1800 },
+        { icon:'✍️', text:'Draft', delay:2500 },
+        { icon:'🔍', text:'Critique', delay:3200 },
+        { icon:'✨', text:'Refine', delay:4000 }
+      ] : fastD ? [
         { icon:'🧠', text:'Understanding', delay:400 },
         { icon:'✨', text:'Crafting', delay:900 }
       ] : [
