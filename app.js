@@ -616,8 +616,8 @@
         const bullets = lines.map(l=> l.replace(/^\d+[\.\)\-]\s*/,'').trim()).filter(Boolean).slice(0,5);
         const ok = bullets.filter(b=>/نعم|yes|✓|مُلتزم|Compliant/i.test(b)).length;
         const warn = bullets.length - ok;
-        const getCls=b=>{ if(b.includes('التناقض:')) return b.includes('نعم')?'warn':'ok'; if(b.includes('الالتزام:')||b.includes('المصادر:')) return (b.includes('نعم')||b.includes('موثوقة')||b.includes('سليم'))?'ok':'warn'; return b.includes('لا')||b.includes('تحتاج')?'warn':'ok'; }; const bulletsHtml = bullets.length ? `<ul class="observer-bullets">${bullets.map(b=>`<li class="observer-bullet ${getCls(b)}"><span class="observer-bullet-text">${this.escapeHtml(b)}</span></li>`).join('')}</ul>` : `<div style="font-size:12px;color:var(--text-dim)">${this.escapeHtml(String(msg.observerReview).slice(0,140))}</div>`;
-        observerHtml = `<div class="observer-box" data-review="${this.escapeHtml(msg.observerReview).slice(0,300)}"><div class="agent-committed-header" onclick="this.nextElementSibling.classList.toggle('hidden'); this.classList.toggle('collapsed')"><span>👁️</span><span class="agent-committed-label">COMMITTED</span><span class="agent-committed-nums"><span class="agent-num ok">${ok}</span><span class="agent-num warn">${warn}</span></span><span class="agent-toggle-icon">▾</span></div><div class="observer-details">${bulletsHtml}<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap"><button class="observer-apply-btn" onclick="window._applyObserverSuggestion(this.closest('.observer-box').dataset.review||'')">Apply</button><button class="llm-end-btn" onclick="window._sendToLLM(this)">⚡ Send to LLM</button><button class="llm-send-apply-btn" onclick="window._sendAndApply(this)">⚡ Send & Apply</button></div></div></div>`;
+        const getCls=b=>{ if(b.includes('التناقض:')) return b.includes('نعم')?'warn':'ok'; if(b.includes('الالتزام:')||b.includes('المصادر:')) return (b.includes('نعم')||b.includes('موثوقة')||b.includes('سليم'))?'ok':'warn'; return b.includes('لا')||b.includes('تحتاج')?'warn':'ok'; }; const mainBul=bullets.slice(0,-1), sBul=bullets.slice(-1)[0]; const mainHtml=mainBul.length? `<ul class="observer-bullets">${mainBul.map(b=>`<li class="observer-bullet ${getCls(b)}"><span class="observer-bullet-text">${this.escapeHtml(b)}</span></li>`).join('')}</ul>` : ''; const sugBox=sBul? `<div class="suggest-box"><div class="suggest-box-body">${this.escapeHtml(sBul)}</div><div class="suggest-box-actions"><button class="observer-apply-btn" onclick="window._applyObserverSuggestion(this.closest('.observer-box').dataset.review||'')">Apply</button><button class="llm-end-btn" onclick="window._sendToLLM(this)">⚡ Send to LLM</button><button class="llm-send-apply-btn" onclick="window._sendAndApply(this)">⚡ Send & Apply</button></div></div>` : ''; const bulletsHtml=(mainHtml+sugBox) || `<div style="font-size:12px;color:var(--text-dim)">${this.escapeHtml(String(msg.observerReview).slice(0,140))}</div>`;
+        observerHtml = `<div class="observer-box" data-review="${this.escapeHtml(msg.observerReview).slice(0,300)}"><div class="agent-committed-header" onclick="this.closest('.multi-agent-box').classList.toggle('collapsed')"><span>👁️</span><span class="agent-committed-label">COMMITTED</span><span class="agent-committed-nums"><span class="agent-num ok">${ok}</span><span class="agent-num warn">${warn}</span></span><span class="agent-toggle-icon">▾</span></div><div class="observer-details">${bulletsHtml}</div></div>`;
       }
 
       if (msg.role === 'user') {
@@ -1319,19 +1319,23 @@
             const lines = String(txt||'').split(/\n/).map(s=>s.trim()).filter(Boolean);
             const bullets = lines.map(l=> l.replace(/^\d+[\.\)\-]\s*/,'').trim()).filter(Boolean).slice(0,5);
             if(!bullets.length) return `<div style="font-size:12px;color:var(--text-dim)">${MessageRenderer.escapeHtml(String(txt||'').slice(0,140))}</div>`;
-            return `<ul class="observer-bullets">${bullets.map(b=>`<li class="observer-bullet ${getCls(b)}"><span class="observer-bullet-text">${MessageRenderer.escapeHtml(b)}</span></li>`).join('')}</ul>`;
+            const main=bullets.slice(0,-1), last=bullets.slice(-1)[0];
+            const mainHtml=main.length? `<ul class="observer-bullets">${main.map(b=>`<li class="observer-bullet ${getCls(b)}"><span class="observer-bullet-text">${MessageRenderer.escapeHtml(b)}</span></li>`).join('')}</ul>` : '';
+            const box=last? `<div class="suggest-box"><div class="suggest-box-body">${MessageRenderer.escapeHtml(last)}</div><div class="suggest-box-actions"><button class="observer-apply-btn" onclick="window._applyObserverSuggestion(this.closest('.observer-box').dataset.review||'')">✨ Apply</button><button class="llm-end-btn" onclick="window._sendToLLM(this)">⚡ Send to LLM</button><button class="llm-send-apply-btn" onclick="window._sendAndApply(this)">⚡ Send & Apply</button></div></div>` : '';
+            // inject handlers via delegated replacement after
+            return mainHtml+box;
           };
         const okC = (txt)=> (String(txt).match(/نعم|yes|✓|مُلتزم|Compliant/gi)||[]).length;
         const reviewHtml = finalReview ? buildBullets(finalReview) : `<div style="font-size:12px; color:var(--text-dim); padding:6px 0;">${t('جاري المراجعة...','Reviewing...')}</div>`;
         const okN = finalReview ? okC(finalReview) : 0;
         const warnN = finalReview ? (String(finalReview).split(/\n/).filter(Boolean).length - okN) : 0;
-        const applyBtn = finalReview ? `<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap"><button class="observer-apply-btn" onclick="window._applyObserverSuggestion(this.closest('.observer-box').dataset.review||'')">Apply</button><button class="llm-end-btn" onclick="window._sendToLLM(this)">⚡ Send to LLM</button><button class="llm-send-apply-btn" onclick="window._sendAndApply(this)">⚡ Send & Apply</button></div>` : '';
+        const applyBtn = '';
         const box = aiRow.querySelector('.observer-box') || document.createElement('div');
         box.className = 'observer-box';
         box.style.cssText = 'margin-top:10px; padding:0; border:none; background:transparent;';
         if(finalReview) box.dataset.review = finalReview;
         box.innerHTML = `
-          <div class="agent-committed-header" onclick="this.nextElementSibling.classList.toggle('hidden'); this.classList.toggle('collapsed')">
+          <div class="agent-committed-header" onclick="this.closest('.multi-agent-box').classList.toggle('collapsed')">
             <span>👁️</span><span class="agent-committed-label">COMMITTED</span><span class="agent-committed-nums"><span class="agent-num ok">${okN}</span><span class="agent-num warn">${Math.max(0,warnN)}</span></span><span class="agent-toggle-icon">▾</span>
           </div>
           <div class="observer-details">
@@ -2617,7 +2621,7 @@
     tbody.innerHTML=all.map(m=>{
       const en=window.isModelEnabled? window.isModelEnabled(m.id):true;
       const u=per[m.id]||{t:0,r:0};
-      const hName=m.name.replace(/(\d+(?:\.\d+)?\s*B)/i,'<span style="color:var(--accent-color)">$1</span>'); return `<tr><td><input type="checkbox" style="width:16px;height:16px;accent-color:var(--accent-color);" data-id="${m.id}" ${en?'checked':''} onchange="toggleModelInline(this)"></td><td><div style="font-weight:700;">${hName}</div><div style="font-size:11px; color:var(--text-dim); font-family:var(--font-mono);">${m.id}</div></td><td><div style="font-size:11px; font-family:var(--font-mono);">${u.t.toLocaleString()} tokens · ${u.r} reqs</div><div style="height:4px; background:rgba(255,255,255,0.08); border-radius:999px; margin-top:4px;"><div style="height:100%; width:${Math.min(100,Math.round((u.t/6000)*100))}%; background:var(--accent-color);"></div></div><div style="font-size:10px; color:var(--text-dim); margin-top:3px;">${getRenew(m.provider)}</div></td></tr>`;
+      const hName=m.name.replace(/(\d+(?:\.\d+)?\s*B)/i,'<span style="color:var(--accent-color)">$1</span>'); return `<tr><td><input type="checkbox" style="width:16px;height:16px;accent-color:var(--accent-color);" data-id="${m.id}" ${en?'checked':''} onchange="toggleModelInline(this)"></td><td><div style="font-weight:700;">${hName}</div><div style="font-size:11px; color:var(--accent-color); font-family:var(--font-mono); text-transform:capitalize;">${m.provider}</div></td><td style="text-align:center;"><div style="font-size:12px; font-weight:700; color:var(--text-main);">${getRenew(m.provider)}</div></td></tr>`;
     }).join('');
   }
   window.toggleModelInline=function(el){ const id=el.dataset.id; const en=el.checked; if(window.setModelEnabled) window.setModelEnabled(id,en); };
