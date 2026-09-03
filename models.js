@@ -149,7 +149,7 @@ async function callOpenRouter(model, messages, signal) {
 
   let timedOut = false;
   const controller = new AbortController();
-  const requestTimeoutMs = isNemotronUltra ? 25000 : 14000;
+  const requestTimeoutMs = isNemotronUltra ? 10000 : 14000;
   const timeoutId = setTimeout(() => {
     timedOut = true;
     controller.abort();
@@ -275,8 +275,8 @@ async function* readStream(response, signal, model) {
       if (signal && signal.aborted) break;
       const isNemotronUltra = model?.id === 'nvidia/nemotron-3-ultra-550b-a55b';
       const timeoutMs = receivedFirstChunk
-        ? (isNemotronUltra ? 18000 : 8000)
-        : (isNemotronUltra ? 25000 : 12000);
+        ? (isNemotronUltra ? 10000 : 8000)
+        : (isNemotronUltra ? 10000 : 12000);
       const readResult = await readWithTimeout(timeoutMs);
       if (signal && signal.aborted) return;
       const { done, value } = readResult;
