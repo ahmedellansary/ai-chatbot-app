@@ -2575,7 +2575,9 @@ When this request requires changing repository code, respond as a concise execut
     if (window.DevUIEngine && window.DevUIEngine.updateAgentPillDisplay) {
       window.DevUIEngine.updateAgentPillDisplay();
     }
-    showToast(`🚀 تم تعيين مستوى التطوير: ${normalizedTier}`, 'info');
+    if (window.DevUIEngine && typeof window.DevUIEngine.showToast === 'function') {
+      window.DevUIEngine.showToast(`🚀 تم تعيين مستوى التطوير: ${normalizedTier}`, 'info');
+    }
   };
 
   window._setAppTheme = function(themeName) {
