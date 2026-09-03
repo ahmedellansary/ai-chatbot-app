@@ -9,8 +9,8 @@
   <meta name="apple-mobile-web-app-title" content="X.v1 Dev">
 
   <title>X.v1 — Developer Portal & Codebase Studio</title>
-  <link rel="manifest" href="./dev-manifest.json?v=257">
-  <link rel="stylesheet" href="./dev_style.css?v=257">
+  <link rel="manifest" href="./dev-manifest.json?v=258">
+  <link rel="stylesheet" href="./dev_style.css?v=258">
   <link rel="icon" type="image/png" href="./icons/dev-icon-192.png?v=52">
   <link rel="apple-touch-icon" href="./icons/dev-icon-192.png?v=52">
   <link rel="apple-touch-icon" sizes="512x512" href="./icons/dev-icon-512.png?v=52">
@@ -93,6 +93,11 @@
     <div id="conversations-list"></div>
 
     <div class="sidebar-footer">
+      <button class="sidebar-link-btn" onclick="window.open('./models.html','_blank')" title="عرض كل النماذج">
+        <span>🤖</span>
+        <span>النماذج (Models)</span>
+        <span style="margin-right:auto;">↗</span>
+      </button>
       <button class="sidebar-link-btn" onclick="window._openDevSettingsModal()" style="color:#e0e7ff; border-color:rgba(168,85,247,0.3);" title="إعدادات المطور">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v1M12 21v1M4.22 4.22l1 1M18.36 18.36l1 1M1 12h1M21 12h1M4.22 19.78l1-1M18.36 5.64l1-1"/></svg>
         <span>الإعدادات (Settings)</span>
@@ -131,7 +136,7 @@
       <div class="header-right">
         <div class="repo-status-badge">
           <span class="status-dot"></span>
-          <span class="repo-badge-text" id="dev-status-badge-text">Dev (V257) 03-09-2026 7:40PM</span>
+          <span class="repo-badge-text" id="dev-status-badge-text">Dev (V258) 03-09-2026 7:58PM</span>
         </div>
         <script>
           (function() {
@@ -370,6 +375,10 @@
 
         <!-- ═══ Settings Navigation Tabs ═══ -->
         <div class="settings-modal-tabs-bar">
+          <button type="button" class="settings-tab-btn" data-tab="models" onclick="window._switchDevSettingsTab('models')">
+            <span>🤖</span>
+            <span>النماذج</span>
+          </button>
           <button type="button" class="settings-tab-btn active" data-tab="themes" onclick="window._switchDevSettingsTab('themes')">
             <span>🎨</span>
             <span>Theme & Fonts</span>
@@ -378,6 +387,21 @@
             <span>🧠</span>
             <span>System Prompt</span>
           </button>
+        </div>
+
+        <!-- ═══ Tab: Models — Sorted strongest→weakest === -->
+        <div id="dev-tab-models" class="settings-tab-pane hidden">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+            <div style="font-size:13px; font-weight:800;">📊 النماذج المستخدمة</div>
+            <a href="./models.html" target="_blank" style="font-size:11px; color:var(--accent-color); text-decoration:none; border:1px solid var(--border-subtle); padding:4px 8px; border-radius:8px;">فتح صفحة كاملة ↗</a>
+          </div>
+          <div style="font-size:11px; color:var(--text-dim); margin-bottom:8px;">مرتبة من الأقوى للأضعف — فعّل/ألغِ أي نموذج من الفول باك</div>
+          <div style="overflow:auto; max-height:320px; border:1px solid var(--border-subtle); border-radius:10px;">
+            <table style="width:100%; border-collapse:collapse; font-size:12.5px;">
+              <thead><tr style="background:rgba(0,0,0,0.2);"><th style="padding:8px; text-align:right; width:32px;">✓</th><th style="padding:8px; text-align:right;">النموذج</th><th style="padding:8px; text-align:right;">المزود</th><th style="padding:8px; text-align:right;">الاستهلاك</th></tr></thead>
+              <tbody id="dev-models-tbody"></tbody>
+            </table>
+          </div>
         </div>
 
         <!-- ═══ Tab 1: Themes & Appearance ═══ -->
@@ -495,10 +519,10 @@
 </div>
 
 <!-- Consolidated High-Performance Developer Studio Engine Bundle -->
-<script src="./config.js?v=257"></script>
-<script src="./auth.js?v=257"></script>
-<script src="./models.js?v=257"></script>
-<script src="./github.js?v=257"></script>
-<script src="./dev.js?v=257"></script>
+<script src="./config.js?v=258"></script>
+<script src="./auth.js?v=258"></script>
+<script src="./models.js?v=258"></script>
+<script src="./github.js?v=258"></script>
+<script src="./dev.js?v=258"></script>
 </body>
 </html>
