@@ -23,6 +23,11 @@
   --text-main: #f3f4f6;
   --text-muted: #9ca3af;
   --text-dim: #6b7280;
+  --hl-important: #f59e0b;
+  --hl-critical: #ef4444;
+  --hl-success: #10b981;
+  --hl-info: #38bdf8;
+  --hl-keyword: #a78bfa;
   
   --font-sans: 'Outfit', 'Tajawal', sans-serif;
   --font-mono: 'Fira Code', monospace;
@@ -1249,6 +1254,13 @@ pre code {
   transform: translateY(6px);
   animation: thinkingFlowIn 0.35s ease forwards;
 }
+/* Highlight by importance — dev also */
+.hl-important { color: var(--hl-important); font-weight: 700; }
+.hl-critical { color: var(--hl-critical); font-weight: 700; }
+.hl-success { color: var(--hl-success); font-weight: 700; }
+.hl-info { color: var(--hl-info); font-weight: 600; }
+.hl-keyword { color: var(--hl-keyword); font-weight: 600; background: rgba(167,139,250,0.12); padding: 1px 4px; border-radius: 4px; }
+
 .thinking-flow-item .flow-icon {
   font-size: 13px;
   flex-shrink: 0;
