@@ -22,7 +22,7 @@
     },
 
     async _loadFromSource() {
-      const CURRENT_VERSION = 'v200_claude_intelligence_tiers';
+      const CURRENT_VERSION = 'v251_smart_instruction_editing';
       try {
         if (this.files && this.files.length) {
           return this.files;
@@ -273,13 +273,11 @@
       if (!this.files || !this.files.length) return 'You are X.v1 Claude Intelligence Engine.';
       const coreFile = this.files.find(f => f.isCore && f.enabled) || this.files[0];
       let coreContent = '';
-      // High uses the compact prompt footprint of FAST; its large
-      // reasoning model performs better without the heavier balanced wrapper.
-      const normalizedTier = (tier === 'FAST' || tier === 'HIGH' || tier === 'BALANCE2') ? 'FAST' : 'MID';
+      // HIGH keeps its own 50-rule set for deep reasoning; FAST uses compact; MID is balanced
+      const normalizedTier = (tier === 'FAST') ? 'FAST' : (tier === 'HIGH' ? 'HIGH' : 'MID');
       
       const isComplex = this.isComplexQuery(userText, attachments);
-      // For simple/casual messages across ALL 3 tiers: use FAST concise summary (1.1k chars)
-      // For complex/deep reasoning: use the selected tier (MID = balanced summary, FAST = fast summary)
+      // For simple messages use FAST; for complex use the tier's own set (HIGH keeps its full protocol)
       const effectiveTier = isComplex ? normalizedTier : 'FAST';
 
       if (coreFile) {
@@ -306,6 +304,19 @@
 
       let fullPrompt = coreContent;
 
+      // HIGH: inject available instruction folders so model can decide new vs existing and check duplicates
+      if (tier === 'HIGH' || tier === 'BALANCE2') {
+        const folders = this.files.map(f => ({
+          id: f.id,
+          name: f.name,
+          isCore: !!f.isCore,
+          enabled: !!f.enabled,
+          keywords: f.keywords || [],
+          preview: (f.content || JSON.stringify(f.tiers || '')).slice(0, 600)
+        }));
+        fullPrompt += `\n\n═══════════════════════════════════════════════════════════════\n📁 AVAILABLE_INSTRUCTION_FOLDERS (for smart editing — JSON strict):\n${JSON.stringify(folders, null, 2)}\n═══════════════════════════════════════════════════════════════\nUse this list to decide: if keywords match existing file → append there; else create new folder. Always check for duplicate/conflict before outputting JSON block.`;
+      }
+
       // Only attach contextual custom files if the query is complex AND matches their keywords
       if (isComplex) {
         const textLower = ((userText || '') + ' ' + (attachments || []).map(a => a.name || '').join(' ')).toLowerCase();
@@ -330,17 +341,38 @@
         const match = aiText.match(/---BEGIN_INSTRUCTION_UPDATE---([\s\S]*?)---END_INSTRUCTION_UPDATE---/);
         if (!match || !match[1]) return;
         const data = JSON.parse(match[1].trim());
+        // If AI asks for confirmation (needs_confirmation flag), don't apply yet — it already asked user in natural language
+        if (data.needs_confirmation || data.ask_confirmation) return;
         if (data.action === 'append' && data.targetFileId && data.newInstruction) {
           const target = this.files.find(f => f.id === data.targetFileId);
           if (target) {
-            target.content += `\n- ${data.newInstruction.trim()}`;
+            // Smart JSON merge: try to merge as JSON, fallback to string append
+            try {
+              const existing = JSON.parse(target.content);
+              const incoming = JSON.parse(data.newInstruction);
+              // Merge objects
+              if (typeof existing === 'object' && typeof incoming === 'object' && !Array.isArray(existing)) {
+                Object.assign(existing, incoming);
+                target.content = JSON.stringify(existing, null, 2);
+              } else {
+                target.content = JSON.stringify(incoming, null, 2);
+              }
+            } catch {
+              // Fallback: string append (preserves old behavior)
+              target.content += `\n- ${data.newInstruction.trim()}`;
+            }
             this.save();
+            this.renderList();
             if (window.MessageRenderer) window.MessageRenderer.showToast(`✨ تم تصنيف وحفظ التعليمة بنجاح في ملف [${target.name}]!`, 'success');
           }
         } else if (data.action === 'create' && data.fileName && data.newInstruction) {
+          // Ensure strict JSON for new file
+          let finalContent = data.newInstruction;
+          try { finalContent = JSON.stringify(JSON.parse(data.newInstruction), null, 2); } catch {}
           const newId = 'custom_' + Date.now();
-          this.files.push({ id: newId, name: data.fileName, icon: '📁', desc: data.category || 'ملف تعليمات مخصص', isCore: false, enabled: true, keywords: data.keywords || [], content: data.newInstruction });
+          this.files.push({ id: newId, name: data.fileName, icon: '📁', desc: data.category || 'ملف تعليمات مخصص', isCore: false, enabled: true, keywords: data.keywords || [], content: finalContent });
           this.save();
+          this.renderList();
           if (window.MessageRenderer) window.MessageRenderer.showToast(`✨ تم إنشاء وتصنيف التعليمة في ملف جديد: [${data.fileName}]!`, 'success');
         }
       } catch (e) { console.warn('[InstructionManager] Auto update parse error:', e); }
