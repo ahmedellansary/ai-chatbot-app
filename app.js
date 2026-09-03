@@ -694,13 +694,14 @@
       this.hideTyping();
       this.showTyping(initialWord);
 
+      // Staggered 200-300ms offset — avoids exact collision with typical first-chunk arrival (1800-2500ms) and stream DOM updates
       const stages = [
         { word: 'Analyzing', delay: 0 },
-        { word: 'Thinking', delay: 1800 },
-        { word: 'Reasoning', delay: 4200 },
-        { word: 'Synthesizing', delay: 7500 },
-        { word: 'Refining', delay: 11000 },
-        { word: 'Composing', delay: 14500 }
+        { word: 'Thinking', delay: 2100 },
+        { word: 'Reasoning', delay: 4550 },
+        { word: 'Synthesizing', delay: 7850 },
+        { word: 'Refining', delay: 11300 },
+        { word: 'Composing', delay: 14900 }
       ];
 
       this._thinkingTimers = [];
@@ -2535,9 +2536,11 @@
     registerServiceWorker();
     setupInstallPrompt();
 
+    // Staggered boot fetches — prevents simultaneous 4x fetch storm that can freeze UI on giant-model tier
     InstructionManager.load().catch(console.warn);
-    loadModelCatalog().catch(console.warn);
-    updateVersionBadge().catch(()=>{});
+    setTimeout(() => loadModelCatalog().catch(console.warn), 220);
+    setTimeout(() => updateVersionBadge().catch(()=>{}), 450);
+    setTimeout(() => { try { if (window.UsageTracker && UsageTracker.fetchRealOpenRouter) UsageTracker.fetchRealOpenRouter().catch(()=>{}); } catch {} }, 750);
     // Auto-focus chat box for instant typing (keyboard appears on mobile)
     const autoFocusChat = () => {
       if (!AuthManager.isUnlocked()) return;
