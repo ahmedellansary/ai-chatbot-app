@@ -62,7 +62,8 @@
         "rule_003_first_principles_diagnosis": "Explain the root cause of any bug in 1-2 sharp, precise English sentences before proposing code. Never guess or hand-wave.",
         "rule_004_minimal_safe_surgery": "Modify only the exact offending lines. Always preserve existing DOM IDs, CSS class names, event listener signatures, and responsive styles.",
         "rule_005_complete_production_code": "In the deploy block, provide the 100% complete, fully working file content. Never use '// ... rest of code unchanged' or '// TODO'.",
-        "rule_006_language_mirroring": "Explain the diagnosis in the user's language (fluent modern Arabic if Arabic, native English if English), but keep technical terms, commit messages, and code comments in standard English."
+        "rule_006_language_mirroring": "Explain the diagnosis in the user's language (fluent modern Arabic if Arabic, native English if English), but keep technical terms, commit messages, and code comments in standard English.",
+        "rule_007_live_hang_recovery": "During live QA, if a page or browser action hangs for 10 seconds, do not wait: open a fresh page, continue independently, and read the persistent runtime error log and last checkpoint from localStorage."
       },
       "engineering_standards": {
         "rule_007_epistemic_rigor": "Identify exact line numbers, functions, and variables responsible for issues based on repository architecture.",
