@@ -922,10 +922,19 @@
         let msgRow = null;
         let pendingUpdate = false;
         let lastUpdateTs = 0;
+        let renderAgain = false;
 
-        const scheduleUpdate = () => {
-          if (pendingUpdate) return;
+        const scheduleUpdate = (force = false) => {
+          if (!force && Date.now() - lastUpdateTs < 250) {
+            renderAgain = true;
+            return;
+          }
+          if (pendingUpdate) {
+            renderAgain = true;
+            return;
+          }
           pendingUpdate = true;
+          renderAgain = false;
           // Batch DOM updates to the next animation frame to avoid long synchronous reflows
           requestAnimationFrame(() => {
             try {
@@ -944,6 +953,7 @@
             } finally {
               pendingUpdate = false;
               lastUpdateTs = Date.now();
+              if (renderAgain) scheduleUpdate();
             }
           });
         };
@@ -966,16 +976,15 @@
           if (msgRow) {
             // If last update was recent, batch this chunk and let requestAnimationFrame handle it.
             const now = Date.now();
-            if (now - lastUpdateTs > 80) {
+            if (now - lastUpdateTs > 250) {
               scheduleUpdate();
             } else {
-              // ensure we schedule eventually
-              scheduleUpdate();
+              renderAgain = true;
             }
           }
         }
         // final flush after stream completes
-        if (msgRow && !pendingUpdate) scheduleUpdate();
+        if (msgRow) scheduleUpdate(true);
 
         if (fullContent.includes('---BEGIN_INSTRUCTION_UPDATE---')) {
           InstructionManager.handleAutoInstructionUpdate(fullContent);
