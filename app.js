@@ -83,6 +83,7 @@
     conversations: [],
     activeConvId: null,
     systemPrompt: '',
+    isThinking: false,
     isStreaming: false,
     sendInFlight: false,
     sendLock: false,
@@ -932,8 +933,10 @@
       MessageRenderer.appendMessage(userMsg);
 
       state.isStreaming = true;
+      state.isThinking = true;
       state.abortController = new AbortController();
       MessageRenderer.startProgressiveThinking('Analyzing');
+      UIEngine.updateSendBtnState();
 
       const tier = state.currentMode || 'MID';
       debugCheckpoint('send-start', { tier, textLength: textForPayload.length });
@@ -947,8 +950,10 @@
         debugCheckpoint('prompt-ready', { tier, promptLength: systemPromptForCall.length });
       } catch (err) {
         MessageRenderer.hideTyping();
+        state.isThinking = false;
         state.isStreaming = false;
         state.abortController = null;
+        UIEngine.updateSendBtnState();
         const errorMessage = {
           id: generateId(),
           role: 'ai',
@@ -1036,6 +1041,8 @@
 
           if (!msgRow) {
             MessageRenderer.hideTyping();
+            state.isThinking = false;
+            UIEngine.updateSendBtnState();
             MessageRenderer.appendMessage(aiMsgObj);
             msgRow = document.querySelector(`[data-id="${aiMsgId}"] .msg-content`);
             const aiElem = document.querySelector(`[data-id="${aiMsgId}"]`);
@@ -1057,6 +1064,8 @@
         }
         // final flush after stream completes
         if (msgRow && !pendingUpdate) scheduleUpdate();
+        // Ensure thinking flow is hidden and no glow remains after strong model finishes
+        try { MessageRenderer.hideTyping(); document.getElementById('thinking-flow')?.remove(); document.querySelectorAll('.input-container.thinking').forEach(el=> el.classList.remove('thinking')); document.querySelectorAll('.flow-dot').forEach(d=> d.style.animation='none'); } catch {}
 
         if (fullContent.includes('---BEGIN_INSTRUCTION_UPDATE---') || fullContent.includes('"title"') && fullContent.includes('"content"')) {
           InstructionManager.handleAutoInstructionUpdate(fullContent);
@@ -1090,6 +1099,8 @@
 
       } catch (err) {
         MessageRenderer.hideTyping();
+        state.isThinking = false;
+        UIEngine.updateSendBtnState();
         if (err.name !== 'AbortError') {
           debugPrint(err, `Chat request failed (${state.currentMode || 'MID'})`);
           // Generic giant-model error handling: always print error in chat after thinking phase, never freeze
@@ -1108,8 +1119,9 @@
           MessageRenderer.showToast('❌ ' + errText.slice(0,180), 'error');
         }
       } finally {
-        // Guaranteed unlock — prevents page freeze for giant-model tiers (HIGH)
+        // Guaranteed unlock — prevents page freeze for giant-model tiers (HIGH) — motion only when operation actually running
         MessageRenderer.hideTyping();
+        state.isThinking = false;
         state.isStreaming = false;
         state.abortController = null;
         state.sendInFlight = false;
@@ -1361,7 +1373,7 @@
         // Render collapsed: hide details, show only briefing line with yes/no
         const isCompliant = /نعم|yes|✓|مُلتزم/i.test(reviewText);
         const brief = isCompliant ? t('✓ نعم — ملتزم', '✓ Yes — compliant') : t('✗ لا — ' + (reviewText.split('\n')[0]||'').slice(0,80), '✗ No — see details');
-        // Re-render collapsed
+        // Re-render collapsed + small apply button (same theme, same instruction-edit flow)
         const box = aiRow.querySelector('.observer-box');
         if(box){
           box.classList.add('collapsed');
@@ -1372,7 +1384,19 @@
           box.querySelectorAll('.flow-dot').forEach(d=> d.style.display='none');
           const flow = box.querySelector('.thinking-flow');
           if(flow) flow.style.display='none';
-          // Show brief instead of full review
+          // Small apply button — same theme, same instruction-edit flow
+          const existingApply = box.querySelector('.observer-apply-btn');
+          if(existingApply) existingApply.remove();
+          const applyBtn = document.createElement('button');
+          applyBtn.className='observer-apply-btn';
+          applyBtn.style.cssText='font-size:11px; padding:4px 10px; border-radius:6px; background:var(--accent-color); color:#fff; border:1px solid var(--accent-color); cursor:pointer; margin-top:6px; margin-inline-start:6px;';
+          applyBtn.textContent = isAr ? 'تطبيق الاقتراح' : 'Apply suggestion';
+          applyBtn.onclick = () => {
+            const improvement = (reviewText.split('\n').find(l=> l.includes('تحسين') || l.toLowerCase().includes('improvement')) || reviewText.slice(-150)).trim();
+            const clean = improvement.replace(/^\d+\.\s*/, '').slice(0, 300);
+            if(window._applyObserverSuggestion) window._applyObserverSuggestion(clean);
+          };
+          // Show brief instead of full review — small button same theme, no motion after
           const existingBrief = box.querySelector('.observer-brief');
           if(existingBrief) existingBrief.remove();
           const b = document.createElement('div');
@@ -1380,6 +1404,12 @@
           b.style.cssText='font-size:12px; margin-top:6px;';
           b.textContent = concise || brief;
           box.appendChild(b);
+          box.appendChild(applyBtn);
+          // Also show briefEl as inline badge
+          const existingBadge = box.querySelector('.observer-badge');
+          if(existingBadge) existingBadge.remove();
+          briefEl.className='observer-badge';
+          box.appendChild(briefEl);
         }
         renderObserver(reviewText);
         // Ensure no glow/motion remains
@@ -1393,6 +1423,22 @@
     }
   };
   try { window.ObserverEngine = ObserverEngine; } catch(e) {}
+  window._applyObserverSuggestion = function(text){
+    try{
+      const clean = String(text||'').trim().slice(0,500);
+      if(!clean) return;
+      const isAr = /[\u0600-\u06FF]/.test(clean);
+      const fileName = isAr ? `اقتراح محسن — ${new Date().toLocaleDateString('ar-EG')}` : `Improved suggestion — ${new Date().toLocaleDateString()}`;
+      const content = JSON.stringify({ suggestion: clean, appliedAt: new Date().toISOString(), source: 'observer' }, null, 2);
+      const mgr = window.InstructionManager;
+      if(mgr){
+        const newId='custom_'+Date.now();
+        mgr.files.push({ id:newId, name: fileName, icon:'✨', desc: isAr?'اقتراح محسن من المراقب':'Observer suggestion', isCore:false, enabled:true, keywords:['تحسين','observer', isAr?'اقتراح':'suggestion'], content });
+        mgr.save(); mgr.renderList();
+        if(window.MessageRenderer) window.MessageRenderer.showToast(isAr ? '✨ تم تطبيق الاقتراح كقاعدة جديدة' : '✨ Suggestion applied as new rule', 'success');
+      }
+    }catch(e){ console.warn('[ApplySuggestion]',e); }
+  };
 
   // ─────────────────────────────────────────────────────────────────
   // 8. SKILLS ENGINE & SANDBOX (SkillsEngine)
@@ -1545,7 +1591,7 @@
       const btn = $('send-btn');
       const inputContainer = document.querySelector('#input-section .input-container') || document.querySelector('.input-container');
       if (inputContainer) {
-        inputContainer.classList.toggle('thinking', Boolean(state.isStreaming));
+        inputContainer.classList.toggle('thinking', Boolean(state.isThinking));
       }
       if (!btn) return;
       const textVal = inputEl ? inputEl.value : '';
