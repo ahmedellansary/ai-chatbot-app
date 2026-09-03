@@ -273,9 +273,9 @@
       if (!this.files || !this.files.length) return 'You are X.v1 Claude Intelligence Engine.';
       const coreFile = this.files.find(f => f.isCore && f.enabled) || this.files[0];
       let coreContent = '';
-      // Balance 2 uses the compact prompt footprint of FAST; its large
+      // High uses the compact prompt footprint of FAST; its large
       // reasoning model performs better without the heavier balanced wrapper.
-      const normalizedTier = (tier === 'FAST' || tier === 'BALANCE2') ? 'FAST' : 'MID';
+      const normalizedTier = (tier === 'FAST' || tier === 'HIGH' || tier === 'BALANCE2') ? 'FAST' : 'MID';
       
       const isComplex = this.isComplexQuery(userText, attachments);
       // For simple/casual messages across ALL 3 tiers: use FAST concise summary (1.1k chars)
