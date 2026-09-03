@@ -990,11 +990,11 @@ When this request requires changing repository code, respond as a concise execut
         const getCls=b=>{ if(b.includes('التناقض:')) return b.includes('نعم')?'warn':'ok'; if(b.includes('الالتزام:')||b.includes('المصادر:')) return (b.includes('نعم')||b.includes('موثوقة')||b.includes('سليم'))?'ok':'warn'; return b.includes('لا')||b.includes('تحتاج')?'warn':'ok'; };
         const buildBullets = (txt)=> {
           const lines = String(txt||'').split(/\n/).map(s=>s.trim()).filter(Boolean);
-          const bullets = lines.map(l=> l.replace(/^[��?]\s*/,'').replace(/^\d+[\.\)\-]\s*/,'').trim()).filter(Boolean).slice(0,5);
+          const bullets = lines.map(l=> l.replace(/^[��?]\s*/,'').replace(/^\d+[\.\)\-]\s*/,'').trim()).filter(Boolean).slice(0,5);
           if(!bullets.length) return `<div style="font-size:12px;color:var(--text-dim)">${escapeHtml(String(txt||'').slice(0,140))}</div>`;
           const main=bullets.slice(0,-1), last=bullets.slice(-1)[0];
           const mainHtml=main.length? `<ul class="observer-bullets">${main.map(b=>`<li class="observer-bullet ${getCls(b)}"><span class="observer-bullet-text">${escapeHtml(b)}</span></li>`).join('')}</ul>` : '';
-          const box=last? `<div class="suggest-box"><div class="suggest-box-body">${escapeHtml(last)}</div><div class="suggest-box-actions"><button class="observer-apply-btn" onclick="(function(btn){ const r=btn.closest('.dev-observer-box').dataset.review||''; if(window._applyObserverSuggestion) window._applyObserverSuggestion(r); })(this)">✨ Apply</button><button class="llm-end-btn" onclick="window._sendToLLM(this)">⚡ Send to LLM</button><button class="llm-send-apply-btn" onclick="window._sendAndApply(this)">⚡ Send & Apply</button></div></div>` : '';
+          const box=last? `<div class="suggest-box"><div class="suggest-box-body">${escapeHtml(last)}</div><div class="actions-header" onclick="this.nextElementSibling.classList.toggle('hidden'); this.classList.toggle('collapsed')"><span>⚡</span><span>ACTIONS</span><span class="agent-committed-nums"><span class="agent-num ok">0</span><span class="agent-num warn">3</span></span><span class="agent-toggle-icon">▾</span></div><div class="suggest-box-actions"><button class="observer-apply-btn" onclick="(function(btn){ const r=btn.closest('.dev-observer-box').dataset.review||''; if(window._applyObserverSuggestion) window._applyObserverSuggestion(r, btn); })(this)">⚡ Apply</button><button class="llm-end-btn" onclick="window._sendToLLM(this)">⚡ Send to LLM</button><button class="llm-send-apply-btn" onclick="window._sendAndApply(this)">⚡ Send & Apply</button></div></div>` : '';
           return mainHtml+box;
         };
         const okN = finalReview ? (String(finalReview).match(/نعم|yes|✓|مُلتزم|Compliant/gi)||[]).length : 0;
@@ -1033,8 +1033,9 @@ When this request requires changing repository code, respond as a concise execut
     }
   };
   try { window.DevObserverEngine = DevObserverEngine; } catch(e) {}
-  window._applyObserverSuggestion = window._applyObserverSuggestion || function(text){
+  window._applyObserverSuggestion = window._applyObserverSuggestion || function(text, btn){
     try{
+      if(btn){ const box=btn.closest('.suggest-box'); if(box){ const h=box.querySelector('.actions-header'); if(h){ const okEl=h.querySelector('.agent-num.ok'), wEl=h.querySelector('.agent-num.warn'); if(okEl) okEl.textContent='1'; if(wEl) wEl.textContent='2'; } const flow=document.createElement('div'); flow.className='thinking-flow'; flow.style.margin='8px 0 0'; flow.innerHTML='<div class="thinking-flow-item reached"><span class="flow-dot"></span><span class="flow-text">Applying...</span></div><div class="thinking-flow-item reached" style="animation-delay:0.3s"><span class="flow-dot"></span><span class="flow-text">Done ✓</span></div>'; box.appendChild(flow); setTimeout(()=>flow.remove(),2200); } }
       const clean=String(text||'').trim().slice(0,500); if(!clean) return;
       const isAr=/[\u0600-\u06FF]/.test(clean);
       const fileName=isAr ? `اقتراح محسن — ${new Date().toLocaleDateString('ar-EG')}` : `Improved suggestion — ${new Date().toLocaleDateString()}`;
@@ -2572,10 +2573,15 @@ When this request requires changing repository code, respond as a concise execut
       input.dispatchEvent(new Event('input'));
       if(window.DevUIEngine) window.DevUIEngine.updateSendBtn();
       input.focus();
-      if(window.DevUIEngine) window.DevUIEngine.showToast('↗ Contradictions sent to LLM','info');
+      setTimeout(()=>{
+        const sendBtn=document.getElementById('send-btn');
+        if(sendBtn && !sendBtn.disabled) sendBtn.click();
+        else if(window.DevChatEngine) window.DevChatEngine.sendMessage(q);
+        if(window.DevUIEngine) window.DevUIEngine.showToast('↗ Sent to LLM as your message','success');
+      },120);
     }catch(e){}
   };
-  window._sendAndApply = function(btn){ if(window._devState && (window._devState.isStreaming || window._devState.isThinking)){ if(window.DevUIEngine) window.DevUIEngine.showToast('⏳ انتظر انتهاء الرد الحالي','info'); return; } try{ const b=btn.closest('.dev-observer-box, .observer-box, .multi-agent-box'); const rv=b?.dataset?.review||b?.innerText||''; if(rv && window._applyObserverSuggestion) window._applyObserverSuggestion(rv); window._sendToLLM(btn);}catch(e){} };
+  window._sendAndApply = function(btn){ if(window._devState && (window._devState.isStreaming || window._devState.isThinking)){ if(window.DevUIEngine) window.DevUIEngine.showToast('⏳ انتظر انتهاء الرد الحالي','info'); return; } try{ const b=btn.closest('.dev-observer-box, .observer-box, .multi-agent-box'); const rv=b?.dataset?.review||b?.innerText||''; if(rv && window._applyObserverSuggestion) window._applyObserverSuggestion(rv, btn); setTimeout(()=> window._sendToLLM(btn), 250);}catch(e){} };
 
   window._openRollbackModal = async function() {
     const modal = $('rollback-modal');
