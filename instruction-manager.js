@@ -336,11 +336,37 @@
     },
 
     handleAutoInstructionUpdate(aiText) {
-      if (!aiText || !aiText.includes('---BEGIN_INSTRUCTION_UPDATE---')) return;
+      if (!aiText) return;
+      let data = null;
+      // Primary: wrapped block
+      if (aiText.includes('---BEGIN_INSTRUCTION_UPDATE---')) {
+        try {
+          const match = aiText.match(/---BEGIN_INSTRUCTION_UPDATE---([\s\S]*?)---END_INSTRUCTION_UPDATE---/);
+          if (match && match[1]) data = JSON.parse(match[1].trim());
+        } catch {}
+      }
+      // Fallback: plain ```json block (AI sometimes omits wrapper)
+      if (!data) {
+        try {
+          const codeMatch = aiText.match(/```json\s*([\s\S]*?)\s*```/);
+          if (codeMatch) {
+            const parsed = JSON.parse(codeMatch[1].trim());
+            if (parsed && parsed.action === 'delete' && (parsed.targetFileId || parsed.fileName)) {
+              data = { action: 'delete', targetFileId: parsed.targetFileId, fileName: parsed.fileName };
+            } else if (parsed && (parsed.title || parsed.fileName) && (parsed.content || parsed.newInstruction)) {
+              data = {
+                action: 'create',
+                fileName: parsed.title || parsed.fileName,
+                newInstruction: typeof parsed.content === 'string' ? parsed.content : JSON.stringify(parsed.content || parsed.newInstruction),
+                keywords: parsed.keywords || [],
+                category: parsed.category || 'general'
+              };
+            }
+          }
+        } catch {}
+      }
+      if (!data) return;
       try {
-        const match = aiText.match(/---BEGIN_INSTRUCTION_UPDATE---([\s\S]*?)---END_INSTRUCTION_UPDATE---/);
-        if (!match || !match[1]) return;
-        const data = JSON.parse(match[1].trim());
         // If AI asks for confirmation (needs_confirmation flag), don't apply yet — it already asked user in natural language
         if (data.needs_confirmation || data.ask_confirmation) return;
         if (data.action === 'append' && data.targetFileId && data.newInstruction) {
@@ -374,6 +400,14 @@
           this.save();
           this.renderList();
           if (window.MessageRenderer) window.MessageRenderer.showToast(`✨ تم إنشاء وتصنيف التعليمة في ملف جديد: [${data.fileName}]!`, 'success');
+        } else if (data.action === 'delete' && (data.targetFileId || data.fileName)) {
+          const target = data.targetFileId ? this.files.find(f => f.id === data.targetFileId) : this.files.find(f => f.name === data.fileName);
+          if (target && !target.isCore) {
+            this.files = this.files.filter(f => f.id !== target.id);
+            this.save();
+            this.renderList();
+            if (window.MessageRenderer) window.MessageRenderer.showToast(`🗑️ تم حذف "${target.name}"`, 'info');
+          }
         }
       } catch (e) { console.warn('[InstructionManager] Auto update parse error:', e); }
     }
