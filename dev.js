@@ -188,8 +188,9 @@
     conversations: [],
     activeConvId: null,
     devPrompt: '',
+    currentMode: localStorage.getItem('xv1_dev_mode') || 'MID',
     selectedAgentId: 'openai/gpt-oss-120b',
-    activeAgentId: 'openai/gpt-oss-120b',
+    activeAgentId: localStorage.getItem('active_dev_agent_id') || 'openai/gpt-oss-120b',
     isMultiAgentMode: localStorage.getItem('is_dev_multi_agent_mode') === '1',
     currentFilter: 'all',
     isStreaming: false,
@@ -212,6 +213,7 @@
       const savedAgent = localStorage.getItem('dev_selected_agent');
       if (savedAgent && DEV_AGENTS.some(a => a.id === savedAgent)) {
         state.selectedAgentId = savedAgent;
+        state.activeAgentId = savedAgent;
       }
     },
 
@@ -233,7 +235,9 @@
       const agent = DEV_AGENTS.find(a => a.id === agentId);
       if (agent) {
         state.selectedAgentId = agent.id;
+        state.activeAgentId = agent.id;
         localStorage.setItem('dev_selected_agent', agent.id);
+        localStorage.setItem('active_dev_agent_id', agent.id);
         DevUIEngine.updateAgentPillDisplay();
       }
     },
@@ -364,11 +368,39 @@
       return resolvedContent;
     },
 
+    isCodeChangeRequest(text = '') {
+      return /(?:عدّل|عدل|أصلح|اصلح|غيّر|غير|أضف|اضف|احذف|ادمج|حدّث|حدث|modify|change|fix|add|delete|merge|update|refactor|implement|patch|deploy)/i.test(text);
+    },
+
+    getCodeChangeResponseProtocol() {
+      return `
+
+═══════════════════════════════════════════════════════════════
+CODE CHANGE RESPONSE PROTOCOL
+═══════════════════════════════════════════════════════════════
+When this request requires changing repository code, respond as a concise execution log:
+1. Start with one short sentence stating the exact scope.
+2. Add one status line per real step using this format:
+   ◌ Read \`filename\` — lines or relevant section when known
+   ● Analyzing — root cause or implementation decision
+   ◌ Editing \`filename\` — precise change
+   ◌ Testing — exact validation performed or still required
+   ● Done — one-line result
+3. Mention only files and line ranges actually inspected or changed. Never invent tool calls, files, line numbers, test results, or a successful deployment.
+4. Keep the execution log in the user's language. Keep technical filenames, commands, and commit messages in English.
+5. If a code patch is required, append the complete deploy JSON block after the execution log. Do not dump the full file outside that block.
+`;
+    },
+
     buildFallbackCascade(primaryAgent, estimatedTokens = 0) {
       const mode = state.currentMode || 'MID';
       const tierList = (DEV_TIER_MODELS && DEV_TIER_MODELS[mode]) ? DEV_TIER_MODELS[mode] : null;
       if (tierList && tierList.length) {
-        return tierList;
+        const primaryKey = primaryAgent ? `${primaryAgent.provider}:${primaryAgent.id}` : '';
+        return [
+          ...tierList.filter(agent => `${agent.provider}:${agent.id}` === primaryKey),
+          ...tierList.filter(agent => `${agent.provider}:${agent.id}` !== primaryKey)
+        ];
       }
       return DEV_AGENTS;
     },
@@ -450,28 +482,35 @@
       let buffer = '';
       let hasTokens = false;
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
 
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split('\n');
         buffer = lines.pop() || '';
 
-        for (const line of lines) {
-          const trimmed = line.trim();
-          if (!trimmed || !trimmed.startsWith('data: ')) continue;
-          const dataStr = trimmed.slice(6);
-          if (dataStr === '[DONE]') continue;
-          try {
-            const parsed = JSON.parse(dataStr);
-            const delta = parsed.choices?.[0]?.delta?.content;
-            if (delta) {
-              hasTokens = true;
-              onChunk(delta);
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed || !trimmed.startsWith('data: ')) continue;
+            const dataStr = trimmed.slice(6);
+            if (dataStr === '[DONE]') continue;
+            try {
+              const parsed = JSON.parse(dataStr);
+              if (parsed.error) throw new Error(parsed.error.message || 'Stream error');
+              const delta = parsed.choices?.[0]?.delta?.content;
+              if (delta) {
+                hasTokens = true;
+                onChunk(delta);
+              }
+            } catch (e) {
+              if (e.message && !e.message.includes('JSON')) throw e;
             }
-          } catch {}
+          }
         }
+      } finally {
+        reader.releaseLock();
       }
 
       if (!hasTokens) {
@@ -519,6 +558,9 @@
       const _devTierCfg = this.getAdaptiveConfigForDev(DevState.getSelectedAgent(), Math.ceil(((textForPayload?.length || 0) + (rawDevPrompt?.length || 0)) / 3.5));
       const _devBriefing = this.generateDevBriefing(conv, DevState.getSelectedAgent(), Math.ceil(((textForPayload?.length || 0) + (rawDevPrompt?.length || 0)) / 3.5));
       let systemPrompt = rawDevPrompt;
+      if (this.isCodeChangeRequest(textForPayload)) {
+        systemPrompt += this.getCodeChangeResponseProtocol();
+      }
       if (_devBriefing) {
         systemPrompt = `${systemPrompt}\n\n═══════════════════════════════════════════════════════════════\n${_devBriefing}\n═══════════════════════════════════════════════════════════════\n(خلاصة ذكية للجلسة الكاملة — استخدمها كسياق كأنك حاضر من البداية. آخر ${_devTierCfg.recentCount} رسائل هي النص الحرفي الأحدث)`;
       }
@@ -784,7 +826,7 @@
       const stage3Agent = DevState.getSelectedAgent();
       const stage3Messages = [
         ...apiMessages.slice(0, -1),
-        { role: 'user', content: `${textForPayload}\n\n[CONSENSUS CONTEXT]\nPlan: ${stage1Output.slice(0, 200)}\nReview: ${stage2Output.slice(0, 150)}\n\n[STRICT DIRECTIVE]: Respond directly in the EXACT SAME LANGUAGE as the user (Arabic if user wrote in Arabic). Keep your answer concise, natural, friendly, and helpful. Do not dump large raw code blocks into text. If code modification is needed, append the deployment JSON block at the very end.` }
+        { role: 'user', content: `${textForPayload}\n\n[CONSENSUS CONTEXT]\nPlan: ${stage1Output.slice(0, 200)}\nReview: ${stage2Output.slice(0, 150)}\n\n[STRICT DIRECTIVE]: Respond directly in the EXACT SAME LANGUAGE as the user (Arabic if user wrote in Arabic). Keep your answer concise, natural, friendly, and helpful. For code changes, follow CODE CHANGE RESPONSE PROTOCOL exactly. Do not dump large raw code blocks into text. If code modification is needed, append the deployment JSON block at the very end.` }
       ];
 
       let finalOutput = '';
@@ -1265,6 +1307,7 @@
     handleSend() {
       const input = $('user-input');
       if (!input) return;
+      if (state.isStreaming) return;
       const text = input.value;
       input.value = '';
       input.style.height = 'auto';
@@ -2261,8 +2304,7 @@
     const agent = DEV_AGENTS.find(a => a.id === agentId);
     if (!agent) return;
 
-    state.activeAgentId = agent.id;
-    localStorage.setItem('active_dev_agent_id', agent.id);
+    DevState.setSelectedAgent(agent.id);
 
     DevUIEngine.updateAgentPillDisplay();
     $('model-dropdown-menu')?.classList.remove('show');
@@ -2523,17 +2565,17 @@
   };
 
   window._selectDevTier = function(tier) {
-    const st = window._devState || devState;
-    if (st) {
-      st.currentMode = tier;
-      try { localStorage.setItem('xv1_dev_mode', tier); } catch(e) {}
-    }
+    const normalizedTier = ['HIGH', 'MID', 'FAST'].includes(String(tier).toUpperCase())
+      ? String(tier).toUpperCase()
+      : 'MID';
+    state.currentMode = normalizedTier;
+    try { localStorage.setItem('xv1_dev_mode', normalizedTier); } catch(e) {}
     const menu = document.getElementById('model-dropdown-menu');
     if (menu) menu.classList.remove('show');
     if (window.DevUIEngine && window.DevUIEngine.updateAgentPillDisplay) {
       window.DevUIEngine.updateAgentPillDisplay();
     }
-    showToast(`🚀 تم تعيين مستوى التطوير: ${tier}`, 'info');
+    showToast(`🚀 تم تعيين مستوى التطوير: ${normalizedTier}`, 'info');
   };
 
   window._setAppTheme = function(themeName) {
