@@ -572,6 +572,14 @@ When this request requires changing repository code, respond as a concise execut
       if (attachedImages.length > 0 && !textForPayload) {
         textForPayload = 'يرجى فحص هذه الصورة/الملف المرفق وتطبيق التعديل المطلوب.';
       }
+      // Web Browse + RAG-lite for dev
+      try{
+        const urls=[...textForPayload.matchAll(/https?:\/\/[^\s"']+/g)].map(m=>m[0]).slice(0,2);
+        for(const u of urls){ try{ const r=await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,{signal:AbortSignal.timeout(5000)}); if(r.ok){ const t=await r.text(); textForPayload+=`\n\n--- رابط ${u} ---\n${t.slice(0,3500)}\n---`; } }catch{} }
+        const ragKeys=['index.html','style.css','app.js','dev.js','config.js','github.js'];
+        const hit=ragKeys.filter(k=> textForPayload.toLowerCase().includes(k.toLowerCase()));
+        for(const f of hit.slice(0,2)){ try{ const r=await fetch(`./${f}?t=${Date.now()}`); if(r.ok){ const t=await r.text(); textForPayload+=`\n\n--- ملف ${f} ---\n${t.slice(0,3500)}\n---`; } }catch{} }
+      }catch{}
 
       // Clear attachments
       state.attachments = [];
@@ -605,10 +613,12 @@ When this request requires changing repository code, respond as a concise execut
         .slice(-_devTierCfg.recentCount)
         .map(m => ({ role: m.role === 'ai' ? 'assistant' : m.role, content: m.content }));
 
+      const visImgs = currentAttachments.filter(a=> a.type.startsWith('image/') && a.dataUrl);
+      const userContentDev = visImgs.length ? [{type:'text', text: textForPayload}, ...visImgs.slice(0,3).map(a=>({type:'image_url', image_url:{url:a.dataUrl}}))] : textForPayload;
       const apiMessages = [
         { role: 'system', content: systemPrompt },
         ...recentMessages,
-        { role: 'user', content: textForPayload }
+        { role: 'user', content: userContentDev }
       ];
 
       let fullContent = '';
@@ -1569,7 +1579,7 @@ When this request requires changing repository code, respond as a concise execut
           ${modelBadgeHtml}
           <div class="claude-actions-bar" style="display:flex;gap:8px;margin-top:6px">
             <button class="claude-action-btn" onclick="navigator.clipboard.writeText(this.closest('.message-row').querySelector('.msg-content').innerText); window.DevUIEngine.showToast('Copied','success')" title="نسخ"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button>
-            <button class="claude-action-btn" onclick="window._retryMsg && window._retryMsg('${msg.id}')" title="إعادة"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg></button>
+            <button class="claude-action-btn" onclick="window._speakMsg && window._speakMsg(this)" title="????? ???"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg></button><button class="claude-action-btn" onclick="window._retryMsg && window._retryMsg('${msg.id}')" title="إعادة"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg></button>
           </div>
         `;
       }
