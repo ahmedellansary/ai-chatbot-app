@@ -62,8 +62,8 @@ const rotateGroqKey = () => {
 
 // ─── Model Tiers — Unified active model set (Strictly Isolated within Tier) ───
 const MODELS = {
-  HIGH: [
-    { id: 'nvidia/nemotron-3-super-120b-a12b:free', name: 'Nemotron 3 Super 120B', provider: 'openrouter' }
+  HARD: [
+    { id: 'nvidia/nemotron-3-ultra-550b-a55b:free', name: 'Nemotron 3 Ultra 550B', provider: 'openrouter' }
   ],
   MID: [
     { id: 'openai/gpt-oss-120b', name: 'GPT OSS 120B (Balanced Core)', provider: 'groq' },
@@ -297,7 +297,7 @@ async function* chatWithFallback(tier, messages, signal, onModelChange) {
   let usedFallback = false;
 
   // IMPORTANT: fallback remains inside the selected tier only.
-  // HIGH -> HIGH models only, MID -> MID models only, FAST -> FAST models only.
+  // HARD -> HARD models only, MID -> MID models only, FAST -> FAST models only.
   for (let i = 0; i < models.length; i++) {
     const model = models[i];
     const isFallback = i > 0;
