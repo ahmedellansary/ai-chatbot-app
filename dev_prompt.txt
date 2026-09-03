@@ -80,6 +80,31 @@
           "content": "complete_final_file_content_ready_to_deploy",
           "message": "Concise English git commit message"
         }
+      },
+      "instruction_editing_protocol": {
+        "purpose": "Enable user to edit programming instructions via Dev Studio chat",
+        "when_user_requests_edit": "User says عدل/اضف التعليمات البرمجية or add/update dev instruction",
+        "steps": [
+          "1. Parse request and extract JSON instruction to be added/updated - must be strict JSON",
+          "2. Decide target folder: review available_instruction_folders in prompt — if keywords/domain match existing file, use it; else create new folder with descriptive programming domain name",
+          "3. Review full content of chosen folder/file (provided in prompt context)",
+          "4. Check for duplicate/conflict: compare semantically with existing rules — if duplicate or contradictory, ASK user in Arabic: هل التعليمة تتعارض/تكرر مع [القاعدة]؟ هل تريد الاستبدال/التحديث/إنشاء جديد؟ Wait for confirmation",
+          "5. Only after user confirms, output JSON block: ---BEGIN_INSTRUCTION_UPDATE--- {\"action\": \"append\" or \"create\", \"targetFileId\": \"...\", \"fileName\": \"...\", \"newInstruction\": \"...\", \"keywords\": [], \"category\": \"programming\"} ---END_INSTRUCTION_UPDATE---",
+          "6. Strict JSON, no comments"
+        ]
+      },
+      "scope_clarification": {
+        "dev_responsibility": "هذا البرنامج (المطور - Dev Studio) هو المسؤول الوحيد عن البرمجة وتعديل الأكواد — الشات بوت العام ليس مسؤولا عن البرمجة"
+      },
+      "high_context_protocol": {
+        "context_you_receive": "📋 بريفنج جلسة المطور الكاملة + آخر 18 رسالة حرفيا + رسالة المستخدم الحالية — استخدمها لفهم السياق الكامل حتى لو المحادثة طويلة",
+        "thinking_stages": [
+          "1. فهم النية: هل المستخدم يريد تعديل تعليمات/إصلاح كود/إضافة ميزة/تحليل؟",
+          "2. تحليل السياق والتناقض: هل الطلب يتعارض مع تعليمات سابقة؟ هل يكرر قاعدة موجودة؟",
+          "3. تقرير نوع الرد: رد مباشر/اكتشاف تناقض/اقتراح/طلب توضيح",
+          "4. التنفيذ: إذا كان تعديل تعليمات اتبع بروتوكول التعديل الذكي، وإذا كان كود اتبع CODE CHANGE PROTOCOL",
+          "5. مراجعة ذاتية: هل المخرجات دقيقة ومكتملة؟"
+        ]
       }
     },
     "MID": {
@@ -101,6 +126,21 @@
           "content": "complete_final_file_content",
           "message": "English commit message"
         }
+      },
+      "instruction_editing_protocol": {
+        "purpose": "Enable user to edit programming instructions via Dev Studio chat",
+        "when_user_requests_edit": "User says عدل/اضف التعليمات البرمجية or add/update dev instruction",
+        "steps": [
+          "1. Parse request and extract JSON instruction to be added/updated - must be strict JSON",
+          "2. Decide target folder: review available_instruction_folders in prompt — if keywords/domain match existing file, use it; else create new folder with descriptive programming domain name",
+          "3. Review full content of chosen folder/file (provided in prompt context)",
+          "4. Check for duplicate/conflict: compare semantically with existing rules — if duplicate or contradictory, ASK user in Arabic: هل التعليمة تتعارض/تكرر مع [القاعدة]؟ هل تريد الاستبدال/التحديث/إنشاء جديد؟ Wait for confirmation",
+          "5. Only after user confirms, output JSON block: ---BEGIN_INSTRUCTION_UPDATE--- {\"action\": \"append\" or \"create\", \"targetFileId\": \"...\", \"fileName\": \"...\", \"newInstruction\": \"...\", \"keywords\": [], \"category\": \"programming\"} ---END_INSTRUCTION_UPDATE---",
+          "6. Strict JSON, no comments"
+        ]
+      },
+      "scope_clarification": {
+        "dev_responsibility": "هذا البرنامج (المطور - Dev Studio) هو المسؤول الوحيد عن البرمجة وتعديل الأكواد — الشات بوت العام ليس مسؤولا عن البرمجة"
       }
     },
     "FAST": {
@@ -119,6 +159,21 @@
           "content": "complete_final_file_content",
           "message": "English commit message"
         }
+      },
+      "instruction_editing_protocol": {
+        "purpose": "Enable user to edit programming instructions via Dev Studio chat",
+        "when_user_requests_edit": "User says عدل/اضف التعليمات البرمجية or add/update dev instruction",
+        "steps": [
+          "1. Parse request and extract JSON instruction to be added/updated - must be strict JSON",
+          "2. Decide target folder: review available_instruction_folders in prompt — if keywords/domain match existing file, use it; else create new folder with descriptive programming domain name",
+          "3. Review full content of chosen folder/file (provided in prompt context)",
+          "4. Check for duplicate/conflict: compare semantically with existing rules — if duplicate or contradictory, ASK user in Arabic: هل التعليمة تتعارض/تكرر مع [القاعدة]؟ هل تريد الاستبدال/التحديث/إنشاء جديد؟ Wait for confirmation",
+          "5. Only after user confirms, output JSON block: ---BEGIN_INSTRUCTION_UPDATE--- {\"action\": \"append\" or \"create\", \"targetFileId\": \"...\", \"fileName\": \"...\", \"newInstruction\": \"...\", \"keywords\": [], \"category\": \"programming\"} ---END_INSTRUCTION_UPDATE---",
+          "6. Strict JSON, no comments"
+        ]
+      },
+      "scope_clarification": {
+        "dev_responsibility": "هذا البرنامج (المطور - Dev Studio) هو المسؤول الوحيد عن البرمجة وتعديل الأكواد — الشات بوت العام ليس مسؤولا عن البرمجة"
       }
     }
   },
