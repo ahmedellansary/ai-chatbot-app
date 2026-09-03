@@ -394,7 +394,7 @@
     },
 
     isCodeChangeRequest(text = '') {
-      return /(?:عدّل|عدل|أصلح|اصلح|غيّر|غير|أضف|اضف|احذف|ادمج|حدّث|حدث|modify|change|fix|add|delete|merge|update|refactor|implement|patch|deploy)/i.test(text);
+      return /(?:عدّل|عدل|أصلح|اصلح|غيّر|غير|أضف|اضف|ضيف|حط|ضع|شيل|احذف|ادمج|حدّث|حدث|انشئ|أنشئ|سوي|اعمل|طور|modify|change|fix|add|delete|merge|update|refactor|implement|patch|deploy|create|build)/i.test(text);
     },
 
     getCodeChangeResponseProtocol() {
@@ -947,15 +947,19 @@ STRICT RULE: The complete file code MUST exist ONLY inside the JSON block. It wi
             </div>
             <div class="dev-proposal-desc">📝 <strong>Summary:</strong> ${escapeHtml(message)}</div>
             <div class="dev-proposal-btns">
-              <button class="dev-btn-action preview" onclick="window._previewProposal('${propId}')">
+              <button class="dev-btn-action preview" onclick="window._previewProposal('${propId}')" title="فتح نافذة المعاينة وتجربة الكود">
                 <span>👁️</span>
                 <span>Live Preview</span>
               </button>
-              <button class="dev-btn-action deploy" onclick="window._deployProposal('${propId}')">
+              <button class="dev-btn-action deploy" onclick="window._deployProposal('${propId}')" title="نشر التعديل إلى GitHub">
                 <span>🚀</span>
                 <span>Deploy to GitHub</span>
               </button>
-              <button class="dev-btn-action review-fix" onclick="window._togglePatchDrawer('${propId}')">
+              <button class="dev-btn-action copy" onclick="window._copyPatchContent('${propId}')" title="نسخ الكود بالكامل إلى الحافظة">
+                <span>📋</span>
+                <span>Copy Full Code</span>
+              </button>
+              <button class="dev-btn-action review-fix" onclick="window._togglePatchDrawer('${propId}')" title="عرض أسطر التعديل">
                 <span>🔍</span>
                 <span>Inspect Patch ▾</span>
               </button>
@@ -1831,18 +1835,32 @@ Reply in 3 strict brief lines only:
       // 4. Clean up repetitive AI warning preamble
       out = out.replace(/^⚠️\s*تنبيه:[^\n]+\n*/gi, '');
 
-      // 5. Suppress huge full-file code dumps when accompanied by proposals
+      // 5. Suppress huge full-file code dumps when accompanied by proposals or code changes
       const hasProposal = /```json|pendingModifications|"file"\s*:|"deploy"\s*:|"content"\s*:/i.test(text);
-      if (hasProposal || text.length > 1200) {
-        out = out.replace(/```(?:js|javascript|html|css|json)?\n([\s\S]{120,})```/gi, (m, code) => {
+      if (hasProposal || text.length > 500) {
+        out = out.replace(/```(?:js|javascript|html|css|json)?\n([\s\S]{80,})```/gi, (m, code) => {
           const lines = code.trim().split('\n').length;
           return `
 <div class="dev-patch-suppressed-pill">
-  <span class="patch-icon">📄</span>
-  <span class="patch-text">تم تجهيز كود التعديل (${lines} سطر) — متاح مباشرة في نافذة المعاينة بالأسفل</span>
+  <span class="patch-icon">⚡</span>
+  <span class="patch-text">Patch Ready (${lines} lines) — Open Live Preview to inspect and test</span>
 </div>`;
         });
       }
+
+      // 5b. Catch in-flight code streaming and replace with sleek English motion loader
+      out = out.replace(/```(?:js|javascript|json|html|css)?\s*[\s\S]{30,}$/gi, () => {
+        return `
+<div class="dev-coding-in-progress">
+  <div class="coding-wave-spinner">
+    <span></span><span></span><span></span><span></span>
+  </div>
+  <div class="coding-meta">
+    <span class="coding-title">⚡ Synthesizing Surgical Patch...</span>
+    <span class="coding-sub">Generating production code for Live Preview sandbox</span>
+  </div>
+</div>`;
+      });
 
       // 6. Ultra-Modern Terminal / Code Card for small snippets (commands, short examples)
       out = out.replace(/```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g, (m, lang, code) => {
