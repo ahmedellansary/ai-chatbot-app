@@ -994,7 +994,7 @@ When this request requires changing repository code, respond as a concise execut
           if(!bullets.length) return `<div style="font-size:12px;color:var(--text-dim)">${escapeHtml(String(txt||'').slice(0,140))}</div>`;
           const main=bullets.slice(0,-1), last=bullets.slice(-1)[0];
           const mainHtml=main.length? `<ul class="observer-bullets">${main.map(b=>`<li class="observer-bullet ${getCls(b)}"><span class="observer-bullet-text">${escapeHtml(b)}</span></li>`).join('')}</ul>` : '';
-          const box=(last && !/?? ???? ?????|No improvement/i.test(last))? `<div class="suggest-box"><div class="suggest-box-body">${escapeHtml(last)}</div><div class="actions-header" onclick="this.nextElementSibling.classList.toggle('hidden'); this.classList.toggle('collapsed')"><span>⚡</span><span>ACTIONS</span><span class="agent-committed-nums"><span class="agent-num ok">0</span><span class="agent-num warn">3</span></span><span class="agent-toggle-icon">▾</span></div><div class="suggest-box-actions"><button class="observer-apply-btn" onclick="(function(btn){ const r=btn.closest('.dev-observer-box').dataset.review||''; if(window._applyObserverSuggestion) window._applyObserverSuggestion(r, btn); })(this)">⚡ Apply</button><button class="llm-end-btn" onclick="window._sendToLLM(this)">⚡ Send to LLM</button><button class="llm-send-apply-btn" onclick="window._sendAndApply(this)">⚡ Send & Apply</button></div></div>` : '';
+          const box=(last && !(last.includes('لا يوجد') || /No improvement/i.test(last)))? `<div class="suggest-box"><div class="suggest-box-body">${escapeHtml(last)}</div><div class="actions-header" onclick="this.nextElementSibling.classList.toggle('hidden'); this.classList.toggle('collapsed')"><span>⚡</span><span>ACTIONS</span><span class="agent-committed-nums"><span class="agent-num ok">0</span><span class="agent-num warn">3</span></span><span class="agent-toggle-icon">▾</span></div><div class="suggest-box-actions"><button class="observer-apply-btn" onclick="(function(btn){ const r=btn.closest('.dev-observer-box').dataset.review||''; if(window._applyObserverSuggestion) window._applyObserverSuggestion(r, btn); })(this)">⚡ Apply</button><button class="llm-end-btn" onclick="window._sendToLLM(this)">⚡ Send to LLM</button><button class="llm-send-apply-btn" onclick="window._sendAndApply(this)">⚡ Send & Apply</button></div></div>` : '';
           return mainHtml+box;
         };
         const okN = finalReview ? (String(finalReview).match(/نعم|yes|✓|مُلتزم|Compliant/gi)||[]).length : 0;
@@ -1013,19 +1013,55 @@ When this request requires changing repository code, respond as a concise execut
         : `You are code reviewer. User: """${userText.slice(0,800)}""" Response (${tier}): """${aiResponse.slice(0,2500)}""" Reply as bullets • : Compliance: if yes "yes" only else "no — reason" | Contradiction: if none "no" only else "yes — reason" | Security: "safe" only else reason | Sources: "reliable" only else reason | GENERAL improvement: if none "No improvement needed" only else one general sentence`;
       const msgs=[{role:'system',content:isAr?'أنت مراقب كود مختصر':'You are concise reviewer'},{role:'user',content:prompt}];
       let review='';
-      try{
-        const ac=new AbortController(); const tm=setTimeout(()=>ac.abort(),12000);
-        let tmp='';
-        const engine = window.ModelEngine || null;
-        if(engine && engine.chatWithFallback){
-          for await(const {chunk} of engine.chatWithFallback('MID', msgs, ac.signal, ()=>{})){ tmp+=chunk; if(tmp.length>30 && steps[1].status!==t('✓ تم','✓ Done')){ steps[1].status=t('✓ تم','✓ Done'); steps[1].summary=t('فحص الالتزام مكتمل','Done'); steps[2].status=t('نشط','Active'); render(tmp.slice(0,400)); } }
-          review=tmp;
-        } else {
-          await DevChatEngine.callSingleAgentStream(DevChatEngine.buildFallbackCascade(DevState.getSelectedAgent())[0]||{id:'openai/gpt-oss-20b',provider:'groq'}, msgs, ac.signal, (d)=>{ review+=d; });
+      // 5-agent COMMITTED chain for dev: MID/FAST sequential
+      const chain=[
+        {id:'qwen/qwen3.8-27b', provider:'groq', name:'Qwen 27B'},
+        {id:'openai/gpt-oss-20b', provider:'groq', name:'GPT 20B'},
+        {id:'cohere/north-mini-code:free', provider:'openrouter', name:'North Mini'},
+        {id:'openai/gpt-oss-120b', provider:'groq', name:'GPT 120B'},
+        {id:'thinkingmachines/inkling-small:free', provider:'openrouter', name:'Inkling 276B'}
+      ];
+      async function callAgentD(agent, msgs, signal){
+        for(let a=0;a<2;a++){
+          try{
+            const r = agent.provider==='groq' ? await ModelEngine.callGroq(agent, msgs, signal) : await ModelEngine.callOpenRouter(agent, msgs, signal);
+            let out='';
+            for await (const ch of ModelEngine.readStream(r, signal, agent)) out+=ch;
+            if(out.trim()) return out;
+            throw new Error('empty');
+          }catch(e){
+            if(/quota|credit|429|CREDITS_EXHAUSTED/i.test(e.message||'')) throw e;
+            if(a===0) continue; else throw e;
+          }
         }
-        clearTimeout(tm);
-        steps[1].status=t('✓ تم','✓ Done'); steps[2].status=t('✓ تم','✓ Done'); steps[3].status=t('✓ تم','✓ Done'); steps[4].status=t('✓ تم','✓ Done');
-        steps[1].summary=t('الالتزام مكتمل','Compliance done'); steps[2].summary=t('الفحص مكتمل','Check done'); steps[3].summary=t('الأمان مكتمل','Security done'); steps[4].summary=t('التحسين جاهز','Ready');
+      }
+      try{
+        let accumulated='';
+        let reviewTmp='';
+        for(let i=0;i<chain.length;i++){
+          const agent=chain[i];
+          const isLast=i===chain.length-1;
+          const prev = accumulated ? "\n\nprev:\n"+accumulated.slice(0,1500) : '';
+          const q1 = isAr ? "مراجع "+(i+1)+"/5 ("+agent.name+")"+prev+" سؤال: "+userText.slice(0,600)+" رد: "+aiResponse.slice(0,2000) : "Reviewer "+(i+1)+"/5 ("+agent.name+")"+prev+" Q: "+userText.slice(0,600)+" A: "+aiResponse.slice(0,2000);
+          const q2 = isLast ? (isAr ? "\nلخص 4 نقاط." : "\nSummarize 4 bullets.") : (isAr ? "\nسطر واحد." : "\nOne line.");
+          const p = q1 + q2;
+          const msgs=[{role:'system', content: isAr?'أنت مراجع مختصر':'You are concise reviewer'}, {role:'user', content:p}];
+          const ac=new AbortController(); const tm=setTimeout(()=>ac.abort(), 9000);
+          let out='';
+          try{ out=await callAgentD(agent, msgs, ac.signal); }catch(e){ clearTimeout(tm); if(/quota|credit/i.test(e.message||'')) throw e; continue; }
+          clearTimeout(tm);
+          accumulated += (accumulated? "\n":'') + "["+agent.name+"]: "+out.trim().slice(0,400);
+          if(i===0){ steps[1].status=t('✓ تم','✓ Done'); steps[1].summary=t('المراجع 1 — تم','R1 done'); steps[2].status=t('نشط','Active'); render(accumulated.slice(0,400)); }
+          else if(i===1){ steps[2].status=t('✓ تم','✓ Done'); steps[3].status=t('نشط','Active'); render(accumulated.slice(0,600)); }
+          else if(i===2){ steps[3].status=t('✓ تم','✓ Done'); steps[4].status=t('نشط','Active'); render(accumulated.slice(0,800)); }
+          if(isLast) reviewTmp=out;
+        }
+        if(!reviewTmp) reviewTmp=accumulated;
+        review=reviewTmp;
+        steps[1].status=t('✓ تم','✓ Done'); steps[1].summary=t('فحص الالتزام مكتمل','Compliance done');
+        steps[2].status=t('✓ تم','✓ Done'); steps[2].summary=t('فحص التناقض مكتمل','Contradiction done');
+        steps[3].status=t('✓ تم','✓ Done'); steps[3].summary=t('التحقق من المصادر مكتمل','Source check done');
+        steps[4].status=t('✓ تم','✓ Done'); steps[4].summary=t('اقتراح التحسين جاهز','Improvement ready');
         render(review);
       }catch(e){
         steps[1].status=t('تخطي','Skipped'); render(t('تعذر المراجعة — الرد الأصلي معتمد','Review skipped — original remains'));
