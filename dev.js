@@ -1472,21 +1472,23 @@ When this request requires changing repository code, respond as a concise execut
         container.appendChild(typing);
         container.scrollTop = container.scrollHeight;
       }
-      const flowStages = isAr ? [
-        { icon:'🧠', text:'فهم النية — ماذا يريد المطور؟', delay:700 },
-        { icon:'📂', text:'مراجعة الملفات الحية — فحص index.html والملفات المعنية', delay:1800 },
-        { icon:'🔍', text:'تحليل الكود والسياق والتناقض', delay:3200 },
-        { icon:'🎯', text:'تقرير نوع التعديل', delay:5200 },
-        { icon:'✨', text:'صياغة الحل البرمجي', delay:7800 },
-        { icon:'✅', text:'مراجعة الأمان + اقتراح تحسين عام', delay:11200 }
+      const tierDev = (window._devState && window._devState.currentMode) || (window.state && window.state.currentMode) || 'MID';
+      const fastD = tierDev === 'FAST';
+      const flowStages = isAr ? (fastD ? [
+        { icon:'🧠', text:'فهم النية', delay:400 },
+        { icon:'✨', text:'صياغة الحل', delay:900 }
       ] : [
-        { icon:'🧠', text:'Understanding intent', delay:700 },
-        { icon:'📂', text:'Reviewing live files — scanning index.html & targets', delay:1800 },
-        { icon:'🔍', text:'Analyzing code & context', delay:3200 },
-        { icon:'🎯', text:'Deciding patch type', delay:5200 },
-        { icon:'✨', text:'Crafting solution', delay:7800 },
-        { icon:'✅', text:'Security + general improvement', delay:11200 }
-      ];
+        { icon:'🧠', text:'فهم النية', delay:500 },
+        { icon:'📂', text:'مراجعة الملفات الحية', delay:1200 },
+        { icon:'✨', text:'صياغة الحل', delay:2000 }
+      ]) : (fastD ? [
+        { icon:'🧠', text:'Understanding', delay:400 },
+        { icon:'✨', text:'Crafting', delay:900 }
+      ] : [
+        { icon:'🧠', text:'Understanding', delay:500 },
+        { icon:'📂', text:'Live files review', delay:1200 },
+        { icon:'✨', text:'Crafting', delay:2000 }
+      ]);
       // Ensure flow alignment matches language (strong model English → LTR, no right icon)
       const flowEl = document.getElementById('dev-thinking-flow');
       if (flowEl) { const isArFlow = /[\u0600-\u06FF]/.test(flowStages[0]?.text||''); flowEl.setAttribute('dir', isArFlow ? 'rtl' : 'ltr'); flowEl.style.textAlign = isArFlow ? 'right' : 'left'; }
