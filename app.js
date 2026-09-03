@@ -717,26 +717,37 @@
       this.hideTyping();
       this.showTyping(initialWord);
       const isAr = /[\u0600-\u06FF]/.test(initialWord) || /[\u0600-\u06FF]/.test(document.getElementById('user-input')?.value || '');
-      const flowStages = isAr ? [
-        { icon: '🧠', text: 'فهم النية — ماذا يريد المستخدم حقاً؟', delay: 900 },
-        { icon: '🔍', text: 'تحليل السياق والتناقض — هل يوجد تعارض أو تكرار؟', delay: 2600 },
-        { icon: '🎯', text: 'تقرير نوع الرد — مباشر أم كشف تناقض؟', delay: 5200 },
-        { icon: '✨', text: 'صياغة الرد — بناء الإجابة النهائية', delay: 8300 },
-        { icon: '✅', text: 'مراجعة ذاتية — هل الرد دقيق ومكتمل؟', delay: 11800 }
+      const tier = (window.state && window.state.currentMode) || 'MID';
+      const fast = tier === 'FAST';
+      const high = tier === 'HIGH';
+      // Optimized: 3 stages max, 3.2s cap — hide instantly on first token, no hallucination
+      const flowStages = isAr ? (fast ? [
+        { icon: '🧠', text: 'فهم النية', delay: 400 },
+        { icon: '✨', text: 'صياغة الرد', delay: 900 }
+      ] : high ? [
+        { icon: '🧠', text: 'فهم النية', delay: 600 },
+        { icon: '📂', text: 'مراجعة السياق', delay: 1400 },
+        { icon: '✨', text: 'صياغة دقيقة', delay: 2300 }
       ] : [
-        { icon: '🧠', text: 'Understanding intent — what does the user really want?', delay: 900 },
-        { icon: '🔍', text: 'Context & contradiction check', delay: 2600 },
-        { icon: '🎯', text: 'Deciding response mode', delay: 5200 },
-        { icon: '✨', text: 'Synthesizing final answer', delay: 8300 },
-        { icon: '✅', text: 'Self-review — is it accurate?', delay: 11800 }
-      ];
+        { icon: '🧠', text: 'فهم النية', delay: 500 },
+        { icon: '🔍', text: 'تحليل السياق', delay: 1200 },
+        { icon: '✨', text: 'صياغة الرد', delay: 2000 }
+      ]) : (fast ? [
+        { icon: '🧠', text: 'Understanding', delay: 400 },
+        { icon: '✨', text: 'Composing', delay: 900 }
+      ] : high ? [
+        { icon: '🧠', text: 'Understanding', delay: 600 },
+        { icon: '📂', text: 'Context check', delay: 1400 },
+        { icon: '✨', text: 'Synthesizing', delay: 2300 }
+      ] : [
+        { icon: '🧠', text: 'Understanding', delay: 500 },
+        { icon: '🔍', text: 'Analyzing', delay: 1200 },
+        { icon: '✨', text: 'Composing', delay: 2000 }
+      ]);
       const wordStages = [
         { word: isAr ? 'تحليل' : 'Analyzing', delay: 0 },
-        { word: isAr ? 'تفكير' : 'Thinking', delay: 2100 },
-        { word: isAr ? 'استدلال' : 'Reasoning', delay: 4550 },
-        { word: isAr ? 'تركيب' : 'Synthesizing', delay: 7850 },
-        { word: isAr ? 'صقل' : 'Refining', delay: 11300 },
-        { word: isAr ? 'صياغة' : 'Composing', delay: 14900 }
+        { word: isAr ? 'صياغة' : 'Composing', delay: 900 },
+        { word: isAr ? 'تدقيق' : 'Refining', delay: 1900 }
       ];
       this._thinkingTimers = [];
       wordStages.slice(1).forEach(stage => {
