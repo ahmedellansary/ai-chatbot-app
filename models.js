@@ -106,6 +106,14 @@ const DEV_TIER_MODELS = {
 
 const DEV_MODELS = DEV_TIER_MODELS.HIGH;
 
+function fetchWithHardTimeout(url, options, timeoutMs) {
+  let timeoutId;
+  const timeout = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error('MODEL_TIMEOUT')), timeoutMs);
+  });
+  return Promise.race([fetch(url, options), timeout]).finally(() => clearTimeout(timeoutId));
+}
+
 async function callOpenRouter(model, messages, signal) {
   const openRouterKey = getOpenRouterKey();
   const headers = {
@@ -132,12 +140,12 @@ async function callOpenRouter(model, messages, signal) {
   const combinedSignal = signal ? AbortSignal.any([signal, controller.signal]) : controller.signal;
 
   try {
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    const response = await fetchWithHardTimeout('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers,
       body: JSON.stringify(bodyPayload),
       signal: combinedSignal
-    });
+    }, 14000);
     clearTimeout(timeoutId);
 
     if (response.status === 429) {
@@ -186,7 +194,7 @@ async function callGroq(model, messages, signal) {
   const combinedSignal = signal ? AbortSignal.any([signal, controller.signal]) : controller.signal;
 
   try {
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    const response = await fetchWithHardTimeout('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers,
       body: JSON.stringify({
@@ -197,7 +205,7 @@ async function callGroq(model, messages, signal) {
         max_tokens: 4096
       }),
       signal: combinedSignal
-    });
+    }, 6000);
     clearTimeout(timeoutId);
 
     if (response.status === 429) {
