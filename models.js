@@ -239,7 +239,9 @@ async function* readStream(response, signal) {
     while (true) {
       if (signal && signal.aborted) break;
       const timeoutMs = receivedFirstChunk ? 8000 : 12000;
-      const { done, value } = await readWithTimeout(timeoutMs);
+      const readResult = await readWithTimeout(timeoutMs);
+      if (signal && signal.aborted) return;
+      const { done, value } = readResult;
       if (done) break;
       receivedFirstChunk = true;
 
@@ -311,7 +313,7 @@ async function* chatWithFallback(tier, messages, signal, onModelChange) {
           ? await callGroq(model, messages, signal)
           : await callOpenRouter(model, messages, signal);
 
-        for await (const chunk of readStream(response)) {
+        for await (const chunk of readStream(response, signal)) {
           yield { chunk, model, usedFallback };
         }
         succeeded = true;
