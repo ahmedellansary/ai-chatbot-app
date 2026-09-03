@@ -43,9 +43,9 @@
   // ─────────────────────────────────────────────────────────────────
   const DEV_TIER_MODELS = (window.DEV_TIER_MODELS) || {
     HIGH: [
-      { id: 'qwen/qwen3.8-27b', name: 'Qwen 3.8 27B Fast Coder', provider: 'groq' },
       { id: 'openai/gpt-oss-120b', name: 'GPT OSS 120B Lead Architect', provider: 'groq' },
       { id: 'poolside/laguna-s-2.1:free', name: 'Laguna S 2.1 (118B Coding Agent)', provider: 'openrouter' },
+      { id: 'qwen/qwen3.8-27b', name: 'Qwen 3.8 27B Fast Coder', provider: 'groq' },
       { id: 'cohere/north-mini-code:free', name: 'North Mini Code (30B)', provider: 'openrouter' },
       { id: 'nvidia/nemotron-3.5-lightning:free', name: 'Nemotron 3.5 Lightning (1M)', provider: 'openrouter' }
     ],
@@ -635,124 +635,104 @@ STRICT RULE: The local engine automatically merges your surgical patches directl
 
       for (let i = 0; i < fallbackList.length; i++) {
         const currentAgent = fallbackList[i];
-        try {
-          // Update model badge live in UI
-          const tagElem = document.querySelector(`[data-id="${aiMsgId}"] .msg-model-tag`);
-          if (tagElem) {
-            tagElem.innerHTML = `<span>${currentAgent.icon || '🧠'}</span> <span class="model-tag-name">${escapeHtml(currentAgent.name)}</span>`;
-          }
+        const isGroq = currentAgent.provider === 'groq';
+        const keyList = isGroq
+          ? (DevConfigVault.getGroqKeys ? DevConfigVault.getGroqKeys() : (DevConfigVault.groqKeys || []))
+          : (DevConfigVault.getOpenRouterKeys ? DevConfigVault.getOpenRouterKeys() : [DevConfigVault.openRouterKey]);
+        const keyCount = Math.max(1, keyList.length);
 
-          if (i > 0) {
-            const msgElem = document.querySelector(`[data-id="${aiMsgId}"] .msg-content`);
-            if (msgElem && !fullContent) {
-              msgElem.innerHTML = `<span style="color:#fbbf24; font-size:12.5px;">🔄 جاري التبديل التلقائي إلى <strong>${escapeHtml(currentAgent.name)}</strong>...</span>`;
-            }
-          }
-
-          fullContent = '';
-          let _devPending = false;
-          let _devRaf = null;
-          let _devLastTs = 0;
-          const _scheduleDevUpdate = () => {
-            if (_devPending) return;
-            _devPending = true;
-            _devRaf = requestAnimationFrame(() => {
-              try {
-                const msgRow = document.querySelector(`[data-id="${aiMsgId}"]`);
-                if (msgRow) {
-                  const hasAr = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFE]/.test(fullContent);
-                  msgRow.className = `message-row ai ${hasAr ? 'is-rtl' : 'is-ltr'}`;
-                  msgRow.setAttribute('dir', hasAr ? 'rtl' : 'ltr');
-                  const msgElem = msgRow.querySelector('.msg-content');
-                  if (msgElem) msgElem.innerHTML = DevUIEngine.parseMarkdown(fullContent);
-                }
-              } finally { _devPending = false; _devLastTs = Date.now(); }
-            });
-          };
-          await this.callSingleAgentStream(currentAgent, apiMessages, state.abortController.signal, (delta) => {
-            if (!_thinkingCleared) _clearThinking();
-            fullContent += delta;
-            const now = Date.now();
-            if (now - _devLastTs > 80) _scheduleDevUpdate();
-            else _scheduleDevUpdate();
-          });
-          if (_devRaf) cancelAnimationFrame(_devRaf);
-          // final flush
+        for (let keyAttempt = 0; keyAttempt < keyCount; keyAttempt++) {
           try {
-            const msgRow = document.querySelector(`[data-id="${aiMsgId}"]`);
-            if (msgRow) {
-              const hasAr = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFE]/.test(fullContent);
-              msgRow.className = `message-row ai ${hasAr ? 'is-rtl' : 'is-ltr'}`;
-              const msgElem = msgRow.querySelector('.msg-content');
-              if (msgElem) msgElem.innerHTML = DevUIEngine.parseMarkdown(fullContent);
+            // Update model badge live in UI
+            const tagElem = document.querySelector(`[data-id="${aiMsgId}"] .msg-model-tag`);
+            if (tagElem) {
+              tagElem.innerHTML = `<span>${currentAgent.icon || '🧠'}</span> <span class="model-tag-name">${escapeHtml(currentAgent.name)}</span>`;
             }
-          } catch {}
 
-          succeeded = true;
-          usedAgent = currentAgent;
-          break; // Successfully finished stream
+            if (i > 0 || keyAttempt > 0) {
+              const msgElem = document.querySelector(`[data-id="${aiMsgId}"] .msg-content`);
+              if (msgElem && !fullContent) {
+                const keyInfo = keyAttempt > 0 ? ` (مفتاح ${keyAttempt + 1}/${keyCount})` : '';
+                msgElem.innerHTML = `<span style="color:#fbbf24; font-size:12.5px;">🔄 جاري تشغيل <strong>${escapeHtml(currentAgent.name)}</strong>${keyInfo}...</span>`;
+              }
+            }
 
-        } catch (err) {
-          if (err.name === 'AbortError') {
-            console.log('[Dev Engine] Stream aborted by user');
-            return;
-          }
-
-          console.warn(`[Agent Fallback] Agent ${currentAgent.name} failed:`, err.message);
-
-          // اختيارك أولوية قصوى: حاول مرة ثانية مع نفس الموديل قبل الفولباك (من الأقوى للأضعف)
-          if (i === 0) {
-            try {
-              if (currentAgent.provider === 'groq') DevConfigVault.rotateGroqKey();
-              fullContent = '';
-              const retryMsg = document.querySelector(`[data-id="${aiMsgId}"] .msg-content`);
-              if (retryMsg) retryMsg.innerHTML = `<span style="color:#fbbf24; font-size:12.5px;">🔄 إعادة محاولة مع <strong>${escapeHtml(currentAgent.name)}</strong>...</span>`;
-              await new Promise(r => setTimeout(r, 700));
-              await this.callSingleAgentStream(currentAgent, apiMessages, state.abortController.signal, (delta) => {
-                if (!_thinkingCleared) _clearThinking();
-                fullContent += delta;
-                const mRow = document.querySelector(`[data-id="${aiMsgId}"]`);
-                if (mRow) {
-                  const hasAr = /[\u0600-\u06FF]/.test(fullContent);
-                  mRow.className = `message-row ai ${hasAr ? 'is-rtl' : 'is-ltr'}`;
-                  const me = mRow.querySelector('.msg-content');
-                  if (me) me.innerHTML = DevUIEngine.parseMarkdown(fullContent);
-                }
+            fullContent = '';
+            let _devPending = false;
+            let _devRaf = null;
+            let _devLastTs = 0;
+            const _scheduleDevUpdate = () => {
+              if (_devPending) return;
+              _devPending = true;
+              _devRaf = requestAnimationFrame(() => {
+                try {
+                  const msgRow = document.querySelector(`[data-id="${aiMsgId}"]`);
+                  if (msgRow) {
+                    const hasAr = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFE]/.test(fullContent);
+                    msgRow.className = `message-row ai ${hasAr ? 'is-rtl' : 'is-ltr'}`;
+                    msgRow.setAttribute('dir', hasAr ? 'rtl' : 'ltr');
+                    const msgElem = msgRow.querySelector('.msg-content');
+                    if (msgElem) msgElem.innerHTML = DevUIEngine.parseMarkdown(fullContent);
+                  }
+                } finally { _devPending = false; _devLastTs = Date.now(); }
               });
-              succeeded = true;
-              usedAgent = currentAgent;
-              break;
-            } catch (retryErr) {
-              console.warn(`[Primary Retry Failed] ${currentAgent.name}:`, retryErr.message);
-            }
-          }
-
-          // If Groq rate limit on fallback agents, rotate key once
-          if (err.message === 'GROQ_RATE_LIMIT' && i > 0) {
+            };
+            await this.callSingleAgentStream(currentAgent, apiMessages, state.abortController.signal, (delta) => {
+              if (!_thinkingCleared) _clearThinking();
+              fullContent += delta;
+              const now = Date.now();
+              if (now - _devLastTs > 80) _scheduleDevUpdate();
+              else _scheduleDevUpdate();
+            });
+            if (_devRaf) cancelAnimationFrame(_devRaf);
+            // final flush
             try {
-              fullContent = '';
-              await this.callSingleAgentStream(currentAgent, apiMessages, state.abortController.signal, (delta) => {
-                _clearThinking();
-                fullContent += delta;
-                const msgElem = document.querySelector(`[data-id="${aiMsgId}"] .msg-content`);
+              const msgRow = document.querySelector(`[data-id="${aiMsgId}"]`);
+              if (msgRow) {
+                const hasAr = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFE]/.test(fullContent);
+                msgRow.className = `message-row ai ${hasAr ? 'is-rtl' : 'is-ltr'}`;
+                const msgElem = msgRow.querySelector('.msg-content');
                 if (msgElem) msgElem.innerHTML = DevUIEngine.parseMarkdown(fullContent);
-              });
-              succeeded = true;
-              usedAgent = currentAgent;
-              break;
-            } catch (retryErr) {
-              console.warn(`[Agent Retry Failed]`, retryErr);
-            }
-          }
+              }
+            } catch {}
 
-          if (!succeeded && i + 1 < agentCascade.length) {
-            const nextAgent = agentCascade[i + 1];
-            const fallbackPill = document.querySelector(`[data-id="${aiMsgId}"] .msg-content`);
-            if (fallbackPill) {
-              fallbackPill.innerHTML = `<span style="color:#60a5fa; font-size:12px; display:inline-flex; align-items:center; gap:6px;"><span>🔄</span><span>تحويل المهمة البرمجية إلى <strong>${escapeHtml(nextAgent.name)}</strong>...</span></span>`;
+            succeeded = true;
+            usedAgent = currentAgent;
+            break; // Finished successfully with this key!
+
+          } catch (err) {
+            if (err.name === 'AbortError') {
+              console.log('[Dev Engine] Stream aborted by user');
+              return;
             }
-            if (window.DevUIEngine) DevUIEngine.showToast?.(`🔄 انتقال تلقائي إلى ${nextAgent.name}`, 'info');
+
+            console.warn(`[Agent Key Rotation] ${currentAgent.name} (Key ${keyAttempt + 1}/${keyCount}) failed:`, err.message);
+
+            // Rotate key and retry if rate limit, credit, timeout or temporary stall
+            if (/rate limit|429|tpm|rpm|credit|402|timeout|stream_stall|model_timeout|only available on/i.test(err.message)) {
+              if (isGroq) DevConfigVault.rotateGroqKey?.();
+              else DevConfigVault.rotateOpenRouterKey?.();
+              if (keyAttempt + 1 < keyCount) {
+                await new Promise(r => setTimeout(r, 400));
+                continue; // Retry with next key for the SAME model
+              }
+            }
+
+            // Fatal error or all keys exhausted for this model -> break to next model
+            break;
           }
+        }
+
+        if (succeeded) break;
+
+        // If not succeeded, notify transition to next model in fallback cascade
+        if (i + 1 < fallbackList.length) {
+          const nextAgent = fallbackList[i + 1];
+          const fallbackPill = document.querySelector(`[data-id="${aiMsgId}"] .msg-content`);
+          if (fallbackPill) {
+            fallbackPill.innerHTML = `<span style="color:#60a5fa; font-size:12px; display:inline-flex; align-items:center; gap:6px;"><span>🔄</span><span>تحويل المهمة البرمجية إلى <strong>${escapeHtml(nextAgent.name)}</strong>...</span></span>`;
+          }
+          if (window.DevUIEngine) DevUIEngine.showToast?.(`🔄 انتقال تلقائي إلى ${nextAgent.name}`, 'info');
         }
       }
 
