@@ -2629,7 +2629,7 @@
     tbody.innerHTML=all.map(m=>{
       const en=window.isModelEnabled? window.isModelEnabled(m.id):true;
       const u=per[m.id]||{t:0,r:0};
-      const hName=m.name.replace(/(\d+(?:\.\d+)?\s*B)/i,'<span style="color:var(--accent-color)">$1</span>'); return `<tr><td><input type="checkbox" style="width:16px;height:16px;accent-color:var(--accent-color);" data-id="${m.id}" ${en?'checked':''} onchange="toggleModelInline(this)"></td><td><div style="font-weight:700;">${hName}</div><div style="font-size:11px; color:var(--accent-color); font-family:var(--font-mono); text-transform:capitalize;">${m.provider}</div></td><td style="text-align:center;"><div style="font-size:12px; font-weight:700; color:var(--text-main);">${getRenew(m.provider)}</div></td></tr>`;
+      const hName=m.name.replace(/(\d+(?:\.\d+)?\s*B)/i,'<span style="color:var(--accent-color)">$1</span>'); return `<tr><td><input type="checkbox" style="width:16px;height:16px;accent-color:var(--accent-color);" data-id="${m.id}" ${en?'checked':''} onchange="toggleModelInline(this)"></td><td><div style="font-weight:700;">${hName}</div><div style="font-size:11px; color:var(--accent-color); font-family:var(--font-mono); text-transform:capitalize;">${m.provider}</div></td><td style="text-align:center;"><div style="font-size:10px; color:var(--text-dim); line-height:1.3;">${u.t.toLocaleString()} tokens<br>${u.r} reqs</div><div style="font-size:11px; font-weight:700; color:var(--text-main); margin-top:3px;">${getRenew(m.provider)}</div></td></tr>`;
     }).join('');
   }
   window.toggleModelInline=function(el){ const id=el.dataset.id; const en=el.checked; if(window.setModelEnabled) window.setModelEnabled(id,en); };
