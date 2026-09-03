@@ -3047,7 +3047,7 @@ pre code {
 }
 /* same floating bullets + COMMITTED header + user copy — dev theme */
 .observer-bullets{list-style:none;padding:0;margin:8px 0 0;display:flex;flex-direction:column;gap:8px}
-.observer-bullet{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,.22);font-size:13px;line-height:1.5;color:var(--text-main)}
+.observer-bullet{display:flex;align-items:flex-start;gap:8px;padding:4px 0;background:transparent;border:none;box-shadow:none;font-size:13px;line-height:1.5;color:var(--text-main)}
 .observer-bullet::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--accent-dev);box-shadow:0 0 8px var(--accent-dev-glow);margin-top:6px;flex-shrink:0}
 .observer-apply-btn{padding:6px 14px;border-radius:999px;background:var(--accent-dev);color:#000;border:1px solid var(--accent-dev);font-size:12px;font-weight:700;cursor:pointer}
 .llm-end-btn{padding:6px 14px;border-radius:999px;background:var(--accent-dev);color:#000;border:1px solid var(--accent-dev);font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
