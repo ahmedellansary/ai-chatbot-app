@@ -772,6 +772,19 @@
     setTimeout(() => toast.remove(), 10000);
   }
   window.debugPrint = debugPrint;
+  function debugPhase(phase, data = {}) {
+    const entry = { at: new Date().toISOString(), phase, ...data };
+    try {
+      const key = 'xv1_runtime_debug_log';
+      const entries = JSON.parse(localStorage.getItem(key) || '[]');
+      entries.push(entry);
+      localStorage.setItem(key, JSON.stringify(entries.slice(-30)));
+    } catch (storageError) {
+      console.error('[X.v1 debug phase log failed]', storageError);
+    }
+    console.info('[X.v1 phase]', entry);
+  }
+  window.debugPhase = debugPhase;
   window.addEventListener('error', event => {
     if (event.error) debugPrint(event.error, 'JavaScript error');
   });
@@ -832,6 +845,7 @@
     async sendMessage(userText) {
       const hasAttachments = state.attachments && state.attachments.length > 0;
       if (state.isStreaming || (!userText.trim() && !hasAttachments)) return;
+      debugPhase('send:start', { tier: state.currentMode || 'MID', textLength: userText.length });
 
       if (!state.activeConvId) StateController.newConversation();
       const conv = StateController.getActiveConv();
@@ -855,7 +869,12 @@
       const tier = state.currentMode || 'MID';
       let systemPromptForCall;
       try {
-        systemPromptForCall = await this.buildSystemPrompt(textForPayload, currentAttachments, conv, tier);
+        debugPhase('prompt:start', { tier, textLength: textForPayload.length });
+        systemPromptForCall = await Promise.race([
+          this.buildSystemPrompt(textForPayload, currentAttachments, conv, tier),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('PROMPT_TIMEOUT')), 8000))
+        ]);
+        debugPhase('prompt:ready', { tier, promptLength: systemPromptForCall.length });
       } catch (err) {
         state.isStreaming = false;
         state.abortController = null;
@@ -922,19 +941,10 @@
         let msgRow = null;
         let pendingUpdate = false;
         let lastUpdateTs = 0;
-        let renderAgain = false;
 
-        const scheduleUpdate = (force = false) => {
-          if (!force && Date.now() - lastUpdateTs < 250) {
-            renderAgain = true;
-            return;
-          }
-          if (pendingUpdate) {
-            renderAgain = true;
-            return;
-          }
+        const scheduleUpdate = () => {
+          if (pendingUpdate) return;
           pendingUpdate = true;
-          renderAgain = false;
           // Batch DOM updates to the next animation frame to avoid long synchronous reflows
           requestAnimationFrame(() => {
             try {
@@ -953,7 +963,6 @@
             } finally {
               pendingUpdate = false;
               lastUpdateTs = Date.now();
-              if (renderAgain) scheduleUpdate();
             }
           });
         };
@@ -976,15 +985,16 @@
           if (msgRow) {
             // If last update was recent, batch this chunk and let requestAnimationFrame handle it.
             const now = Date.now();
-            if (now - lastUpdateTs > 250) {
+            if (now - lastUpdateTs > 80) {
               scheduleUpdate();
             } else {
-              renderAgain = true;
+              // ensure we schedule eventually
+              scheduleUpdate();
             }
           }
         }
         // final flush after stream completes
-        if (msgRow) scheduleUpdate(true);
+        if (msgRow && !pendingUpdate) scheduleUpdate();
 
         if (fullContent.includes('---BEGIN_INSTRUCTION_UPDATE---')) {
           InstructionManager.handleAutoInstructionUpdate(fullContent);
