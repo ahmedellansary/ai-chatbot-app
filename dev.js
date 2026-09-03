@@ -987,11 +987,12 @@ When this request requires changing repository code, respond as a concise execut
         { icon:'✨', title:t('اقتراح تحسين','Improvement'), status:t('انتظار','Waiting'), summary:t('بانتظار...','Awaiting...') }
       ];
       const render = (finalReview='') => {
+        const getCls=b=>{ if(b.includes('التناقض:')) return b.includes('نعم')?'warn':'ok'; if(b.includes('الالتزام:')||b.includes('المصادر:')) return (b.includes('نعم')||b.includes('موثوقة')||b.includes('سليم'))?'ok':'warn'; return b.includes('لا')||b.includes('تحتاج')?'warn':'ok'; };
         const buildBullets = (txt)=> {
           const lines = String(txt||'').split(/\n/).map(s=>s.trim()).filter(Boolean);
           const bullets = lines.map(l=> l.replace(/^\d+[\.\)\-]\s*/,'').trim()).filter(Boolean).slice(0,5);
           if(!bullets.length) return `<div style="font-size:12px;color:var(--text-dim)">${escapeHtml(String(txt||'').slice(0,140))}</div>`;
-          return `<ul class="observer-bullets">${bullets.map(b=>`<li class="observer-bullet"><span class="observer-bullet-text">${escapeHtml(b)}</span></li>`).join('')}</ul>`;
+          return `<ul class="observer-bullets">${bullets.map(b=>`<li class="observer-bullet ${getCls(b)}"><span class="observer-bullet-text">${escapeHtml(b)}</span></li>`).join('')}</ul>`;
         };
         const okN = finalReview ? (String(finalReview).match(/نعم|yes|✓|مُلتزم|Compliant/gi)||[]).length : 0;
         const warnN = finalReview ? (String(finalReview).split(/\n/).filter(Boolean).length - okN) : 0;
