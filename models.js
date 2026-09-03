@@ -112,6 +112,37 @@ const DEV_MODELS = DEV_TIER_MODELS.HIGH;
 // Backward compat alias — old localStorage values used BALANCE2
 MODELS.BALANCE2 = MODELS.HIGH;
 
+// ─── Enabled/Disabled per-model fallback (checkbox) ───
+const ENABLED_KEY = 'xv1_enabled_models';
+function loadEnabledMap() {
+  try { const v = JSON.parse(localStorage.getItem(ENABLED_KEY) || 'null'); return v && typeof v === 'object' ? v : {}; } catch { return {}; }
+}
+function saveEnabledMap(m) { try { localStorage.setItem(ENABLED_KEY, JSON.stringify(m)); } catch {} }
+function isModelEnabled(id) {
+  const map = loadEnabledMap();
+  if (map[id] === undefined) return true; // default enabled
+  return !!map[id];
+}
+function setModelEnabled(id, enabled) {
+  const map = loadEnabledMap();
+  map[id] = !!enabled;
+  saveEnabledMap(map);
+  try { window.dispatchEvent(new CustomEvent('xv1:modelToggled', {detail:{id,enabled}})); } catch {}
+}
+function getEnabledModelsForTier(tier) {
+  const list = MODELS[tier] || [];
+  return list.filter(m => isModelEnabled(m.id));
+}
+function getParamCount(name) {
+  const m = String(name||'').match(/(\d+(?:\.\d+)?)\s*B/i);
+  return m ? parseFloat(m[1]) : 0;
+}
+function getModelsSorted(tier) {
+  const list = (MODELS[tier]||[]).slice();
+  // already sorted strongest→weakest, but ensure by param count desc as fallback
+  return list.sort((a,b)=> getParamCount(b.name)-getParamCount(a.name));
+}
+
 function fetchWithHardTimeout(url, options, timeoutMs) {
   let timeoutId;
   const timeout = new Promise((_, reject) => {
@@ -331,7 +362,13 @@ async function* readStream(response, signal, model) {
 
 async function* chatWithFallback(tier, messages, signal, onModelChange) {
   const normalizedTier = String(tier || 'MID').toUpperCase();
-  const models = Array.isArray(MODELS[normalizedTier]) ? MODELS[normalizedTier] : MODELS.MID;
+  let models = Array.isArray(MODELS[normalizedTier]) ? MODELS[normalizedTier] : MODELS.MID;
+  // Respect checkbox enabled/disabled — fallback only over enabled models, preserving original order
+  try {
+    const enabled = getEnabledModelsForTier(normalizedTier);
+    if (enabled && enabled.length) models = enabled;
+    else if (enabled && !enabled.length) throw new Error('لا يوجد نماذج مفعلة في هذا المستوى — فعل واحداً على الأقل من صفحة النماذج');
+  } catch(e) { if (e.message && e.message.includes('لا يوجد نماذج')) throw e; }
   let usedFallback = false;
   let lastError = null;
 
@@ -449,8 +486,15 @@ if (typeof window !== 'undefined') {
     rotateGroqKey,
     normalizeCatalog,
     getAvailableModels,
-    getSelectedDevModel
+    getSelectedDevModel,
+    isModelEnabled,
+    setModelEnabled,
+    getEnabledModelsForTier,
+    getModelsSorted
   };
+  window.isModelEnabled = isModelEnabled;
+  window.setModelEnabled = setModelEnabled;
+  window.getEnabledModelsForTier = getEnabledModelsForTier;
   window.getOpenRouterKey = getOpenRouterKey;
   window.getGroqKeys = getGroqKeys;
   window.getGroqKey = getGroqKey;
