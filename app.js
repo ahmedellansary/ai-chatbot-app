@@ -1368,24 +1368,53 @@
       ];
 
       let reviewText = '';
-      try {
-        const ac = new AbortController();
-        const tm = setTimeout(() => ac.abort(), 12000);
-        const stream = ModelEngine.chatWithFallback('MID', reviewMessages, ac.signal, () => {});
-        for await (const { chunk } of stream) {
-          reviewText += chunk;
-          // Update step 2-4 progressively
-          if (reviewText.length > 30 && steps[1].status !== t('✓ تم', '✓ Done')) {
-            steps[1].status = t('✓ تم', '✓ Done'); steps[1].summary = t('تم فحص الالتزام', 'Compliance checked');
-            steps[2].status = t('نشط', 'Active');
-            renderObserver(reviewText.slice(0, 400));
+      // 5-agent COMMITTED chain: MID/FAST sequential, concise
+      const chain=[
+        {id:'qwen/qwen3.8-27b', provider:'groq', name:'Qwen 27B'},
+        {id:'openai/gpt-oss-20b', provider:'groq', name:'GPT 20B'},
+        {id:'cohere/north-mini-code:free', provider:'openrouter', name:'North Mini'},
+        {id:'openai/gpt-oss-120b', provider:'groq', name:'GPT 120B'},
+        {id:'thinkingmachines/inkling-small:free', provider:'openrouter', name:'Inkling 276B'}
+      ];
+      async function callAgent(agent, msgs, signal){
+        for(let a=0;a<2;a++){
+          try{
+            const resp = agent.provider==='groq' ? await ModelEngine.callGroq(agent, msgs, signal) : await ModelEngine.callOpenRouter(agent, msgs, signal);
+            let out='';
+            for await (const ch of ModelEngine.readStream(resp, signal, agent)) out+=ch;
+            if(out.trim()) return out;
+            throw new Error('empty');
+          }catch(e){
+            if(/quota|credit|429|CREDITS_EXHAUSTED/i.test(e.message||'')) throw e;
+            if(a===0) continue; else throw e;
           }
         }
-        clearTimeout(tm);
-        steps[1].status = t('✓ تم', '✓ Done'); steps[1].summary = t('فحص الالتزام مكتمل', 'Compliance done');
-        steps[2].status = t('✓ تم', '✓ Done'); steps[2].summary = t('فحص التناقض مكتمل', 'Contradiction done');
-        steps[3].status = t('✓ تم', '✓ Done'); steps[3].summary = t('التحقق من المصادر مكتمل', 'Source check done');
-        steps[4].status = t('✓ تم', '✓ Done'); steps[4].summary = t('اقتراح التحسين جاهز', 'Improvement ready');
+      }
+      try{
+        let accumulated='';
+        for(let i=0;i<chain.length;i++){
+          const agent=chain[i];
+          const isLast=i===chain.length-1;
+          const prev = accumulated ? "\n\nprev:\n"+accumulated.slice(0,1500) : '';
+          const q1 = isAr ? "مراجع "+(i+1)+"/5 ("+agent.name+")"+prev+" سؤال: "+userText.slice(0,600)+" رد: "+aiResponse.slice(0,2000) : "Reviewer "+(i+1)+"/5 ("+agent.name+")"+prev+" Q: "+userText.slice(0,600)+" A: "+aiResponse.slice(0,2000);
+          const q2 = isLast ? (isAr ? "\nلخص 4 نقاط: التزام/تناقض/مصادر/تحسين عام." : "\nSummarize 4 bullets.") : (isAr ? "\nسطر واحد فقط." : "\nOne line.");
+          const p = q1 + q2;
+          const msgs=[{role:'system', content: isAr?'أنت مراجع مختصر':'You are concise reviewer'}, {role:'user', content:p}];
+          const ac=new AbortController(); const tm=setTimeout(()=>ac.abort(), 9000);
+          let out='';
+          try{ out=await callAgent(agent, msgs, ac.signal); }catch(e){ clearTimeout(tm); if(/quota|credit/i.test(e.message||'')) throw e; continue; }
+          clearTimeout(tm);
+          accumulated += (accumulated? "\n":'') + "["+agent.name+"]: "+out.trim().slice(0,400);
+          if(i===0){ steps[1].status=t('✓ تم','✓ Done'); steps[1].summary=t('المراجع 1 — تم','R1 done'); steps[2].status=t('نشط','Active'); renderObserver(accumulated.slice(0,400)); }
+          else if(i===1){ steps[2].status=t('✓ تم','✓ Done'); steps[3].status=t('نشط','Active'); renderObserver(accumulated.slice(0,600)); }
+          else if(i===2){ steps[3].status=t('✓ تم','✓ Done'); steps[4].status=t('نشط','Active'); renderObserver(accumulated.slice(0,800)); }
+          if(isLast) reviewText=out;
+        }
+        if(!reviewText) reviewText=accumulated;
+        steps[1].status=t('✓ تم','✓ Done'); steps[1].summary=t('فحص الالتزام مكتمل','Compliance done');
+        steps[2].status=t('✓ تم','✓ Done'); steps[2].summary=t('فحص التناقض مكتمل','Contradiction done');
+        steps[3].status=t('✓ تم','✓ Done'); steps[3].summary=t('التحقق من المصادر مكتمل','Source check done');
+        steps[4].status=t('✓ تم','✓ Done'); steps[4].summary=t('اقتراح التحسين جاهز','Improvement ready');
         // Collapse after done — show only concise briefing, no motion
         const concise = reviewText.split('\n').slice(0,4).join(' | ').slice(0,220);
         // Save to message for persistence after refresh
@@ -2092,25 +2121,48 @@
         MessageRenderer.showToast('🔊 وضع الصوت التفاعلي جاهز', 'info');
         if (recognition) micBtn?.click();
       });
-      // Voice Call button — continuous call motion
+      // Voice Call — fullscreen motion + sounds + floating stop
+      function playTone(freq, dur, vol=0.25){
+        try{ const ctx=new (window.AudioContext||window.webkitAudioContext)(); const o=ctx.createOscillator(); const g=ctx.createGain(); o.frequency.value=freq; o.type='sine'; g.gain.value=vol; o.connect(g); g.connect(ctx.destination); o.start(); g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime+dur); setTimeout(()=>{o.stop(); ctx.close();}, dur*1000+100);}catch{}
+      }
+      const callOverlay=$('voice-call-overlay'), callStatus=$('call-status'), callStopBtn=$('call-stop-btn');
       const callBtn=$('voice-call-btn');
       let callActive=false;
-      callBtn?.addEventListener('click', ()=>{
-        callActive=!callActive;
-        callBtn.classList.toggle('active',callActive);
-        if(!recognition){ MessageRenderer.showToast('المتصفح لا يدعم المكالمة','error'); callActive=false; callBtn.classList.remove('active'); return; }
-        try{
-          if(callActive){
-            recognition.continuous=true;
-            recognition.start();
-            MessageRenderer.showToast('📞 Call started — تكلم','info');
-          }else{
-            recognition.continuous=false;
-            try{recognition.stop();}catch{}
-            MessageRenderer.showToast('📞 Call ended','info');
-          }
-        }catch(e){ callActive=false; callBtn.classList.remove('active'); }
+      function setCallUI(active, txt){
+        if(callOverlay) callOverlay.classList.toggle('hidden', !active);
+        if(callStatus) callStatus.textContent = txt || (active ? '📞 متصل — تكلم' : '📞 جاري الاتصال...');
+        document.body.style.overflow = active ? 'hidden' : '';
+        if(callBtn) callBtn.classList.toggle('active', active);
+        if(callOverlay) callOverlay.classList.toggle('speaking', active);
+      }
+      callStopBtn?.addEventListener('click', ()=>{
+        playTone(300,0.3); setCallUI(false); callActive=false; try{recognition.continuous=false; recognition.stop(); speechSynthesis.cancel();}catch{} MessageRenderer.showToast('📞 Call ended','info');
       });
+      callBtn?.addEventListener('click', ()=>{
+        if(callActive){ callStopBtn?.click(); return; }
+        if(!recognition){ MessageRenderer.showToast('المتصفح لا يدعم المكالمة','error'); return; }
+        callActive=true; setCallUI(true,'📞 جاري الاتصال...'); playTone(440,0.35); setTimeout(()=>playTone(660,0.25),400);
+        setTimeout(()=>{
+          if(!callActive) return;
+          playTone(880,0.2); setCallUI(true,'📞 متصل — تكلم'); MessageRenderer.showToast('📞 Call started','info');
+          try{ recognition.continuous=true; recognition.start(); }catch{}
+        },900);
+        // auto speak next AI response
+        const obs = new MutationObserver(()=>{
+          const last = document.querySelector('.message-row.ai:last-child .msg-content');
+          if(last && callActive && !speechSynthesis.speaking){
+            const txt=last.innerText.slice(0,1200);
+            if(txt && txt.length>10){ speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(txt); u.lang=/[\u0600-\u06FF]/.test(txt)?'ar-EG':'en-US'; u.onstart=()=>callOverlay?.classList.add('speaking'); u.onend=()=>callOverlay?.classList.remove('speaking'); speechSynthesis.speak(u); }
+          }
+        });
+        obs.observe(document.getElementById('chat-container'),{childList:true, subtree:true});
+        callOverlay._obs=obs;
+      });
+      // when speech starts, add speaking motion
+      if(window.speechSynthesis){
+        const origSpeak=speechSynthesis.speak.bind(speechSynthesis);
+        speechSynthesis.speak=function(u){ callOverlay?.classList.add('speaking'); u.addEventListener('end',()=>callOverlay?.classList.remove('speaking')); return origSpeak(u); };
+      }
     },
 
     setupEmergencyControls() {
