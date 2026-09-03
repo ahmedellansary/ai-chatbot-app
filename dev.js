@@ -404,12 +404,12 @@
 CODE CHANGE RESPONSE PROTOCOL — ZERO CHAT CLUTTER
 ═══════════════════════════════════════════════════════════════
 You must follow this EXACT compact output structure:
-1. THINKING STAGES: Put all intermediate steps, file checks, and diagnosis INSIDE <think>...</think> tags.
-   Format steps as short single-line bullets:
-   • 🔍 تشخيص المشكلة في الملف المعني
-   • ⚡ فحص الكود الحقيقي
-   • 🛠️ تجهيز التعديل الجراحي
-2. CHAT TEXT: Outside of <think>, write EXACTLY 1 to 2 brief, direct sentences explaining what was updated.
+1. THINKING STAGES (STRICTLY IN ENGLISH): Put all intermediate steps, diagnostic checks, and file analysis INSIDE <think>...</think> tags ONLY in English.
+   Format as short single-line English bullets:
+   • 🔍 Diagnosing root cause in [target_file]
+   • ⚡ Inspecting live repository implementation
+   • 🛠️ Preparing surgical code patch
+2. FINAL USER REPLY (IN ARABIC): Outside of <think>, write EXACTLY 1 to 2 brief sentences in Arabic explaining what was modified concisely.
    - NO greetings, NO warnings, NO marketing fluff, NO markdown headings (no ###), and NO big vertical gaps.
    - NEVER write full code or raw code blocks (\`\`\`javascript, \`\`\`css, \`\`\`html) in the chat text!
 3. DEPLOY BLOCK: Output the JSON deploy block at the very end of your response:
@@ -420,7 +420,7 @@ You must follow this EXACT compact output structure:
   "message": "Concise git commit message in English"
 }
 \`\`\`
-STRICT RULE: The complete file code MUST exist ONLY inside the JSON block. It will be loaded directly into the Live Preview window for the user to inspect and test.`;
+STRICT RULE: The complete file code MUST exist ONLY inside the JSON block. It will be loaded directly into the Live Preview window for the user to inspect, test, or copy.`;
     },
 
     buildFallbackCascade(primaryAgent, estimatedTokens = 0) {
@@ -1788,7 +1788,7 @@ Reply in 3 strict brief lines only:
           .map(l => l.replace(/^[•\-\*◌●\d\.]+\s*/, '').trim())
           .filter(l => l.length > 2 && l.length < 120);
         
-        const steps = rawLines.length > 0 ? rawLines.slice(0, 5) : ['تشخيص المشكلة', 'فحص الملفات الحية', 'إعداد التعديل الجراحي'];
+        const steps = rawLines.length > 0 ? rawLines.slice(0, 5) : ['Diagnosing Root Cause', 'Inspecting Live Files', 'Synthesizing Patch'];
         
         const tabsHtml = steps.map((s, idx) => `
           <div class="dev-thinking-tab reached" style="animation-delay: ${idx * 0.1}s">
@@ -1802,7 +1802,7 @@ Reply in 3 strict brief lines only:
   <div class="dev-thinking-summary" onclick="this.parentElement.classList.toggle('collapsed')">
     <div class="summary-left">
       <span class="thinking-brain-icon">🧠</span>
-      <span class="thinking-headline">تفكير المطور (${steps.length} خطوات مكتملة)</span>
+      <span class="thinking-headline">Thinking Process (${steps.length} steps completed)</span>
     </div>
     <span class="thinking-chevron">▾</span>
   </div>
@@ -1818,7 +1818,7 @@ Reply in 3 strict brief lines only:
           .map(l => l.replace(/^[•\-\*◌●\d\.]+\s*/, '').trim())
           .filter(l => l.length > 2 && l.length < 120);
         
-        const currentStep = lines[lines.length - 1] || 'جاري التفكير البرمجي وفحص المعمارية...';
+        const currentStep = lines[lines.length - 1] || 'Analyzing architecture & synthesizing patch...';
         
         return `
 <div class="dev-thinking-container active-streaming">
