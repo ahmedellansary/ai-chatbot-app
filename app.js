@@ -84,6 +84,7 @@
     activeConvId: null,
     systemPrompt: '',
     isStreaming: false,
+    sendInFlight: false,
     abortController: null,
     lastModifiedFile: 'index.html',
     attachments: [],
@@ -838,7 +839,8 @@
 
     async sendMessage(userText) {
       const hasAttachments = state.attachments && state.attachments.length > 0;
-      if (state.isStreaming || (!userText.trim() && !hasAttachments)) return;
+      if (state.isStreaming || state.sendInFlight || (!userText.trim() && !hasAttachments)) return;
+      state.sendInFlight = true;
 
       if (!state.activeConvId) StateController.newConversation();
       const conv = StateController.getActiveConv();
@@ -858,18 +860,34 @@
 
       state.isStreaming = true;
       state.abortController = new AbortController();
+      MessageRenderer.startProgressiveThinking('Analyzing');
 
       const tier = state.currentMode || 'MID';
       debugCheckpoint('send-start', { tier, textLength: textForPayload.length });
       let systemPromptForCall;
       try {
-        systemPromptForCall = await this.buildSystemPrompt(textForPayload, currentAttachments, conv, tier);
+        const promptTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error('PROMPT_TIMEOUT')), 8000));
+        systemPromptForCall = await Promise.race([
+          this.buildSystemPrompt(textForPayload, currentAttachments, conv, tier),
+          promptTimeout
+        ]);
         debugCheckpoint('prompt-ready', { tier, promptLength: systemPromptForCall.length });
       } catch (err) {
+        MessageRenderer.hideTyping();
         state.isStreaming = false;
         state.abortController = null;
+        const errorMessage = {
+          id: generateId(),
+          role: 'ai',
+          content: `⚠️ تعذر تجهيز الطلب: ${err.message === 'PROMPT_TIMEOUT' ? 'انتهت مهلة تجهيز التعليمات' : (err.message || 'خطأ غير معروف')}. يمكنك إعادة المحاولة.`,
+          isError: true,
+          timestamp: new Date().toISOString()
+        };
+        conv.messages.push(errorMessage);
+        MessageRenderer.appendMessage(errorMessage);
         debugPrint(err, `Prompt preparation failed (${tier})`);
         UIEngine.updateSendBtnState();
+        state.sendInFlight = false;
         return;
       }
       const apiMessages = tier === 'HIGH'
@@ -907,13 +925,12 @@
           MessageRenderer.hideTyping();
           state.isStreaming = false;
           state.abortController = null;
+          state.sendInFlight = false;
           UIEngine.updateSendBtnState();
           MessageRenderer.scrollToBottom();
         }
         return;
       }
-
-      MessageRenderer.startProgressiveThinking('Analyzing');
 
       const onModelEvent = (model, isFallback) => {
         aiMsgObj.model = model.name;
@@ -1013,6 +1030,7 @@
         MessageRenderer.hideTyping();
         state.isStreaming = false;
         state.abortController = null;
+        state.sendInFlight = false;
         UIEngine.updateSendBtnState();
         MessageRenderer.scrollToBottom();
       }
