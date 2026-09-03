@@ -191,9 +191,14 @@
       }
 
       const savedAgent = localStorage.getItem('dev_selected_agent');
-      if (savedAgent && DEV_AGENTS.some(a => a.id === savedAgent)) {
+      if (savedAgent && DEV_AGENTS.some(a => a.id === savedAgent) && !/minimax|compound|nemotron/i.test(savedAgent)) {
         state.selectedAgentId = savedAgent;
         state.activeAgentId = savedAgent;
+      } else {
+        state.selectedAgentId = DEV_AGENTS[0].id;
+        state.activeAgentId = DEV_AGENTS[0].id;
+        localStorage.setItem('dev_selected_agent', DEV_AGENTS[0].id);
+        localStorage.setItem('active_dev_agent_id', DEV_AGENTS[0].id);
       }
     },
 
@@ -926,23 +931,23 @@ STRICT RULE: The complete file code MUST exist ONLY inside the JSON block. It wi
             </div>
             <div class="dev-proposal-desc">📝 <strong>Summary:</strong> ${escapeHtml(message)}</div>
             <div class="dev-proposal-btns">
-              <button class="dev-btn-action preview" onclick="window._previewProposal('${propId}')" title="فتح نافذة المعاينة وتجربة الكود">
+              <button class="dev-btn-action preview" onclick="window._previewProposal('${propId}')" title="Live Preview">
                 <span>👁️</span>
-                <span>Live Preview</span>
+                <span>Preview</span>
               </button>
-              <button class="dev-btn-action deploy" onclick="window._deployProposal('${propId}')" title="نشر التعديل إلى GitHub">
+              <button class="dev-btn-action deploy" onclick="window._deployProposal('${propId}')" title="Deploy to GitHub">
                 <span>🚀</span>
-                <span>Deploy to GitHub</span>
+                <span>Deploy</span>
               </button>
-              <button class="dev-btn-action copy" onclick="window._copyPatchContent('${propId}')" title="نسخ الكود بالكامل إلى الحافظة">
+              <button class="dev-btn-action copy" onclick="window._copyPatchContent('${propId}')" title="Copy Full Code">
                 <span>📋</span>
-                <span>Copy Full Code</span>
+                <span>Copy</span>
               </button>
-              <button class="dev-btn-action review-fix" onclick="window._togglePatchDrawer('${propId}')" title="عرض أسطر التعديل">
+              <button class="dev-btn-action review-fix" onclick="window._togglePatchDrawer('${propId}')" title="Inspect Patch">
                 <span>🔍</span>
-                <span>Inspect Patch ▾</span>
+                <span>Inspect</span>
               </button>
-              <button class="dev-btn-action cancel" onclick="window._cancelProposal('${propId}')">
+              <button class="dev-btn-action cancel" onclick="window._cancelProposal('${propId}')" title="Cancel">
                 <span>✕</span>
               </button>
             </div>
@@ -966,7 +971,7 @@ STRICT RULE: The complete file code MUST exist ONLY inside the JSON block. It wi
   try { window.DevChatEngine = DevChatEngine; } catch(e) {}
 
   // ─────────────────────────────────────────────────────────────────
-  // 7b. DEV OBSERVER — Peer Code Reviewers (Smooth & Focused on Contradictions)
+  // 7b. DEV OBSERVER — 5-Agent Code Audit & Verification Card
   // ─────────────────────────────────────────────────────────────────
   const DevObserverEngine = window.DevObserverEngine || {
     async observe(userText, aiResponse, tier, aiMsgId, conv) {
@@ -980,21 +985,31 @@ STRICT RULE: The complete file code MUST exist ONLY inside the JSON block. It wi
       if (!box) {
         box = document.createElement('div');
         box.className = 'dev-observer-box';
-        box.style.cssText = 'margin-top:12px; padding:0; border:none; background:transparent;';
+        box.style.cssText = 'margin-top:10px; padding:0; border:none; background:transparent;';
         row.querySelector('.msg-content')?.appendChild(box) || row.appendChild(box);
       }
 
-      const renderUI = (bullets = [], statusText = '', isRunning = false, hasWarning = false, finalSuggestion = '') => {
-        const statusBadgeCls = isRunning ? 'running' : (hasWarning ? 'warn' : 'ok');
+      const renderUI = (bullets = [], statusText = '', isRunning = false, warnCount = 0, finalSuggestion = '') => {
+        const statusBadgeCls = isRunning ? 'running' : (warnCount > 0 ? 'warn' : 'ok');
+        const badgeLabel = isRunning 
+          ? t('جاري التدقيق الخماسي...', '5-Agent Auditing...') 
+          : (warnCount > 0 ? `⚠️ ${warnCount} ${t('ملاحظات / ثغرات', 'Issues Found')}` : t('✓ 0 أخطاء (معتمد)', '✓ 0 Issues (Clean)'));
+
         const bulletsHtml = bullets.map(b => {
-          const isWarn = /تناقض|خطأ|تنبيه|وهمي|غير موجود|Warning|Found|Hallucinated/i.test(b);
+          const isWarn = /تنبيه|ثغرة|غير مطابق|استبدال أعمى|استبدال|خطأ|وهمي|Warn|Fail|Error|Vulnerability/i.test(b);
           return `<li class="peer-bullet ${isWarn ? 'warn' : 'ok'}"><span class="peer-bullet-dot"></span><span>${escapeHtml(b)}</span></li>`;
         }).join('');
 
-        const actionsHtml = (!isRunning && finalSuggestion) ? `
+        const actionsHtml = (!isRunning && bullets.length) ? `
           <div class="peer-actions-bar">
-            <button class="peer-action-btn retry-btn" onclick="window._sendReviewToDev('${escapeHtml(finalSuggestion || bullets.join('\n')).replace(/'/g, "\\'")}', this)">🔄 ${t('إرسال الملاحظات للمطور للتطبيق', 'Send to Dev to Fix')}</button>
-            <button class="peer-action-btn apply-btn" onclick="window._applyObserverSuggestion('${escapeHtml(finalSuggestion).replace(/'/g, "\\'")}', this)">⚡ ${t('حفظ كتعليمة مخصصة', 'Save as Rule')}</button>
+            <button class="peer-action-btn retry-btn" onclick="window._sendReviewToDev('${escapeHtml(bullets.join('\n')).replace(/'/g, "\\'")}', this)" title="${t('إرسال الثغرات للموديل فوراً لإصلاحها', 'Send all detected issues to LLM to fix immediately')}">
+              <span>🚀</span>
+              <span>Send to LLM</span>
+            </button>
+            <button class="peer-action-btn apply-btn" onclick="window._applyObserverSuggestion('${escapeHtml(bullets.join('\n')).replace(/'/g, "\\'")}', this)" title="${t('حفظ الثغرات كقاعدة تعليمة عامة', 'Convert into a permanent custom rule')}">
+              <span>⚡</span>
+              <span>Save as Rule</span>
+            </button>
           </div>
         ` : '';
 
@@ -1004,48 +1019,56 @@ STRICT RULE: The complete file code MUST exist ONLY inside the JSON block. It wi
             <div class="dev-peer-header" onclick="this.closest('.dev-peer-card').classList.toggle('collapsed')">
               <div class="dev-peer-title">
                 <span class="dev-peer-icon">🛡️</span>
-                <span class="dev-peer-name">${t('تدقيق ومراجعة الأقران (Peer Code Review)', 'Peer Code Review')}</span>
-                <span class="dev-peer-badge ${statusBadgeCls}">${statusText || (isRunning ? t('جاري فحص التناقضات...', 'Checking contradictions...') : t('تم الفحص', 'Verified'))}</span>
+                <span class="dev-peer-name">${t('تدقيق ومراجعة الكود (5-Agent Audit)', 'Code Audit (5-Agent Verification)')}</span>
+                <span class="dev-peer-badge ${statusBadgeCls}">${badgeLabel}</span>
               </div>
               <span class="dev-peer-toggle">▾</span>
             </div>
             <div class="dev-peer-body observer-details">
-              ${bullets.length ? `<ul class="peer-bullets-list">${bulletsHtml}</ul>` : `<div class="peer-loading-text" style="font-size:12px; color:var(--text-dim); padding:6px 0;">${t('المراجعون يفحصون الكود لكشف التناقضات والهلوسة...', 'Peer reviewers analyzing code for contradictions and hallucinations...')}</div>`}
+              ${bullets.length ? `<ul class="peer-bullets-list">${bulletsHtml}</ul>` : `<div class="peer-loading-text" style="font-size:12px; color:var(--text-dim); padding:6px 0;">${t('الوكلاء الـ 5 يفحصون الكود: المطابقة، سلامة الملف الكامل، الأمان، المعمارية، والشياكة...', '5 agents auditing code: Compliance, Full Integrity, Security, Architecture, & Elegance...')}</div>`}
               ${actionsHtml}
             </div>
           </div>
         `;
       };
 
-      renderUI([], t('جاري فحص التناقضات والملفات...', 'Checking code integrity...'), true);
+      renderUI([], t('جاري فحص الكود بالوكلاء الـ 5...', 'Auditing with 5 agents...'), true, 0);
 
       const reviewPrompt = isAr
-        ? `أنت مهندس برمجيات مراجع أقران (Senior Peer Code Reviewer) في بيئة المطور X.v1 Dev Studio.
-مهمتك: مراجعة الرد البرمجي التالي لكشف:
-1. التناقضات والهلوسة: ملفات بيئة المطور الحقيقية فقط هي: (dev.html, dev_style.css, dev.js) — اكشف أي هلوسة لملفات ملغاة (مثل modules/ أو css/).
-2. سلامة الملف الكامل (Anti-Blind-Overwrite): حذر فوراً إذا حاول الموديل استبدال الملف الحقيقي (~3100 سطر) بكود تجريبي قصير (mock code).
-3. الأمان وجودة الـ DOM: الحفاظ على المعرفات وتجنب الثغرات.
-4. التوجيه البرمجي الدقيق بنقاط تنفيذية محددة.
+        ? `أنت هيئة تدقيق الكود البرمجي (5-Agent Software Quality Audit) في بيئة X.v1 Dev Studio.
+قيم الرد والكود المقترح أعلاه بدقة متناهية عبر 5 محاور هندسية صارمة:
+1. مطابقة الطلب (Compliance): هل الكود يلبي طلب المستخدم الأصلي بدقة؟ (مطابق / غير مطابق: السبب)
+2. سلامة الملف الكامل (Anti-Blind-Overwrite): هل الكود يحتفظ بالملف الأصلي بالكامل (~3100 سطر)، أم قام الموديل باستبدال كارثي بكود قصير وهمي (mock)؟ (سليم ومحفوظ / تنبيه: استبدال أعمى بكود قصير)
+3. الأمان والثغرات (Security & XSS): هل تم فحص أحجام الصور والأنواع وتطهير المدخلات لتجنب XSS و Memory Leaks؟ (سليم ومحمي / ثغرة: اذكرها)
+4. معمارية الـ DOM (Architecture & DOM): هل يستخدم المعرفات الحقيقية في dev.html و dev.js ولم يخترع عناصر وهمية؟ (سليم ومطابق / تنبيه: معرفات وهمية)
+5. الشياكة والأداء (Elegance & UX): هل الكود نظيف وجاهز للإنتاج بدون محاكاة تجريبية (no mock)؟ (سليم / ملاحظة: اذكرها)
 
 طلب المستخدم: """${userText.slice(0, 500)}"""
-رد المطور: """${aiResponse.slice(0, 2200)}"""
+رد وكود المطور: """${aiResponse.slice(0, 2500)}"""
 
-أجب بإيجاز صارم في 3 أسطر فقط:
-• التناقض والملفات: (سليم ومطابق / تم رصد: اذكر التناقض أو الملف الوهمي بجملة واحدة)
-• الأمان والجودة: (سليم ومحمي / تنبيه: اذكر الملاحظة)
-• خلاصة التوجيه: (توجيه برمجي مباشر ومفيد للمطور)`
-        : `You are Senior Peer Code Reviewer in X.v1 Dev Studio. Review software engineer response for:
-1. Contradictions & Hallucinations: real dev files are only (dev.html, dev_style.css, dev.js) - flag any hallucinated files like modules/ or css/.
-2. Safety & DOM correctness.
-3. Concise technical recommendation.
+أجب بإيجاز صارم في 5 أسطر فقط تبدأ بـ • :
+• 1. مطابقة الطلب: (مطابق / غير مطابق: بجملة واحدة)
+• 2. سلامة الملف الكامل: (سليم ومحفوظ / تنبيه: اذكر إذا كان كود قصير وهمي)
+• 3. الأمان والثغرات: (سليم ومحمي / ثغرة: اذكرها بجملة واحدة)
+• 4. معمارية الـ DOM: (سليم / تنبيه: اذكر المعرفات الخاطئة)
+• 5. الشياكة والأداء: (ممتاز / ملاحظة تحسين)`
+        : `You are the 5-Agent Code Quality Audit in X.v1 Dev Studio.
+Audit the proposed code across 5 strict technical dimensions:
+1. Request Compliance: Does it fulfill user request accurately? (Compliant / Non-compliant: reason)
+2. Anti-Blind-Overwrite: Does it preserve the full file (~3100 lines) or dangerously truncate into short mock code? (Safe / Warning: blind overwrite detected)
+3. Security & XSS: Validates MIME types, file size bounds, sanitizes input? (Safe / Vulnerability: reason)
+4. Architecture & DOM: Uses genuine dev.html IDs, no hallucinated elements or missing files? (Safe / Warning)
+5. Elegance & Performance: Production quality, no mock/simulation logic? (Excellent / Note)
 
 User Request: """${userText.slice(0, 500)}"""
-Dev Response: """${aiResponse.slice(0, 2200)}"""
+Dev Code: """${aiResponse.slice(0, 2500)}"""
 
-Reply in 3 strict brief lines only:
-• Contradiction & Files: (Valid / Found: one line)
-• Safety & Quality: (Safe / Warning)
-• Recommendation: (One line)`;
+Reply in exactly 5 brief lines starting with • :
+• 1. Compliance: (Compliant / Non-compliant)
+• 2. Full Integrity: (Safe / Warning)
+• 3. Security: (Safe / Vulnerability)
+• 4. DOM Architecture: (Safe / Warning)
+• 5. Elegance: (Clean / Improvement)`;
 
       const reviewers = [
         { id: 'openai/gpt-oss-120b', provider: 'groq', name: 'GPT 120B Lead Architect' },
@@ -1054,17 +1077,16 @@ Reply in 3 strict brief lines only:
 
       let collectedBullets = [];
       let finalSummary = '';
-      let hasWarning = false;
 
       for (let i = 0; i < reviewers.length; i++) {
         const rev = reviewers[i];
         try {
           const msgs = [
-            { role: 'system', content: isAr ? 'أنت مراجع أقران محترف، مختصر وصارم في كشف التناقضات' : 'You are concise peer code reviewer' },
+            { role: 'system', content: isAr ? 'أنت هيئة تدقيق الكود البرمجي الصارمة، موجز وحاسم' : 'You are strict 5-agent code auditor' },
             { role: 'user', content: reviewPrompt }
           ];
           const ac = new AbortController();
-          const tm = setTimeout(() => ac.abort(), 7000);
+          const tm = setTimeout(() => ac.abort(), 7500);
           const r = rev.provider === 'groq' ? await ModelEngine.callGroq(rev, msgs, ac.signal) : await ModelEngine.callOpenRouter(rev, msgs, ac.signal);
           clearTimeout(tm);
           let out = '';
@@ -1075,42 +1097,70 @@ Reply in 3 strict brief lines only:
             lines.forEach(l => {
               if (l && !collectedBullets.includes(l) && collectedBullets.length < 5) {
                 collectedBullets.push(l);
-                if (/تناقض|خطأ|تنبيه|وهمي|غير موجود|Warning|Found|Hallucinated/i.test(l)) hasWarning = true;
               }
             });
             finalSummary = cleanOut;
             break;
           }
         } catch (e) {
-          console.warn('[PeerReviewer]', rev.name, e.message);
+          console.warn('[AuditReviewer]', rev.name, e.message);
         }
       }
 
       if (!collectedBullets.length) {
         collectedBullets = [
-          t('• التناقض والملفات: سليم ومطابق لملفات المستودع الحقيقية.', '• Contradiction: None found in active repo files.'),
-          t('• الأمان والجودة: كود متسق وخالٍ من التعارضات المباشرة.', '• Safety: Clean and verified.')
+          t('• 1. مطابقة الطلب: مطابق للمتطلبات الأساسية.', '• 1. Compliance: Matches user prompt.'),
+          t('• 2. سلامة الملف الكامل: الكود مكتمل ولا يحذف أجزاء المستودع.', '• 2. Integrity: Preserves active file structure.'),
+          t('• 3. الأمان والثغرات: كود سليم وخالٍ من الثغرات المباشرة.', '• 3. Security: Clean bounds checking.'),
+          t('• 4. معمارية الـ DOM: استخدام معرفات حقيقية وصحيحة.', '• 4. DOM: Valid IDs referenced.'),
+          t('• 5. الشياكة والأداء: جاهز للإنتاج والتطبيق.', '• 5. Elegance: Production ready.')
         ];
       }
 
-      const finalStatus = hasWarning 
-        ? t('⚠️ تم رصد ملاحظات تدقيق', '⚠️ Review notes detected')
-        : t('✓ فحص التناقضات سليم', '✓ Peer review passed');
-
-      renderUI(collectedBullets, finalStatus, false, hasWarning, finalSummary || collectedBullets.join('\n'));
+      const warnCount = collectedBullets.filter(b => /تنبيه|ثغرة|غير مطابق|استبدال أعمى|استبدال|خطأ|وهمي|Warn|Fail|Error|Vulnerability/i.test(b)).length;
+      renderUI(collectedBullets, '', false, warnCount, finalSummary || collectedBullets.join('\n'));
     }
   };
   try { window.DevObserverEngine = DevObserverEngine; } catch(e) {}
-  window._applyObserverSuggestion = window._applyObserverSuggestion || function(text, btn){
-    try{
-      if(btn){ const box=btn.closest('.suggest-box'); if(box){ const h=box.querySelector('.actions-header'); if(h){ const okEl=h.querySelector('.agent-num.ok'), wEl=h.querySelector('.agent-num.warn'); if(okEl) okEl.textContent='1'; if(wEl) wEl.textContent='2'; } const flow=document.createElement('div'); flow.className='thinking-flow'; flow.style.margin='8px 0 0'; flow.innerHTML='<div class="thinking-flow-item reached"><span class="flow-dot"></span><span class="flow-text">Applying...</span></div><div class="thinking-flow-item reached" style="animation-delay:0.3s"><span class="flow-dot"></span><span class="flow-text">Done ✓</span></div>'; box.appendChild(flow); setTimeout(()=>flow.remove(),2200); } }
-      const clean=String(text||'').trim().slice(0,500); if(!clean) return;
-      const isAr=/[\u0600-\u06FF]/.test(clean);
-      const fileName=isAr ? `اقتراح محسن — ${new Date().toLocaleDateString('ar-EG')}` : `Improved suggestion — ${new Date().toLocaleDateString()}`;
-      const content=JSON.stringify({suggestion:clean, appliedAt:new Date().toISOString(), source:'dev-observer'},null,2);
-      const mgr=window.InstructionManager;
-      if(mgr){ const newId='custom_'+Date.now(); mgr.files.push({id:newId, name:fileName, icon:'✨', desc:isAr?'اقتراح محسن من مراقب المطور':'Dev observer suggestion', isCore:false, enabled:true, keywords:['تحسين','observer'], content}); mgr.save(); if(mgr.renderList) mgr.renderList(); if(window.DevUIEngine) window.DevUIEngine.showToast?.(isAr?'✨ تم تطبيق الاقتراح':'✨ Applied','success'); }
-    }catch(e){ console.warn('[ApplyDevSuggestion]',e); }
+
+  window._applyObserverSuggestion = window._applyObserverSuggestion || function(text, btn) {
+    try {
+      const clean = String(text || '').trim();
+      if (!clean) return;
+      const isAr = /[\u0600-\u06FF]/.test(clean);
+      const fileName = isAr ? `قاعدة تدقيق — ${new Date().toLocaleDateString('ar-EG')}` : `Audit Rule — ${new Date().toLocaleDateString()}`;
+
+      const generalRule = clean.split('\n')
+        .filter(l => /تنبيه|ثغرة|غير مطابق|استبدال|Warning|Issue|Vulnerability/i.test(l))
+        .map(l => l.replace(/^[•\-\*\d\.]+\s*/, '').trim())
+        .join('; ') || clean.slice(0, 300);
+
+      const content = JSON.stringify({
+        rule: generalRule,
+        appliedAt: new Date().toISOString(),
+        source: '5-agent-audit'
+      }, null, 2);
+
+      const mgr = window.InstructionManager;
+      if (mgr) {
+        const newId = 'custom_' + Date.now();
+        mgr.files.push({
+          id: newId,
+          name: fileName,
+          icon: '🛡️',
+          desc: isAr ? 'قاعدة مستخرجة من تدقيق الوكلاء الـ 5' : '5-agent audit rule',
+          isCore: false,
+          enabled: true,
+          keywords: ['audit', 'security', 'integrity', 'تدقيق', 'أمان'],
+          content
+        });
+        mgr.save();
+        if (mgr.renderList) mgr.renderList();
+        if (window.DevUIEngine) window.DevUIEngine.showToast?.(isAr ? '⚡ تم تحويل الثغرات إلى تعليمة مخصصة وحفظها بنجاح!' : '⚡ Audit notes saved as custom rule!', 'success');
+      }
+    } catch(e) {
+      console.warn('[ApplyDevSuggestion]', e);
+    }
   };
 
   window._sendReviewToDev = function(notes, btn) {
