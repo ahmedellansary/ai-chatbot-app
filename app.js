@@ -625,10 +625,10 @@
       } else {
         row.innerHTML = `
           <div class="msg-content" ${dirAttr}>
-            ${multiAgentHtml}
-            ${observerHtml}
             ${parsed}
             ${attachmentsHtml}
+            ${multiAgentHtml}
+            ${observerHtml}
           </div>
           <div class="claude-actions-bar">
             <button class="claude-action-btn" onclick="window._copyMsgText(this)" title="نسخ">
@@ -1191,7 +1191,7 @@
         `;
 
         const parsedFinal = finalContent ? MessageRenderer.parseMarkdown(finalContent) : (isThinking ? '<div style="color:var(--text-dim); font-size:13px; padding:4px;">⏳ جاري صياغة القرار النهائي المعتمد...</div>' : '');
-        row.innerHTML = boxHtml + parsedFinal;
+        row.innerHTML = parsedFinal + boxHtml;
 
         const isAr = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(finalContent || userText);
         const parentRow = document.querySelector(`[data-id="${aiMsgId}"]`);
@@ -1312,7 +1312,7 @@
         const reviewHtml = finalReview ? buildBullets(finalReview) : `<div style="font-size:12px; color:var(--text-dim); padding:6px 0;">${t('جاري المراجعة...','Reviewing...')}</div>`;
         const okN = finalReview ? okC(finalReview) : 0;
         const warnN = finalReview ? (String(finalReview).split(/\n/).filter(Boolean).length - okN) : 0;
-        const applyBtn = finalReview ? `<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap"><button class="observer-apply-btn" onclick="window._applyObserverSuggestion(this.closest('.observer-box').dataset.review||'')">Apply</button><button class="llm-end-btn" onclick="window._endToLLM(this)" title="SSend to LLM">⚡ Send to LLM</button></div>` : '';
+        const applyBtn = finalReview ? `<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap"><button class="observer-apply-btn" onclick="window._applyObserverSuggestion(this.closest('.observer-box').dataset.review||'')">Apply</button><button class="llm-end-btn" onclick="window._endToLLM(this)" title="Send to LLM">⚡ Send to LLM</button></div>` : '';
         const box = aiRow.querySelector('.observer-box') || document.createElement('div');
         box.className = 'observer-box';
         box.style.cssText = 'margin-top:10px; padding:0; border:none; background:transparent;';
@@ -1340,10 +1340,10 @@
       steps[1].status = t('نشط', 'Active');
       renderObserver();
 
-      // Build review prompt for MID (Balanced) tier — reviewers from Balanced with usual fallback
+      // Build review prompt — rule: نفي يذكر السبب، إيجاب بدون توضيح + اقتراح عام إجباري
       const reviewPrompt = isAr
-        ? `أنت مراقب جودة ذكي ومختصر من مستوى Balanced. راجع الرد:\n\nسؤال: """${userText.slice(0, 800)}"""\nرد (${tier}): """${aiResponse.slice(0, 2500)}"""\n\nأجب بهذا الشكل المختصر فقط (بدون مقدمات):\n1. الالتزام: نعم/لا — السبب بجملة واحدة\n2. التناقض: نعم/لا — السبب\n3. المصادر (لو قصة حقيقية): موثوقة/تحتاج تحقق — السبب\n4. تحسين: جملة واحدة محددة\n`
-        : `You are concise reviewer from Balanced tier. User: """${userText.slice(0, 800)}""" Response (${tier}): """${aiResponse.slice(0, 2500)}""" Reply as: 1. Compliance: yes/no — reason 2. Contradiction: yes/no — reason 3. Sources: reliable/needs check — reason 4. Improvement: one sentence`;
+        ? `أنت مراقب جودة ذكي ومختصر من مستوى Balanced. راجع الرد:\n\nسؤال: """${userText.slice(0, 800)}"""\nرد (${tier}): """${aiResponse.slice(0, 2500)}"""\n\nأجب بهذا الشكل فقط (بدون مقدمات، نقاط عائمة •):\n• الالتزام: إذا نعم فاكتب "نعم" فقط بدون سبب، إذا لا فاكتب "لا — السبب بجملة واحدة"\n• التناقض: إذا لا يوجد تناقض فاكتب "لا" فقط، إذا يوجد فاكتب "نعم — السبب بجملة واحدة"\n• المصادر (لو قصة حقيقية): إذا موثوقة فاكتب "موثوقة" فقط، إذا تحتاج تحقق فاذكر السبب\n• تحسين عام: جملة واحدة عامة تنفع لأي سؤال (مثل أمان/أداء/وصولية) — ممنوع ربطها بهذا السؤال تحديدا\n`
+        : `You are concise reviewer. User: """${userText.slice(0, 800)}""" Response (${tier}): """${aiResponse.slice(0, 2500)}""" Reply as bullets • : 1. Compliance: if yes write "yes" only, if no write "no — reason" 2. Contradiction: if none write "no" only, if exists write "yes — reason" 3. Sources: "reliable" only if ok, else reason 4. One GENERAL improvement (applies to any question, e.g. security/perf/a11y) — never question-specific`;
 
       const reviewMessages = [
         { role: 'system', content: isAr ? 'أنت مراقب جودة محترف ومختصر.' : 'You are a concise quality reviewer.' },
@@ -2275,6 +2275,7 @@
     if (!box) return;
     box.classList.toggle('collapsed');
   };
+  
   window._sendToLLM = window._endToLLM = function(btn){
     try{
       const box = btn.closest('.observer-box, .multi-agent-box, .dev-observer-box');
@@ -2293,6 +2294,7 @@
       if(window.MessageRenderer) window.MessageRenderer.showToast('↗ Contradictions sent to LLM','info');
     }catch(e){}
   };
+  window._sendAndApply = function(btn){ try{ const b=btn.closest('.observer-box, .dev-observer-box, .multi-agent-box'); const rv=b?.dataset?.review||''; if(rv && window._applyObserverSuggestion) window._applyObserverSuggestion(rv); window._sendToLLM(btn);}catch(e){} };
 
   // ─────────────────────────────────────────────────────────────────
   // Modern Audio Player & Code Card Controllers
