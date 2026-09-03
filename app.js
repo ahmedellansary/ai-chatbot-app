@@ -76,7 +76,7 @@
   // 3. STATE & PERSISTENCE CONTROLLER (StateController)
   // ─────────────────────────────────────────────────────────────────
   const state = {
-    currentMode: (function(){ try{ const saved = localStorage.getItem('xv1_current_mode'); return saved === 'HARD' ? 'HIGH' : (saved || 'MID'); }catch{ return 'MID'; }})(),
+    currentMode: (function(){ try{ const saved = localStorage.getItem('xv1_current_mode'); return (saved === 'HIGH' || saved === 'HARD') ? 'BALANCE2' : (saved || 'MID'); }catch{ return 'MID'; }})(),
     currentModel: null,
     devModelKey: null,
     modelCatalog: [],
@@ -831,7 +831,6 @@
         await InstructionManager.load();
       }
       const basePrompt = InstructionManager.assemblePrompt(userText, attachments, tier);
-      if (tier === 'HIGH') return basePrompt;
       const briefing = this.generateBriefing(conv, tier);
       if (!briefing) return basePrompt;
       return `${basePrompt}\n\n═══════════════════════════════════════════════════════════════\n${briefing}\n═══════════════════════════════════════════════════════════════\n(هذه خلاصة ذكية للمحادثة الكاملة — استخدمها كسياق كأنك كنت حاضراً من البداية. آخر ${this.getAdaptiveConfig(tier).recentCount} رسائل التالية هي النص الحرفي الأحدث)`;
@@ -890,16 +889,14 @@
         state.sendInFlight = false;
         return;
       }
-      const apiMessages = tier === 'HIGH'
-        ? [{ role: 'system', content: systemPromptForCall }, { role: 'user', content: textForPayload }]
-        : [
-            { role: 'system', content: systemPromptForCall },
-            ...conv.messages
-              .filter(m => m.id !== userMsg.id)
-              .slice(-this.getAdaptiveConfig(tier).recentCount)
-              .map(m => ({ role: m.role === 'ai' ? 'assistant' : m.role, content: m.content })),
-            { role: 'user', content: textForPayload }
-          ];
+      const apiMessages = [
+        { role: 'system', content: systemPromptForCall },
+        ...conv.messages
+          .filter(m => m.id !== userMsg.id)
+          .slice(-this.getAdaptiveConfig(tier).recentCount)
+          .map(m => ({ role: m.role === 'ai' ? 'assistant' : m.role, content: m.content })),
+        { role: 'user', content: textForPayload }
+      ];
 
       let fullContent = '';
       const aiMsgId = generateId();
