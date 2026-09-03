@@ -389,6 +389,7 @@
           resolvedContent += `\n\n═══════════════════════════════════════════════════════════════\n📁 AVAILABLE_INSTRUCTION_FOLDERS (for smart editing — JSON strict):\n${JSON.stringify(folders, null, 2)}\n═══════════════════════════════════════════════════════════════\nUse this list to decide: if keywords/domain match existing file → append there; else create new folder. Always check duplicate/conflict before outputting JSON block.`;
         } catch {}
       }
+      resolvedContent += '\n\n═══════════════════════════════════════════════════════════════\n⚡ CONCISE RESPONSE PROTOCOL (مختصر ومفيد):\nالردود دائماً مختصرة ومباشرة وفي صلب الموضوع. تشخيص دقيق في 1-2 جملة ثم تنفيذ الكود والتعديل المطلوب فوراً بدون حشو أو مقدمات.\n═══════════════════════════════════════════════════════════════';
       return resolvedContent;
     },
 
@@ -1200,6 +1201,9 @@ When this request requires changing repository code, respond as a concise execut
             state.devPrompt += mapHeader;
           }
           console.log('[DevStudio] Live Repo Map Synced:', files.length, 'files');
+          if (typeof window._autoSyncFiles === 'function') {
+            window._autoSyncFiles(true).catch(()=>{});
+          }
         }
       } catch (e) {
         console.log('[DevStudio] Live Repo Map sync skipped:', e.message);
@@ -2361,13 +2365,15 @@ When this request requires changing repository code, respond as a concise execut
 
 
 
-  window._syncFilesManual = async function() {
+  window._autoSyncFiles = async function(silent = true) {
     const syncBtn = $('btn-sync-files-manual');
     const syncText = $('files-sync-text');
     if (syncBtn) syncBtn.classList.add('spinning');
     if (syncText) syncText.textContent = 'Syncing...';
 
-    DevUIEngine.showToast('🔄 Comparing and syncing files with GitHub...', 'info');
+    if (!silent) {
+      DevUIEngine.showToast('🔄 Comparing and syncing files with GitHub...', 'info');
+    }
 
     const formatDateTime = (d) => {
       const pad = (n) => String(n).padStart(2, '0');
@@ -2386,6 +2392,7 @@ When this request requires changing repository code, respond as a concise execut
       const files = await DevGitHubService.listFiles();
       if (files && files.length) {
         repoFilesCache = files;
+        state.liveRepoFiles = files;
       }
       
       // Reload current active file
@@ -2416,29 +2423,21 @@ When this request requires changing repository code, respond as a concise execut
 
       renderRepositoryFilesExplorer();
       updateDevVersionBadge().catch(()=>{});
-      DevUIEngine.showToast(`✅ Synced ${repoFilesCache.length} repository files successfully!`, 'success');
+      if (!silent) DevUIEngine.showToast(`✅ Synced ${repoFilesCache.length} repository files successfully!`, 'success');
     } catch (e) {
-      DevUIEngine.showToast(`⚠️ Sync notice: ${e.message}`, 'error');
+      if (!silent) DevUIEngine.showToast(`⚠️ Sync notice: ${e.message}`, 'error');
       if (syncText) syncText.textContent = 'Sync failed';
     } finally {
       if (syncBtn) syncBtn.classList.remove('spinning');
     }
   };
+  window._syncFilesManual = () => window._autoSyncFiles(false);
 
   window._openFilesModal = async function() {
     $('files-modal')?.classList.remove('hidden');
     window._selectFileForEditing(state.currentEditingFile || 'index.html');
     renderRepositoryFilesExplorer();
-
-    try {
-      const files = await DevGitHubService.listFiles();
-      if (files && files.length) {
-        repoFilesCache = files;
-        renderRepositoryFilesExplorer();
-      }
-    } catch (e) {
-      console.warn('[Files list fetch]', e);
-    }
+    window._autoSyncFiles(true).catch(()=>{});
   };
 
   window._closeFilesModal = function() {
