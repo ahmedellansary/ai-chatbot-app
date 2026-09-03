@@ -136,7 +136,7 @@ async function callOpenRouter(model, messages, signal) {
   const timeoutId = setTimeout(() => {
     timedOut = true;
     controller.abort();
-  }, 9000);
+  }, 14000);
   const combinedSignal = signal ? AbortSignal.any([signal, controller.signal]) : controller.signal;
 
   try {
@@ -145,7 +145,7 @@ async function callOpenRouter(model, messages, signal) {
       headers,
       body: JSON.stringify(bodyPayload),
       signal: combinedSignal
-    }, 9000);
+    }, 14000);
     clearTimeout(timeoutId);
 
     if (response.status === 429) {
