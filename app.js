@@ -826,6 +826,7 @@
     },
 
     async buildSystemPrompt(userText = '', attachments = [], conv = null, tier = 'MID') {
+      if (tier === 'HARD') return '';
       if (!InstructionManager.files || !InstructionManager.files.length) {
         await InstructionManager.load();
       }
@@ -862,7 +863,9 @@
       debugCheckpoint('send-start', { tier, textLength: textForPayload.length });
       let systemPromptForCall;
       try {
-        systemPromptForCall = await this.buildSystemPrompt(textForPayload, currentAttachments, conv, tier);
+        systemPromptForCall = tier === 'HARD'
+          ? ''
+          : await this.buildSystemPrompt(textForPayload, currentAttachments, conv, tier);
         debugCheckpoint('prompt-ready', { tier, promptLength: systemPromptForCall.length });
       } catch (err) {
         state.isStreaming = false;
@@ -871,16 +874,16 @@
         UIEngine.updateSendBtnState();
         return;
       }
-      const cfg = this.getAdaptiveConfig(tier);
-      const recentMessages = conv.messages
-        .filter(m => m.id !== userMsg.id)
-        .slice(-cfg.recentCount);
-
-      const apiMessages = [
-        { role: 'system', content: systemPromptForCall },
-        ...recentMessages.map(m => ({ role: m.role === 'ai' ? 'assistant' : m.role, content: m.content })),
-        { role: 'user', content: textForPayload }
-      ];
+      const apiMessages = tier === 'HARD'
+        ? [{ role: 'user', content: textForPayload }]
+        : [
+            { role: 'system', content: systemPromptForCall },
+            ...conv.messages
+              .filter(m => m.id !== userMsg.id)
+              .slice(-this.getAdaptiveConfig(tier).recentCount)
+              .map(m => ({ role: m.role === 'ai' ? 'assistant' : m.role, content: m.content })),
+            { role: 'user', content: textForPayload }
+          ];
 
       let fullContent = '';
       const aiMsgId = generateId();
