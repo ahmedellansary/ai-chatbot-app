@@ -63,11 +63,7 @@ const rotateGroqKey = () => {
 // ─── Model Tiers — Unified active model set (Strictly Isolated within Tier) ───
 const MODELS = {
   HIGH: [
-    { id: 'minimax/minimax-m3:free', name: 'MiniMax M3 (1M)', provider: 'openrouter' },
-    { id: 'z-ai/glm-5.2:free', name: 'GLM 5.2 (1M)', provider: 'openrouter' },
-    { id: 'thinkingmachines/inkling:free', name: 'Inkling 975B (MoE)', provider: 'openrouter' },
-    { id: 'nvidia/nemotron-3-ultra-550b-a55b:free', name: 'Nemotron 3 Ultra 550B', provider: 'openrouter' },
-    { id: 'minimax/minimax-m2.7:free', name: 'MiniMax M2.7', provider: 'openrouter' }
+    { id: 'nvidia/nemotron-3-super-120b-a12b:free', name: 'Nemotron 3 Super 120B', provider: 'openrouter' }
   ],
   MID: [
     { id: 'openai/gpt-oss-120b', name: 'GPT OSS 120B (Balanced Core)', provider: 'groq' },
