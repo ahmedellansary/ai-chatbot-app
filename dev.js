@@ -642,20 +642,43 @@ When this request requires changing repository code, respond as a concise execut
           }
 
           fullContent = '';
+          let _devPending = false;
+          let _devRaf = null;
+          let _devLastTs = 0;
+          const _scheduleDevUpdate = () => {
+            if (_devPending) return;
+            _devPending = true;
+            _devRaf = requestAnimationFrame(() => {
+              try {
+                const msgRow = document.querySelector(`[data-id="${aiMsgId}"]`);
+                if (msgRow) {
+                  const hasAr = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFE]/.test(fullContent);
+                  msgRow.className = `message-row ai ${hasAr ? 'is-rtl' : 'is-ltr'}`;
+                  msgRow.setAttribute('dir', hasAr ? 'rtl' : 'ltr');
+                  const msgElem = msgRow.querySelector('.msg-content');
+                  if (msgElem) msgElem.innerHTML = DevUIEngine.parseMarkdown(fullContent);
+                }
+              } finally { _devPending = false; _devLastTs = Date.now(); }
+            });
+          };
           await this.callSingleAgentStream(currentAgent, apiMessages, state.abortController.signal, (delta) => {
-            _clearThinking();
+            if (!_thinkingCleared) _clearThinking();
             fullContent += delta;
+            const now = Date.now();
+            if (now - _devLastTs > 80) _scheduleDevUpdate();
+            else _scheduleDevUpdate();
+          });
+          if (_devRaf) cancelAnimationFrame(_devRaf);
+          // final flush
+          try {
             const msgRow = document.querySelector(`[data-id="${aiMsgId}"]`);
             if (msgRow) {
               const hasAr = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFE]/.test(fullContent);
               msgRow.className = `message-row ai ${hasAr ? 'is-rtl' : 'is-ltr'}`;
-              msgRow.setAttribute('dir', hasAr ? 'rtl' : 'ltr');
               const msgElem = msgRow.querySelector('.msg-content');
-              if (msgElem) {
-                msgElem.innerHTML = DevUIEngine.parseMarkdown(fullContent);
-              }
+              if (msgElem) msgElem.innerHTML = DevUIEngine.parseMarkdown(fullContent);
             }
-          });
+          } catch {}
 
           succeeded = true;
           usedAgent = currentAgent;
@@ -678,7 +701,7 @@ When this request requires changing repository code, respond as a concise execut
               if (retryMsg) retryMsg.innerHTML = `<span style="color:#fbbf24; font-size:12.5px;">🔄 إعادة محاولة مع <strong>${escapeHtml(currentAgent.name)}</strong>...</span>`;
               await new Promise(r => setTimeout(r, 700));
               await this.callSingleAgentStream(currentAgent, apiMessages, state.abortController.signal, (delta) => {
-                _clearThinking();
+                if (!_thinkingCleared) _clearThinking();
                 fullContent += delta;
                 const mRow = document.querySelector(`[data-id="${aiMsgId}"]`);
                 if (mRow) {
@@ -759,19 +782,19 @@ When this request requires changing repository code, respond as a concise execut
         const isDone = !isThinking && steps.every(s => s.status.includes('✓') || s.status.includes('Approved') || s.status.includes('Done'));
         const statusBadgeText = isDone ? '✓ Consensus Reached' : (steps.find(s => s.status === 'Active')?.title || 'In Progress...');
 
+        const okC = steps.filter(s=>/✓|Done|Approved/i.test(s.status)).length;
+        const warnC = steps.length - okC;
         const boxHtml = `
           <div class="multi-agent-box" id="box-${aiMsgId}">
-            <div class="multi-agent-header" onclick="window._toggleThinkingBox('${aiMsgId}')">
-              <div class="multi-agent-title">
-                <span>👥</span>
-                <span>Multi-Agent Consensus: <span style="color:#fbbf24; font-weight:600;">${escapeHtml(statusBadgeText)}</span></span>
-              </div>
-              <div class="multi-agent-toggle-indicator">
-                <span id="indicator-${aiMsgId}">[Details ▾]</span>
-              </div>
+            <div class="agent-committed-header" onclick="window._toggleThinkingBox('${aiMsgId}'); this.classList.toggle('collapsed')">
+              <span style="color:var(--accent-dev)">👥</span>
+              <span class="agent-committed-label">COMMITTED</span>
+              <span class="agent-committed-nums"><span class="agent-num ok">${okC}</span><span class="agent-num warn">${warnC}</span></span>
+              <span class="agent-toggle-icon" id="indicator-${aiMsgId}">▾</span>
             </div>
             <div class="multi-agent-content">
               ${stepsHtml}
+              <div style="display:flex;gap:8px;margin-top:8px"><button class="llm-end-btn" onclick="window._endToLLM(this)">⚡ Send to LLM</button></div>
             </div>
           </div>
         `;
@@ -954,18 +977,26 @@ When this request requires changing repository code, respond as a concise execut
         { icon:'✨', title:t('اقتراح تحسين','Improvement'), status:t('انتظار','Waiting'), summary:t('بانتظار...','Awaiting...') }
       ];
       const render = (finalReview='') => {
-        const reviewHtml = finalReview ? (()=>{ let pr=''; try{ pr=window.DevUIEngine ? window.DevUIEngine.parseMarkdown(finalReview) : finalReview; }catch{ pr=finalReview; } return `<div style="margin-top:6px; padding:8px; background:rgba(255,255,255,0.03); border:1px solid var(--border-subtle); border-radius:8px;">${pr}</div>`; })() : `<div style="font-size:12px; color:var(--text-dim); padding:6px 0;">${t('جاري المراجعة...','Reviewing...')}</div>`;
-        const applyBtn = finalReview ? `<button style="font-size:11px; padding:4px 10px; border-radius:6px; background:var(--accent-color); color:#fff; border:1px solid var(--accent-color); cursor:pointer; margin-top:8px;" onclick="(function(btn){ const r=btn.closest('.dev-observer-box').dataset.review||''; if(window._applyObserverSuggestion) window._applyObserverSuggestion(r); })(this)">Apply suggestion</button>` : '';
+        const buildBullets = (txt)=> {
+          const lines = String(txt||'').split(/\n/).map(s=>s.trim()).filter(Boolean);
+          const bullets = lines.map(l=> l.replace(/^\d+[\.\)\-]\s*/,'').trim()).filter(Boolean).slice(0,5);
+          if(!bullets.length) return `<div style="font-size:12px;color:var(--text-dim)">${escapeHtml(String(txt||'').slice(0,140))}</div>`;
+          return `<ul class="observer-bullets">${bullets.map(b=>`<li class="observer-bullet"><span class="observer-bullet-text">${escapeHtml(b)}</span></li>`).join('')}</ul>`;
+        };
+        const okN = finalReview ? (String(finalReview).match(/نعم|yes|✓|مُلتزم|Compliant/gi)||[]).length : 0;
+        const warnN = finalReview ? (String(finalReview).split(/\n/).filter(Boolean).length - okN) : 0;
+        const reviewHtml = finalReview ? buildBullets(finalReview) : `<div style="font-size:12px; color:var(--text-dim); padding:6px 0;">${t('جاري المراجعة...','Reviewing...')}</div>`;
+        const applyBtn = finalReview ? `<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap"><button class="observer-apply-btn" onclick="(function(btn){ const r=btn.closest('.dev-observer-box').dataset.review||''; if(window._applyObserverSuggestion) window._applyObserverSuggestion(r); })(this)">Apply</button><button class="llm-end-btn" onclick="window._endToLLM && window._endToLLM(this)" title="SSend to LLM">⚡ Send to LLM</button></div>` : '';
         let box = row.querySelector('.dev-observer-box');
         if (!box) { box = document.createElement('div'); box.className='dev-observer-box'; box.style.cssText='margin-top:10px; padding:0; border:none; background:transparent;'; row.querySelector('.msg-content')?.appendChild(box) || row.appendChild(box); }
         box.dataset.review = finalReview || '';
-        box.innerHTML = `<div style="display:flex; align-items:center; gap:6px; padding:4px 0; border-top:1px solid var(--border-subtle); margin-top:6px;"><span>👁️</span><span style="font-size:11px; color:var(--text-dim);">Review</span></div>${reviewHtml}${applyBtn}`;
+        box.innerHTML = `<div class="agent-committed-header" onclick="this.nextElementSibling.classList.toggle('hidden'); this.classList.toggle('collapsed')"><span>👁️</span><span class="agent-committed-label">COMMITTED</span><span class="agent-committed-nums"><span class="agent-num ok">${okN}</span><span class="agent-num warn">${Math.max(0,warnN)}</span></span><span class="agent-toggle-icon">▾</span></div><div class="observer-details">${reviewHtml}${applyBtn}</div>`;
       };
       render();
       steps[0].status=t('✓ تمت المتابعة','✓ Tracked'); steps[0].summary=t(`تمت مراقبة رد ${tier}`,'Tracked '+tier); steps[1].status=t('نشط','Active'); render();
       const prompt = isAr
-        ? `أنت مراقب كود ذكي. راجع الرد:\n\nطلب المستخدم: """${userText.slice(0,800)}"""\n\nرد المطور (${tier}): """${aiResponse.slice(0,2500)}"""\n\nحلل في 5 نقاط موجزة:\n1. هل الرد ملتزم بتعليمات البرمجة؟\n2. هل يوجد تناقض/تكرار/خطأ منطقي؟\n3. هل يوجد ثغرات أمان (XSS/SQLi/eval) أو أخطاء صامتة؟\n4. لو قصة/سكريبت لأشخاص حقيقيين — هل المعلومات موثوقة؟\n5. اقتراح تحسين واحد محدد لرفع الجودة\n\nعربي موجز بنقاط واضحة.`
-        : `You are a code reviewer. User: """${userText.slice(0,800)}""" Response (${tier}): """${aiResponse.slice(0,2500)}""" Provide 5 concise bullets: 1. Instruction compliance 2. Contradiction/bug 3. Security 4. Source reliability if real story 5. One improvement. Keep brief.`;
+        ? `أنت مراقب كود ذكي. راجع الرد:\n\nطلب المستخدم: """${userText.slice(0,800)}"""\n\nرد المطور (${tier}): """${aiResponse.slice(0,2500)}"""\n\nحلل في 5 نقاط موجزة:\n1. هل الرد ملتزم بتعليمات البرمجة؟\n2. هل يوجد تناقض/تكرار/خطأ منطقي؟\n3. هل يوجد ثغرات أمان (XSS/SQLi/eval) أو أخطاء صامتة؟\n4. لو قصة/سكريبت لأشخاص حقيقيين — هل المعلومات موثوقة؟\n5. اقتراح تحسين واحد *عام* للمشروع كله (ليس خاصا بهذا السؤال) — مثال: تحسين وصولية عام، أو أمان عام، أو أداء عام\n\nمهم: النقطة 5 يجب أن تكون اقتراحا عاما يصلح لأي طلب، لا اقتراحا مرتبطا بسؤال المستخدم الحالي. عربي موجز بنقاط واضحة.`
+        : `You are a code reviewer. User: """${userText.slice(0,800)}""" Response (${tier}): """${aiResponse.slice(0,2500)}""" Provide 5 concise bullets: 1. Instruction compliance 2. Contradiction/bug 3. Security 4. Source reliability if real story 5. ONE *GENERAL* improvement for the whole project (not tied to this specific question) — e.g. general a11y, security hardening, or perf. Keep brief. Bullet 5 MUST be general.`;
       const msgs=[{role:'system',content:isAr?'أنت مراقب كود مختصر':'You are concise reviewer'},{role:'user',content:prompt}];
       let review='';
       try{
@@ -1432,17 +1463,19 @@ When this request requires changing repository code, respond as a concise execut
         container.scrollTop = container.scrollHeight;
       }
       const flowStages = isAr ? [
-        { icon:'🧠', text:'فهم النية — ماذا يريد المطور؟', delay:900 },
-        { icon:'🔍', text:'تحليل الكود والسياق', delay:2600 },
+        { icon:'🧠', text:'فهم النية — ماذا يريد المطور؟', delay:700 },
+        { icon:'📂', text:'مراجعة الملفات الحية — فحص index.html والملفات المعنية', delay:1800 },
+        { icon:'🔍', text:'تحليل الكود والسياق والتناقض', delay:3200 },
         { icon:'🎯', text:'تقرير نوع التعديل', delay:5200 },
-        { icon:'✨', text:'صياغة الحل البرمجي', delay:8300 },
-        { icon:'✅', text:'مراجعة الأمان والجودة', delay:11800 }
+        { icon:'✨', text:'صياغة الحل البرمجي', delay:7800 },
+        { icon:'✅', text:'مراجعة الأمان + اقتراح تحسين عام', delay:11200 }
       ] : [
-        { icon:'🧠', text:'Understanding intent', delay:900 },
-        { icon:'🔍', text:'Analyzing code & context', delay:2600 },
+        { icon:'🧠', text:'Understanding intent', delay:700 },
+        { icon:'📂', text:'Reviewing live files — scanning index.html & targets', delay:1800 },
+        { icon:'🔍', text:'Analyzing code & context', delay:3200 },
         { icon:'🎯', text:'Deciding patch type', delay:5200 },
-        { icon:'✨', text:'Crafting solution', delay:8300 },
-        { icon:'✅', text:'Security review', delay:11800 }
+        { icon:'✨', text:'Crafting solution', delay:7800 },
+        { icon:'✅', text:'Security + general improvement', delay:11200 }
       ];
       // Ensure flow alignment matches language (strong model English → LTR, no right icon)
       const flowEl = document.getElementById('dev-thinking-flow');
@@ -1524,10 +1557,22 @@ When this request requires changing repository code, respond as a concise execut
       }
 
       const contentHtml = msg.role === 'ai' ? this.parseMarkdown(msg.content) : this.escapeHtml(msg.content);
-      row.innerHTML = `
-        <div class="msg-content">${contentHtml}</div>
-        ${modelBadgeHtml}
-      `;
+      if (msg.role === 'user') {
+        row.innerHTML = `
+          <div class="msg-content">${contentHtml}</div>
+          <div class="user-actions-bar"><button class="user-copy-btn" onclick="navigator.clipboard.writeText(this.closest('.message-row').querySelector('.msg-content').innerText); window.DevUIEngine.showToast('Copied','success')" title="نسخ"><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button></div>
+          ${modelBadgeHtml}
+        `;
+      } else {
+        row.innerHTML = `
+          <div class="msg-content">${contentHtml}</div>
+          ${modelBadgeHtml}
+          <div class="claude-actions-bar" style="display:flex;gap:8px;margin-top:6px">
+            <button class="claude-action-btn" onclick="navigator.clipboard.writeText(this.closest('.message-row').querySelector('.msg-content').innerText); window.DevUIEngine.showToast('Copied','success')" title="نسخ"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button>
+            <button class="claude-action-btn" onclick="window._retryMsg && window._retryMsg('${msg.id}')" title="إعادة"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg></button>
+          </div>
+        `;
+      }
       container.appendChild(row);
 
       if (msg.role === 'ai') {
@@ -2478,6 +2523,24 @@ When this request requires changing repository code, respond as a concise execut
   window._toggleThinkingBox = function(msgId) {
     const box = document.getElementById(`box-${msgId}`);
     if (box) box.classList.toggle('collapsed');
+  };
+  window._sendToLLM = window._endToLLM = function(btn){
+    try{
+      const box = btn.closest('.observer-box, .multi-agent-box, .dev-observer-box');
+      const raw = box?.dataset?.review || box?.innerText || '';
+      const lines = String(raw).split(/\n/).map(s=>s.trim()).filter(Boolean);
+      let contras = lines.filter(l=> /لا|تناقض|تعارض|✗|contradiction|inconsistent|conflict/i.test(l) && !/نعم|مُلتزم|Compliant|✓/i.test(l.split('—')[0]));
+      if(!contras.length) contras = lines.filter(l=> /لا\s*—|✗|تناقض/i.test(l)).slice(0,3);
+      if(!contras.length) contras = lines.slice(1,3);
+      const q = contras.length ? `⚠️ تناقض مكتشف:\n- ${contras.join('\n- ')}\n\nهل تلاحظ هذه المشكلة؟ وضح وصحح.` : `هل ترى أي تناقض في الرد السابق؟ راجع: ${String(raw).slice(0,300)}`;
+      const input = document.getElementById('user-input');
+      if(!input) return;
+      input.value = q.slice(0,900);
+      input.dispatchEvent(new Event('input'));
+      if(window.DevUIEngine) window.DevUIEngine.updateSendBtn();
+      input.focus();
+      if(window.DevUIEngine) window.DevUIEngine.showToast('↗ Contradictions sent to LLM','info');
+    }catch(e){}
   };
 
   window._openRollbackModal = async function() {
