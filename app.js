@@ -509,7 +509,7 @@
 
         let runBtn = '';
         if (isWebCode) {
-          runBtn = `<button class="sandbox-launch-btn" onclick="window._runSandbox(decodeURIComponent('${encodedCode}'))">▶️ تشغيل المحاكاة</button>`;
+          runBtn = `<button class="sandbox-launch-btn" data-code="${encodedCode}" onclick="window._runSandbox(decodeURIComponent(this.dataset.code))">▶️ تشغيل المحاكاة</button>`;
         }
 
         return `<div class="code-window">
@@ -630,7 +630,7 @@
             </button>
           </div>
           <div class="claude-footer-note">
-            <div class="claude-terracotta-star">✦</div>
+            <div class="claude-terracotta-star"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg></div>
             <div class="claude-disclaimer-text">
               <span class="claude-model-name">${this.escapeHtml(msg.model || 'X.v1')}</span>
               <span>· Verify info</span>
@@ -675,7 +675,7 @@
       const container = $('chat-container');
       if (!container) return;
       const base = this._stripDots(initialText) || 'Analyzing';
-
+      const isAr = /[\u0600-\u06FF]/.test(initialText) || /[\u0600-\u06FF]/.test(document.getElementById('user-input')?.value || '');
       let typing = $('typing-indicator');
       if (!typing) {
         typing = document.createElement('div');
@@ -683,15 +683,18 @@
         typing.className = 'message-row ai typing-indicator';
         typing.innerHTML = `
           <div class="typing-bubble" dir="ltr">
-            <span class="typing-icon" aria-hidden="true">✦</span>
+            <span class="typing-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg></span>
             <span id="thinking-word" class="thinking-word">${this.escapeHtml(base)}</span>
             <span class="thinking-dots" aria-hidden="true"><i></i><i></i><i></i></span>
           </div>
+          <div id="thinking-flow" class="thinking-flow"></div>
         `;
         container.appendChild(typing);
       } else {
         const wordEl = document.getElementById('thinking-word');
         if (wordEl) wordEl.textContent = base;
+        const flow = document.getElementById('thinking-flow');
+        if (flow) flow.innerHTML = '';
       }
       this.scrollToBottom();
     },
@@ -699,22 +702,43 @@
     startProgressiveThinking(initialWord = 'Analyzing') {
       this.hideTyping();
       this.showTyping(initialWord);
-
-      // Staggered 200-300ms offset — avoids exact collision with typical first-chunk arrival (1800-2500ms) and stream DOM updates
-      const stages = [
-        { word: 'Analyzing', delay: 0 },
-        { word: 'Thinking', delay: 2100 },
-        { word: 'Reasoning', delay: 4550 },
-        { word: 'Synthesizing', delay: 7850 },
-        { word: 'Refining', delay: 11300 },
-        { word: 'Composing', delay: 14900 }
+      const isAr = /[\u0600-\u06FF]/.test(initialWord) || /[\u0600-\u06FF]/.test(document.getElementById('user-input')?.value || '');
+      const flowStages = isAr ? [
+        { icon: '🧠', text: 'فهم النية — ماذا يريد المستخدم حقاً؟', delay: 900 },
+        { icon: '🔍', text: 'تحليل السياق والتناقض — هل يوجد تعارض أو تكرار؟', delay: 2600 },
+        { icon: '🎯', text: 'تقرير نوع الرد — مباشر أم كشف تناقض؟', delay: 5200 },
+        { icon: '✨', text: 'صياغة الرد — بناء الإجابة النهائية', delay: 8300 },
+        { icon: '✅', text: 'مراجعة ذاتية — هل الرد دقيق ومكتمل؟', delay: 11800 }
+      ] : [
+        { icon: '🧠', text: 'Understanding intent — what does the user really want?', delay: 900 },
+        { icon: '🔍', text: 'Context & contradiction check', delay: 2600 },
+        { icon: '🎯', text: 'Deciding response mode', delay: 5200 },
+        { icon: '✨', text: 'Synthesizing final answer', delay: 8300 },
+        { icon: '✅', text: 'Self-review — is it accurate?', delay: 11800 }
       ];
-
+      const wordStages = [
+        { word: isAr ? 'تحليل' : 'Analyzing', delay: 0 },
+        { word: isAr ? 'تفكير' : 'Thinking', delay: 2100 },
+        { word: isAr ? 'استدلال' : 'Reasoning', delay: 4550 },
+        { word: isAr ? 'تركيب' : 'Synthesizing', delay: 7850 },
+        { word: isAr ? 'صقل' : 'Refining', delay: 11300 },
+        { word: isAr ? 'صياغة' : 'Composing', delay: 14900 }
+      ];
       this._thinkingTimers = [];
-      stages.slice(1).forEach(stage => {
+      wordStages.slice(1).forEach(stage => {
+        const timer = setTimeout(() => { this.setThinkingStage(stage.word); }, stage.delay);
+        this._thinkingTimers.push(timer);
+      });
+      flowStages.forEach(s => {
         const timer = setTimeout(() => {
-          this.setThinkingStage(stage.word);
-        }, stage.delay);
+          const flow = document.getElementById('thinking-flow');
+          if (!flow) return;
+          const item = document.createElement('div');
+          item.className = 'thinking-flow-item';
+          item.innerHTML = `<span class="flow-icon">${s.icon}</span><span class="flow-text">${this.escapeHtml(s.text)}</span><span class="flow-dot"></span>`;
+          flow.appendChild(item);
+          this.scrollToBottom();
+        }, s.delay);
         this._thinkingTimers.push(timer);
       });
     },
@@ -1019,14 +1043,33 @@
         // final flush after stream completes
         if (msgRow && !pendingUpdate) scheduleUpdate();
 
-        if (fullContent.includes('---BEGIN_INSTRUCTION_UPDATE---')) {
+        if (fullContent.includes('---BEGIN_INSTRUCTION_UPDATE---') || fullContent.includes('"title"') && fullContent.includes('"content"')) {
           InstructionManager.handleAutoInstructionUpdate(fullContent);
-          const cleanText = fullContent.replace(/---BEGIN_INSTRUCTION_UPDATE---[\s\S]*?---END_INSTRUCTION_UPDATE---/g, '').trim();
-          aiMsgObj.content = cleanText;
-          if (msgRow) msgRow.innerHTML = MessageRenderer.parseMarkdown(cleanText);
+          const cleanText = fullContent.replace(/---BEGIN_INSTRUCTION_UPDATE---[\s\S]*?---END_INSTRUCTION_UPDATE---/g, '').replace(/```json\s*\{[\s\S]*?"title"[\s\S]*?\}\s*```/g, '').trim();
+          if (cleanText) {
+            aiMsgObj.content = cleanText;
+            if (msgRow) msgRow.innerHTML = MessageRenderer.parseMarkdown(cleanText);
+          } else {
+            aiMsgObj.content = fullContent;
+            if (msgRow) msgRow.innerHTML = MessageRenderer.parseMarkdown(fullContent) + '<div style="margin-top:8px; font-size:12px; color:var(--accent-color);">✅ تم حفظ التعليمة — يمكنك مراجعتها في الإعدادات → التعليمات</div>';
+          }
         } else {
           aiMsgObj.content = fullContent;
         }
+        // Skill previews: slides / mindmap — show preview button if JSON detected
+        try {
+          const slidesMatch = fullContent.match(/```json\s*([\s\S]*?"slides"[\s\S]*?)\s*```/);
+          if (slidesMatch && msgRow) {
+            const sData = JSON.parse(slidesMatch[1]);
+            if (sData.slides && Array.isArray(sData.slides)) {
+              const btn = `<button class="slides-launch-btn" data-slides="${encodeURIComponent(JSON.stringify(sData.slides))}" onclick="window._openSlides(decodeURIComponent(this.dataset.slides))">📊 عرض الشرائح التفاعلية</button>`;
+              msgRow.innerHTML += btn;
+            }
+          }
+          if (fullContent.includes('mindmap') || fullContent.includes('Mind Map')) {
+            // mindmap preview is handled via parseMarkdown tree, no extra action needed
+          }
+        } catch {}
         StateController.save();
         try { UsageTracker.record(aiMsgObj.model, aiMsgObj.provider || 'groq', textForPayload, fullContent); } catch {}
 
@@ -1230,24 +1273,22 @@
 
       const renderObserver = (finalReview = '') => {
         const stepsHtml = steps.map(s => `
-          <div class="agent-step-item">
-            <div class="agent-step-header">
-              <span class="agent-step-name">${s.icon} ${MessageRenderer.escapeHtml(s.title)}</span>
-              <span class="agent-step-badge">${MessageRenderer.escapeHtml(s.status)}</span>
-            </div>
-            <div class="agent-step-body">${MessageRenderer.escapeHtml(s.summary)}</div>
+          <div class="thinking-flow-item">
+            <span class="flow-icon">${s.icon}</span>
+            <span class="flow-text">${MessageRenderer.escapeHtml(s.title)} — ${MessageRenderer.escapeHtml(s.summary)}</span>
+            <span class="flow-dot" style="${s.status.includes('✓') || s.status.includes('Done') ? 'opacity:0;' : ''}"></span>
           </div>
         `).join('');
-        const reviewHtml = finalReview ? `<div class="observer-final" style="margin-top:10px; padding:10px; background:rgba(255,255,255,0.04); border-radius:8px; border:1px solid var(--border-subtle);">${MessageRenderer.parseMarkdown(finalReview)}</div>` : '';
+        const reviewHtml = finalReview ? `<div class="observer-final" style="margin-top:8px; padding:8px; background:transparent; border:none;">${MessageRenderer.parseMarkdown(finalReview)}</div>` : '';
         const box = aiRow.querySelector('.observer-box') || document.createElement('div');
-        box.className = 'observer-box multi-agent-box';
-        box.style.cssText = 'margin-top:12px; border:1px solid var(--border-subtle);';
+        box.className = 'observer-box';
+        box.style.cssText = 'margin-top:10px; padding:0; border:none; background:transparent;';
         box.innerHTML = `
-          <div class="multi-agent-header" style="cursor:pointer;" onclick="this.nextElementSibling.classList.toggle('hidden')">
-            <div class="multi-agent-title"><span>👁️</span><span>${t('المراقبون — مراجعة الجودة', 'Observers — Quality Review')}</span></div>
-            <span style="font-size:11px; color:var(--text-dim);">${t('عرض التفاصيل ▾', 'Details ▾')}</span>
+          <div style="display:flex; align-items:center; gap:6px; cursor:pointer; padding:4px 0;" onclick="this.nextElementSibling.classList.toggle('hidden')">
+            <span>👁️</span><span style="font-size:12.5px; font-weight:600;">${t('المراقبون — مراجعة الجودة', 'Observers — Quality Review')}</span>
+            <span style="font-size:11px; color:var(--text-dim); margin-left:auto;">${t('عرض التفاصيل ▾', 'Details ▾')}</span>
           </div>
-          <div class="multi-agent-content" style="padding:8px;">
+          <div class="thinking-flow" style="margin-top:6px; padding:0; background:transparent; border:none;">
             ${stepsHtml}
             ${reviewHtml}
             <div style="font-size:10.5px; color:var(--text-dim); margin-top:6px;">${t('مراجعة لاحقة بعد رد المستوى المختار — لا تحل محل الرد الأصلي', 'Post-response review — does not replace original answer')}</div>
@@ -1384,7 +1425,7 @@
       area.innerHTML = `
         <h2 class="slide-title">${MessageRenderer.escapeHtml(slide.title || 'شريحة')}</h2>
         <div class="slide-bullets-wrap">
-          ${(slide.bullets || []).map(b => `<div class="slide-bullet"><span>✦</span> <span>${MessageRenderer.escapeHtml(b)}</span></div>`).join('')}
+          ${(slide.bullets || []).map(b => `<div class="slide-bullet"><span>▸</span> <span>${MessageRenderer.escapeHtml(b)}</span></div>`).join('')}
         </div>
       `;
     },
