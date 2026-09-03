@@ -986,7 +986,8 @@ When this request requires changing repository code, respond as a concise execut
       } else {
         DevState.newConversation();
       }
-      updateDevVersionBadge().catch(()=>{});
+      // Stagger version badge fetch — avoid simultaneous fetch with dev_prompt
+      setTimeout(() => updateDevVersionBadge().catch(()=>{}), 260);
       // Auto-focus chat box for instant typing
       setTimeout(() => { try { if (DevAuthManager.isUnlocked()) document.getElementById('user-input')?.focus(); } catch {} }, 600);
       const _devOrigUnlock = DevAuthManager.unlock.bind(DevAuthManager);
@@ -1006,7 +1007,8 @@ When this request requires changing repository code, respond as a concise execut
         const saved = localStorage.getItem('custom_dev_prompt');
         if (saved) state.devPrompt = saved;
       }
-      this.syncLiveRepoMap();
+      // Stagger heavy GitHub tree fetch — prevents concurrent boot storm with version.json
+      setTimeout(() => this.syncLiveRepoMap().catch(()=>{}), 380);
     },
 
     async syncLiveRepoMap() {
