@@ -3024,3 +3024,22 @@ pre code {
   color: var(--text-main);
   box-shadow: 0 0 10px var(--accent-dev-glow, rgba(245, 158, 11, 0.25));
 }
+/* same floating bullets + COMMITTED header + user copy — dev theme */
+.observer-bullets{list-style:none;padding:0;margin:8px 0 0;display:flex;flex-direction:column;gap:8px}
+.observer-bullet{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,.22);font-size:13px;line-height:1.5;color:var(--text-main)}
+.observer-bullet::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--accent-dev);box-shadow:0 0 8px var(--accent-dev-glow);margin-top:6px;flex-shrink:0}
+.observer-apply-btn{padding:6px 14px;border-radius:999px;background:var(--accent-dev);color:#000;border:1px solid var(--accent-dev);font-size:12px;font-weight:700;cursor:pointer}
+.llm-end-btn{padding:6px 14px;border-radius:999px;background:transparent;color:var(--text-main);border:1px solid var(--border-subtle);font-size:12px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.llm-end-btn:hover{background:var(--bg-card-hover);border-color:var(--accent-dev);color:var(--accent-dev)}
+.agent-committed-header{display:flex;align-items:center;gap:8px;padding:6px 10px;border-bottom:1px solid var(--border-subtle);cursor:pointer;user-select:none}
+.agent-committed-label{font-size:11px;font-weight:800;letter-spacing:.06em;color:var(--text-muted)}
+.agent-committed-nums{display:flex;gap:6px}
+.agent-num{font-size:11px;font-weight:700;padding:2px 7px;border-radius:999px;min-width:22px;text-align:center}
+.agent-num.ok{background:rgba(16,185,129,.14);color:#10b981;border:1px solid rgba(16,185,129,.3)}
+.agent-num.warn{background:rgba(245,158,11,.14);color:#f59e0b;border:1px solid rgba(245,158,11,.3)}
+.agent-toggle-icon{margin-left:auto;color:var(--text-dim);font-size:12px;transition:transform .18s}
+.agent-committed-header.collapsed .agent-toggle-icon{transform:rotate(-90deg)}
+.user-actions-bar{display:flex;gap:6px;margin-top:6px;justify-content:flex-end}
+.user-copy-btn{width:28px;height:28px;border-radius:50%;background:var(--bg-card);border:1px solid var(--border-subtle);color:var(--text-dim);display:flex;align-items:center;justify-content:center;cursor:pointer}
+.user-copy-btn:hover{color:var(--text-main);border-color:var(--border-focus)}
+@media(max-width:600px){.user-copy-btn{width:26px;height:26px}.observer-bullet{padding:8px 10px;font-size:12.5px}}
