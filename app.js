@@ -621,7 +621,7 @@
       }
 
       if (msg.role === 'user') {
-        row.innerHTML = `<div class="msg-content" ${dirAttr}>${parsed}${attachmentsHtml}</div><div class="user-actions-bar"><button class="user-copy-btn" onclick="window._copyMsgText(this)" title="نسخ"><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button></div>`;
+        row.innerHTML = `<div class="msg-content" ${dirAttr} style="position:relative;padding-inline-end:36px">${parsed}${attachmentsHtml}<button class="user-copy-inside" onclick="window._copyMsgText(this)" title="نسخ"><svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button></div>`;
       } else {
         row.innerHTML = `
           <div class="msg-content" ${dirAttr}>
@@ -770,7 +770,7 @@
           const item = document.createElement('div');
           item.className = 'thinking-flow-item';
           // Only left bullet, no right icon — LTR for English thinking
-          item.innerHTML = `<span class="flow-icon">${s.icon}</span><span class="flow-text">${this.escapeHtml(s.text)}</span>`;
+          item.classList.add('reached'); item.innerHTML = `<span class="flow-dot"></span><span class="flow-text">${this.escapeHtml(s.text)}</span>`;
           flow.appendChild(item);
           this.scrollToBottom();
         }, s.delay);
