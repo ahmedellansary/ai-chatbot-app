@@ -3101,11 +3101,12 @@ html, body {
 
 @media (max-width: 600px) {
   .settings-modal-body {
-    flex-direction: column;
-    gap: 12px;
+    flex-direction: row-reverse;
+    gap: 10px;
   }
   .settings-modal-tabs-bar {
-    width: 100%;
+    width: 110px;
+    min-width: 100px;
     flex-direction: column;
     overflow-x: visible;
     padding: 6px;
@@ -3113,7 +3114,8 @@ html, body {
   .settings-tab-btn {
     flex: none;
     justify-content: flex-start;
-    padding: 10px 14px;
+    padding: 8px 10px;
+    font-size: 12px;
   }
 }
 
