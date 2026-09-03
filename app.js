@@ -827,18 +827,27 @@
     },
 
     getAdaptiveConfig(tier) {
-      if (tier === 'FAST' || tier === 'HIGH') return { recentCount: 6, maxBriefingChars: 600 };
+      if (tier === 'HIGH') return { recentCount: 18, maxBriefingChars: 3200 };
+      if (tier === 'FAST') return { recentCount: 6, maxBriefingChars: 600 };
       return { recentCount: 10, maxBriefingChars: 1200 };
     },
 
     generateBriefing(conv, tier) {
-      if (!conv || !Array.isArray(conv.messages) || conv.messages.length <= 12) return '';
+      if (!conv || !Array.isArray(conv.messages) || conv.messages.length <= 8) return '';
       const cfg = this.getAdaptiveConfig(tier);
-      const firstUser = (conv.messages.find(m => m.role === 'user')?.content || '').slice(0, 200).replace(/\n/g, ' ').trim();
-      const recentAi = conv.messages.filter(m => m.role === 'ai').slice(-3).map(m => (m.content || '').slice(0, 180).replace(/\n/g, ' ').trim()).filter(Boolean).join(' | ');
+      const firstUser = (conv.messages.find(m => m.role === 'user')?.content || '').slice(0, 250).replace(/\n/g, ' ').trim();
       const lang = /[\u0600-\u06FF]/.test(firstUser) ? 'العربية' : 'English';
       const turns = conv.messages.length;
       const title = conv.title || 'محادثة';
+      if (tier === 'HIGH') {
+        // HIGH: briefing for whole session + last summaries (up to 3200 chars) + last 18 lines will be sent verbatim via apiMessages
+        const recentAi = conv.messages.filter(m => m.role === 'ai').slice(-5).map(m => (m.content || '').slice(0, 220).replace(/\n/g, ' ').trim()).filter(Boolean).join(' | ');
+        const recentUser = conv.messages.filter(m => m.role === 'user').slice(-5).map(m => (m.content || '').slice(0, 180).replace(/\n/g, ' ').trim()).filter(Boolean).join(' | ');
+        let briefing = `📋 بريفنج المحادثة الكاملة (${title}):\n- الهدف الأساسي: ${firstUser.slice(0, 250)}\n- اللغة والنبرة: ${lang}\n- عدد التبادلات: ${turns}\n- آخر رسائل المستخدم: ${recentUser.slice(0, 500)}\n- آخر خلاصات AI: ${recentAi.slice(0, 600)}\n- ملاحظة: آخر 18 رسالة التالية مرسلة حرفيا كسياق كامل`;
+        if (briefing.length > cfg.maxBriefingChars) briefing = briefing.slice(0, cfg.maxBriefingChars) + '...';
+        return briefing;
+      }
+      const recentAi = conv.messages.filter(m => m.role === 'ai').slice(-3).map(m => (m.content || '').slice(0, 180).replace(/\n/g, ' ').trim()).filter(Boolean).join(' | ');
       let briefing = `📋 بريفنج المحادثة (${title}):\n- الهدف الأساسي: ${firstUser.slice(0, 180)}\n- اللغة والنبرة: ${lang}\n- عدد التبادلات: ${turns}\n- آخر خلاصات: ${recentAi.slice(0, 350)}`;
       if (briefing.length > cfg.maxBriefingChars) briefing = briefing.slice(0, cfg.maxBriefingChars) + '...';
       return briefing;
