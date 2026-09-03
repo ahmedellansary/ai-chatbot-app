@@ -1514,7 +1514,7 @@ When this request requires changing repository code, respond as a concise execut
           if (!flow) return;
           const item = document.createElement('div');
           item.className = 'thinking-flow-item';
-          item.innerHTML = `<span class="flow-icon">${s.icon}</span><span class="flow-text">${this.escapeHtml(s.text)}</span>`;
+          item.classList.add('reached'); item.innerHTML = `<span class="flow-dot"></span><span class="flow-text">${this.escapeHtml(s.text)}</span>`;
           flow.appendChild(item);
           const ca = $('chat-area'); if (ca) ca.scrollTop = ca.scrollHeight;
         }, s.delay);
@@ -1586,8 +1586,7 @@ When this request requires changing repository code, respond as a concise execut
       const contentHtml = msg.role === 'ai' ? this.parseMarkdown(msg.content) : this.escapeHtml(msg.content);
       if (msg.role === 'user') {
         row.innerHTML = `
-          <div class="msg-content">${contentHtml}</div>
-          <div class="user-actions-bar"><button class="user-copy-btn" onclick="navigator.clipboard.writeText(this.closest('.message-row').querySelector('.msg-content').innerText); window.DevUIEngine.showToast('Copied','success')" title="نسخ"><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button></div>
+          <div class="msg-content" style="position:relative;padding-inline-end:36px">${contentHtml}<button class="user-copy-inside" onclick="navigator.clipboard.writeText(this.closest('.message-row').querySelector('.msg-content').innerText); window.DevUIEngine.showToast('Copied','success')" title="نسخ"><svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button></div>
           ${modelBadgeHtml}
         `;
       } else {
