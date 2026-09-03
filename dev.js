@@ -2673,6 +2673,23 @@ When this request requires changing repository code, respond as a concise execut
     }
   };
 
+  function renderDevModelsInline(){
+    const tbody=document.getElementById('dev-models-tbody');
+    if(!tbody || !window.MODELS) return;
+    const getParam=(n)=>{ const m=String(n||'').match(/(\d+(?:\.\d+)?)\s*B/i); return m? parseFloat(m[1]):0; };
+    const all=[];
+    ['HIGH','MID','FAST'].forEach(tier=> (window.MODELS[tier]||[]).forEach(m=> all.push({...m, tier, params:getParam(m.name)})));
+    all.sort((a,b)=> b.params - a.params || (['HIGH','MID','FAST'].indexOf(a.tier)-['HIGH','MID','FAST'].indexOf(b.tier)));
+    const per=(window.UsageTracker? window.UsageTracker.load().perModel||{} : {});
+    const getRenew=(p)=>{ const now=new Date(); if(p==='groq'){ const t=new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()+1,0,0,0)); return `غداً ${Math.round((t-now)/3600000)}س`; } else { const t=new Date(now.getFullYear(), now.getMonth()+1,1); return `أول الشهر ${Math.ceil((t-now)/86400000)}يوم`; } };
+    tbody.innerHTML=all.map(m=>{
+      const en=window.isModelEnabled? window.isModelEnabled(m.id):true;
+      const u=per[m.id]||{t:0,r:0};
+      return `<tr><td><input type="checkbox" style="width:16px;height:16px;accent-color:var(--accent-color);" data-id="${m.id}" ${en?'checked':''} onchange="toggleDevModelInline(this)"></td><td><div style="font-weight:700;">${m.name} <span style="font-size:10px; padding:2px 5px; border-radius:6px; background:rgba(255,255,255,0.06);">${m.tier}</span></div><div style="font-size:11px; color:var(--text-dim); font-family:var(--font-mono);">${m.id}</div></td><td><span style="font-size:11px; padding:3px 7px; border-radius:999px; background:${m.provider==='groq'?'rgba(16,185,129,0.15)':'rgba(99,102,241,0.15)'}; border:1px solid var(--border-subtle);">${m.provider}</span></td><td><div style="font-size:11px; font-family:var(--font-mono);">${u.t.toLocaleString()} توكن · ${u.r} طلب</div><div style="height:4px; background:rgba(255,255,255,0.08); border-radius:999px; margin-top:4px;"><div style="height:100%; width:${Math.min(100,Math.round((u.t/6000)*100))}%; background:var(--accent-color);"></div></div><div style="font-size:10px; color:var(--text-dim); margin-top:3px;">${getRenew(m.provider)}</div></td></tr>`;
+    }).join('');
+  }
+  window.toggleDevModelInline=function(el){ const id=el.dataset.id; const en=el.checked; if(window.setModelEnabled) window.setModelEnabled(id,en); };
+  window.DevModelsPage={ refreshRow: renderDevModelsInline, render: renderDevModelsInline };
   window._switchDevSettingsTab = function(tabName) {
     $$('#dev-settings-modal .settings-tab-btn').forEach(btn => {
       btn.classList.toggle('active', btn.getAttribute('data-tab') === tabName);
@@ -2681,6 +2698,7 @@ When this request requires changing repository code, respond as a concise execut
       pane.classList.toggle('hidden', pane.id !== `dev-tab-${tabName}`);
       pane.classList.toggle('active', pane.id === `dev-tab-${tabName}`);
     });
+    if(tabName==='models') renderDevModelsInline();
   };
 
   window._secretSyncAndClearGate = async function() {
