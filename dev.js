@@ -990,7 +990,7 @@ When this request requires changing repository code, respond as a concise execut
         const getCls=b=>{ if(b.includes('التناقض:')) return b.includes('نعم')?'warn':'ok'; if(b.includes('الالتزام:')||b.includes('المصادر:')) return (b.includes('نعم')||b.includes('موثوقة')||b.includes('سليم'))?'ok':'warn'; return b.includes('لا')||b.includes('تحتاج')?'warn':'ok'; };
         const buildBullets = (txt)=> {
           const lines = String(txt||'').split(/\n/).map(s=>s.trim()).filter(Boolean);
-          const bullets = lines.map(l=> l.replace(/^\d+[\.\)\-]\s*/,'').trim()).filter(Boolean).slice(0,5);
+          const bullets = lines.map(l=> l.replace(/^[��?]\s*/,'').replace(/^\d+[\.\)\-]\s*/,'').trim()).filter(Boolean).slice(0,5);
           if(!bullets.length) return `<div style="font-size:12px;color:var(--text-dim)">${escapeHtml(String(txt||'').slice(0,140))}</div>`;
           const main=bullets.slice(0,-1), last=bullets.slice(-1)[0];
           const mainHtml=main.length? `<ul class="observer-bullets">${main.map(b=>`<li class="observer-bullet ${getCls(b)}"><span class="observer-bullet-text">${escapeHtml(b)}</span></li>`).join('')}</ul>` : '';
@@ -1004,7 +1004,7 @@ When this request requires changing repository code, respond as a concise execut
         let box = row.querySelector('.dev-observer-box');
         if (!box) { box = document.createElement('div'); box.className='dev-observer-box'; box.style.cssText='margin-top:10px; padding:0; border:none; background:transparent;'; row.querySelector('.msg-content')?.appendChild(box) || row.appendChild(box); }
         box.dataset.review = finalReview || '';
-        box.innerHTML = `<div class="agent-committed-header" onclick="this.closest('.dev-observer-box, .observer-box').classList.toggle('collapsed')"><span>👁️</span><span class="agent-committed-label">COMMITTED</span><span class="agent-committed-nums"><span class="agent-num ok">${okN}</span><span class="agent-num warn">${Math.max(0,warnN)}</span></span><span class="agent-toggle-icon">▾</span></div><div class="observer-details">${reviewHtml}${applyBtn}</div>`;
+        box.innerHTML = `<div class="agent-committed-header" onclick="this.closest('.dev-observer-box')?.classList.toggle('collapsed')"><span>👁️</span><span class="agent-committed-label">COMMITTED</span><span class="agent-committed-nums"><span class="agent-num ok">${okN}</span><span class="agent-num warn">${Math.max(0,warnN)}</span></span><span class="agent-toggle-icon">▾</span></div><div class="observer-details">${reviewHtml}${applyBtn}</div>`;
       };
       render();
       steps[0].status=t('✓ تمت المتابعة','✓ Tracked'); steps[0].summary=t(`تمت مراقبة رد ${tier}`,'Tracked '+tier); steps[1].status=t('نشط','Active'); render();
