@@ -720,25 +720,31 @@
       const tier = (window.state && window.state.currentMode) || 'MID';
       const fast = tier === 'FAST';
       const high = tier === 'HIGH';
-      // Optimized: 3 stages max, 3.2s cap — hide instantly on first token, no hallucination
-      const flowStages = isAr ? (fast ? [
+      // HIGH: Claude 6-stage visible then hidden after done
+      const flowStages = isAr ? (high ? [
+        { icon: '🧠', text: 'فهم النية الحقيقية', delay: 500 },
+        { icon: '📂', text: 'جمع السياق والملفات', delay: 1100 },
+        { icon: '📋', text: 'تخطيط هيكل الرد', delay: 1800 },
+        { icon: '✍️', text: 'صياغة أولية', delay: 2500 },
+        { icon: '🔍', text: 'نقد ذاتي — هلوسة/تسريب؟', delay: 3200 },
+        { icon: '✨', text: 'صقل نهائي', delay: 4000 }
+      ] : fast ? [
         { icon: '🧠', text: 'فهم النية', delay: 400 },
         { icon: '✨', text: 'صياغة الرد', delay: 900 }
-      ] : high ? [
-        { icon: '🧠', text: 'فهم النية', delay: 600 },
-        { icon: '📂', text: 'مراجعة السياق', delay: 1400 },
-        { icon: '✨', text: 'صياغة دقيقة', delay: 2300 }
       ] : [
         { icon: '🧠', text: 'فهم النية', delay: 500 },
         { icon: '🔍', text: 'تحليل السياق', delay: 1200 },
         { icon: '✨', text: 'صياغة الرد', delay: 2000 }
-      ]) : (fast ? [
+      ]) : (high ? [
+        { icon: '🧠', text: 'Intent', delay: 500 },
+        { icon: '📂', text: 'Gather context', delay: 1100 },
+        { icon: '📋', text: 'Plan structure', delay: 1800 },
+        { icon: '✍️', text: 'Draft', delay: 2500 },
+        { icon: '🔍', text: 'Self-critique', delay: 3200 },
+        { icon: '✨', text: 'Refine', delay: 4000 }
+      ] : fast ? [
         { icon: '🧠', text: 'Understanding', delay: 400 },
         { icon: '✨', text: 'Composing', delay: 900 }
-      ] : high ? [
-        { icon: '🧠', text: 'Understanding', delay: 600 },
-        { icon: '📂', text: 'Context check', delay: 1400 },
-        { icon: '✨', text: 'Synthesizing', delay: 2300 }
       ] : [
         { icon: '🧠', text: 'Understanding', delay: 500 },
         { icon: '🔍', text: 'Analyzing', delay: 1200 },
