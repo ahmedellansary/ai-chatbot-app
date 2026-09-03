@@ -63,7 +63,7 @@ const rotateGroqKey = () => {
 // ─── Model Tiers — Unified active model set (Strictly Isolated within Tier) ───
 const MODELS = {
   HIGH: [
-    { id: 'openai/gpt-oss-120b', name: 'GPT OSS 120B (High Temporary)', provider: 'groq' }
+    { id: 'minimax/minimax-m3:free', name: 'MiniMax M3 (High Temporary)', provider: 'openrouter' }
   ],
   MID: [
     { id: 'openai/gpt-oss-120b', name: 'GPT OSS 120B (Balanced Core)', provider: 'groq' },
