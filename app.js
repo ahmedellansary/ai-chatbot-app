@@ -772,19 +772,12 @@
     setTimeout(() => toast.remove(), 10000);
   }
   window.debugPrint = debugPrint;
-  function debugPhase(phase, data = {}) {
-    const entry = { at: new Date().toISOString(), phase, ...data };
-    try {
-      const key = 'xv1_runtime_debug_log';
-      const entries = JSON.parse(localStorage.getItem(key) || '[]');
-      entries.push(entry);
-      localStorage.setItem(key, JSON.stringify(entries.slice(-30)));
-    } catch (storageError) {
-      console.error('[X.v1 debug phase log failed]', storageError);
-    }
-    console.info('[X.v1 phase]', entry);
+  function debugCheckpoint(stage, data = {}) {
+    const entry = { at: new Date().toISOString(), stage, ...data };
+    try { localStorage.setItem('xv1_runtime_last_checkpoint', JSON.stringify(entry)); } catch (e) {}
+    console.info('[X.v1 checkpoint]', entry);
   }
-  window.debugPhase = debugPhase;
+  window.debugCheckpoint = debugCheckpoint;
   window.addEventListener('error', event => {
     if (event.error) debugPrint(event.error, 'JavaScript error');
   });
@@ -845,7 +838,6 @@
     async sendMessage(userText) {
       const hasAttachments = state.attachments && state.attachments.length > 0;
       if (state.isStreaming || (!userText.trim() && !hasAttachments)) return;
-      debugPhase('send:start', { tier: state.currentMode || 'MID', textLength: userText.length });
 
       if (!state.activeConvId) StateController.newConversation();
       const conv = StateController.getActiveConv();
@@ -867,14 +859,11 @@
       state.abortController = new AbortController();
 
       const tier = state.currentMode || 'MID';
+      debugCheckpoint('send-start', { tier, textLength: textForPayload.length });
       let systemPromptForCall;
       try {
-        debugPhase('prompt:start', { tier, textLength: textForPayload.length });
-        systemPromptForCall = await Promise.race([
-          this.buildSystemPrompt(textForPayload, currentAttachments, conv, tier),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('PROMPT_TIMEOUT')), 8000))
-        ]);
-        debugPhase('prompt:ready', { tier, promptLength: systemPromptForCall.length });
+        systemPromptForCall = await this.buildSystemPrompt(textForPayload, currentAttachments, conv, tier);
+        debugCheckpoint('prompt-ready', { tier, promptLength: systemPromptForCall.length });
       } catch (err) {
         state.isStreaming = false;
         state.abortController = null;
@@ -936,6 +925,7 @@
       };
 
       try {
+        debugCheckpoint('stream-start', { tier, messageCount: apiMessages.length });
         const stream = ModelEngine.chatWithFallback(state.currentMode, apiMessages, state.abortController.signal, onModelEvent);
 
         let msgRow = null;
