@@ -43,18 +43,18 @@
   // ─────────────────────────────────────────────────────────────────
   const DEV_TIER_MODELS = (window.DEV_TIER_MODELS) || {
     HIGH: [
+      { id: 'qwen/qwen3.8-27b', name: 'Qwen 3.8 27B Fast Coder', provider: 'groq' },
       { id: 'openai/gpt-oss-120b', name: 'GPT OSS 120B Lead Architect', provider: 'groq' },
       { id: 'poolside/laguna-s-2.1:free', name: 'Laguna S 2.1 (118B Coding Agent)', provider: 'openrouter' },
-      { id: 'meta-llama/llama-3.3-70b-instruct:free', name: 'Llama 3.3 70B Code Master', provider: 'openrouter' },
-      { id: 'cohere/north-mini-code:free', name: 'Cohere North Mini Code (30B)', provider: 'openrouter' },
-      { id: 'z-ai/glm-5.2:free', name: 'GLM 5.2 Reasoning (1M)', provider: 'openrouter' }
+      { id: 'cohere/north-mini-code:free', name: 'North Mini Code (30B)', provider: 'openrouter' },
+      { id: 'nvidia/nemotron-3.5-lightning:free', name: 'Nemotron 3.5 Lightning (1M)', provider: 'openrouter' }
     ],
     MID: [
-      { id: 'openai/gpt-oss-120b', name: 'GPT OSS 120B Lead Architect', provider: 'groq' },
       { id: 'qwen/qwen3.8-27b', name: 'Qwen 3.8 27B Fast Coder', provider: 'groq' },
-      { id: 'meta-llama/llama-3.3-70b-instruct:free', name: 'Llama 3.3 70B Code Master', provider: 'openrouter' },
+      { id: 'openai/gpt-oss-120b', name: 'GPT OSS 120B Lead Architect', provider: 'groq' },
       { id: 'poolside/laguna-s-2.1:free', name: 'Laguna S 2.1 (118B Coding Agent)', provider: 'openrouter' },
-      { id: 'cohere/north-mini-code:free', name: 'Cohere North Mini Code (30B)', provider: 'openrouter' }
+      { id: 'cohere/north-mini-code:free', name: 'North Mini Code (30B)', provider: 'openrouter' },
+      { id: 'openai/gpt-oss-20b', name: 'GPT OSS 20B Rapid Coder', provider: 'groq' }
     ],
     FAST: [
       { id: 'qwen/qwen3.8-27b', name: 'Qwen 3.8 27B Fast Coder', provider: 'groq' },
@@ -66,6 +66,16 @@
 
   const DEV_AGENTS = [
     {
+      id: 'qwen/qwen3.8-27b',
+      provider: 'groq',
+      name: 'Qwen 3.8 27B Fast Coder',
+      icon: '⚡',
+      category: 'code',
+      params: '27B Coder (179ms)',
+      desc: 'الموديل البرمجي الأسرع والأدق عالمياً لتوليد أكواد الجافاسكريبت والـ Search & Replace.',
+      priority: 1
+    },
+    {
       id: 'openai/gpt-oss-120b',
       provider: 'groq',
       name: 'GPT OSS 120B Lead Architect',
@@ -73,16 +83,6 @@
       category: 'code',
       params: '120B Coder',
       desc: 'المهندس المعماري الأول لكتابة وهندسة الأكواد وتعديل ملفات التطبيق بدقة فائقة.',
-      priority: 1
-    },
-    {
-      id: 'qwen/qwen3.8-27b',
-      provider: 'groq',
-      name: 'Qwen 3.8 27B Fast Coder',
-      icon: '⚡',
-      category: 'code',
-      params: '27B Coder',
-      desc: 'خبير برمجي فائق السرعة لتصحيح الأخطاء وتوليد دوال جافاسكريبت والـ CSS.',
       priority: 1
     },
     {
@@ -96,13 +96,13 @@
       priority: 1
     },
     {
-      id: 'meta-llama/llama-3.3-70b-instruct:free',
+      id: 'nvidia/nemotron-3.5-lightning:free',
       provider: 'openrouter',
-      name: 'Llama 3.3 70B Code Master',
-      icon: '🦙',
+      name: 'Nemotron 3.5 Lightning (1M)',
+      icon: '⚡',
       category: 'code',
-      params: '70B Instruct',
-      desc: 'محرك كود فائق الدقة في الالتزام بالتعليمات الهندسية والتعديلات الجراحية.',
+      params: '1M Context',
+      desc: 'محرك كود فائق السرعة بسياق مليون توكن لإدارة وتطوير المشاريع الكاملة.',
       priority: 1
     },
     {
@@ -744,6 +744,15 @@ STRICT RULE: The local engine automatically merges your surgical patches directl
             } catch (retryErr) {
               console.warn(`[Agent Retry Failed]`, retryErr);
             }
+          }
+
+          if (!succeeded && i + 1 < agentCascade.length) {
+            const nextAgent = agentCascade[i + 1];
+            const fallbackPill = document.querySelector(`[data-id="${aiMsgId}"] .msg-content`);
+            if (fallbackPill) {
+              fallbackPill.innerHTML = `<span style="color:#60a5fa; font-size:12px; display:inline-flex; align-items:center; gap:6px;"><span>🔄</span><span>تحويل المهمة البرمجية إلى <strong>${escapeHtml(nextAgent.name)}</strong>...</span></span>`;
+            }
+            if (window.DevUIEngine) DevUIEngine.showToast?.(`🔄 انتقال تلقائي إلى ${nextAgent.name}`, 'info');
           }
         }
       }
