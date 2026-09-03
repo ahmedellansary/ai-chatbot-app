@@ -289,13 +289,16 @@ async function* readStream(response, signal, model) {
 
       for (const line of lines) {
         const trimmed = line.trim();
-        // Handle heartbeats or non-SSE lines (some providers emit status lines like "OPENROUTER PROCESSING")
+        // Handle heartbeats — throttled to 900ms to avoid DOM thrash colliding with stream rendering
         if (trimmed && !trimmed.startsWith('data: ')) {
           try {
-            // Update UI thinking stage periodically without appending to message body
+            const now = Date.now();
             if (typeof window !== 'undefined' && window.MessageRenderer && typeof window.MessageRenderer.setThinkingStage === 'function') {
-              const elapsed = Math.floor((Date.now() - (window.__model_stream_start_ts || Date.now())) / 1000);
-              try { window.MessageRenderer.setThinkingStage(`Processing... ${elapsed}s`); } catch (e) {}
+              if (!window.__hb_last_ts || now - window.__hb_last_ts > 900) {
+                window.__hb_last_ts = now;
+                const elapsed = Math.floor((now - (window.__model_stream_start_ts || now)) / 1000);
+                try { window.MessageRenderer.setThinkingStage(`Processing... ${elapsed}s`); } catch (e) {}
+              }
             }
           } catch (e) {}
           continue;
