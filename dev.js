@@ -583,6 +583,7 @@ When this request requires changing repository code, respond as a concise execut
       state.abortController = new AbortController();
       DevUIEngine.updateSendBtn();
       DevUIEngine.setThinking(true);
+      const _shouldObserve = !!state.isMultiAgentMode;
 
        const tier = state.currentMode || 'MID';
       const rawDevPrompt = this.assembleDevPrompt(tier, state.devPrompt, state.liveRepoFiles);
@@ -612,25 +613,6 @@ When this request requires changing repository code, respond as a concise execut
       const estimatedTokens = Math.ceil((textForPayload.length + (systemPrompt?.length || 0)) / 3.5);
       const aiMsgObj = { id: aiMsgId, role: 'ai', content: '', model: state.isMultiAgentMode ? '👥 Multi-Agent Consensus' : chosenAgent.name };
       DevUIEngine.appendEmptyAiMessage(aiMsgObj);
-
-      if (state.isMultiAgentMode) {
-        try {
-          await this.runDevMultiAgentConsensus(textForPayload, apiMessages, aiMsgId, aiMsgObj, conv, estimatedTokens);
-        } catch (err) {
-          if (err.name !== 'AbortError') {
-            const errRow = document.querySelector(`[data-id="${aiMsgId}"] .msg-content`);
-            if (errRow) {
-              errRow.innerHTML = `<span style="color:var(--accent-rose); font-size:13px;">⚠️ ${escapeHtml(err.message || 'حدث خطأ أثناء معالجة الطلب. يرجى المحاولة ثانية.')}</span>`;
-            }
-          }
-        } finally {
-          DevUIEngine.setThinking(false);
-          state.isStreaming = false;
-          state.abortController = null;
-          DevUIEngine.updateSendBtn();
-        }
-        return;
-      }
 
       const fallbackList = this.buildFallbackCascade(chosenAgent, estimatedTokens);
 
@@ -748,6 +730,9 @@ When this request requires changing repository code, respond as a concise execut
       state.isStreaming = false;
       state.abortController = null;
       DevUIEngine.updateSendBtn();
+      if (_shouldObserve && fullContent && !fullContent.includes('⚠️')) {
+        setTimeout(() => { try { if (window.DevObserverEngine) window.DevObserverEngine.observe(userText, fullContent, tier, aiMsgId, conv); } catch {} }, 500);
+      }
     },
 
     async runDevMultiAgentConsensus(textForPayload, apiMessages, aiMsgId, aiMsgObj, conv, estimatedTokens = 0) {
@@ -947,6 +932,61 @@ When this request requires changing repository code, respond as a concise execut
     }
   };
   try { window.DevChatEngine = DevChatEngine; } catch(e) {}
+
+  // ─────────────────────────────────────────────────────────────────
+  // 7b. DEV OBSERVER — Post-response code reviewers (non-blocking)
+  // ─────────────────────────────────────────────────────────────────
+  const DevObserverEngine = window.DevObserverEngine || {
+    async observe(userText, aiResponse, tier, aiMsgId, conv) {
+      const isAr = /[\u0600-\u06FF]/.test((userText||'') + ' ' + (aiResponse||'').slice(0,200));
+      const t = (ar,en) => isAr ? ar : en;
+      const row = document.querySelector(`[data-id="${CSS.escape ? CSS.escape(aiMsgId) : aiMsgId}"]`);
+      if (!row || row.querySelector('.dev-observer-box')) return;
+      const steps = [
+        { icon:'👁️', title:t('مراقبة رد المطور','Monitoring dev response'), status:t('نشط','Active'), summary:t('جاري متابعة رد المستوى المختار...','Tracking selected level...') },
+        { icon:'📋', title:t('فحص الالتزام بتعليمات البرمجة','Instruction compliance'), status:t('انتظار','Waiting'), summary:t('بانتظار...','Awaiting...') },
+        { icon:'🔍', title:t('كشف التناقض والأخطاء','Contradiction & bug check'), status:t('انتظار','Waiting'), summary:t('بانتظار...','Awaiting...') },
+        { icon:'🛡️', title:t('فحص الأمان والجودة','Security & quality'), status:t('انتظار','Waiting'), summary:t('فحص XSS/SQLi/أخطاء صامتة','Check XSS/silent fails') },
+        { icon:'✨', title:t('اقتراح تحسين','Improvement'), status:t('انتظار','Waiting'), summary:t('بانتظار...','Awaiting...') }
+      ];
+      const render = (finalReview='') => {
+        const stepsHtml = steps.map(s=>`<div class="agent-step-item"><div class="agent-step-header"><span class="agent-step-name">${s.icon} ${DevChatEngine ? '' : ''}${s.title}</span><span class="agent-step-badge">${s.status}</span></div><div class="agent-step-body">${s.summary}</div></div>`).join('');
+        const reviewHtml = finalReview ? `<div style="margin-top:10px; padding:10px; background:rgba(255,255,255,0.04); border-radius:8px; border:1px solid var(--border-subtle);">${finalReview}</div>` : '';
+        let box = row.querySelector('.dev-observer-box');
+        if (!box) { box = document.createElement('div'); box.className='dev-observer-box multi-agent-box'; box.style.cssText='margin-top:12px; border:1px solid var(--border-subtle);'; row.querySelector('.msg-content')?.appendChild(box) || row.appendChild(box); }
+        // Use simple markdown for review
+        let parsedReview = '';
+        try { const md = window.DevUIEngine ? window.DevUIEngine.parseMarkdown(finalReview) : finalReview; parsedReview = md; } catch { parsedReview = finalReview; }
+        const reviewSection = finalReview ? `<div style="margin-top:10px; padding:10px; background:rgba(255,255,255,0.04); border-radius:8px;">${parsedReview}</div>` : '';
+        box.innerHTML = `<div class="multi-agent-header" style="cursor:pointer;" onclick="this.nextElementSibling.classList.toggle('hidden')"><div class="multi-agent-title"><span>👁️</span><span>${t('المراقبون — مراجعة الكود','Observers — Code Review')}</span></div><span style="font-size:11px; color:var(--text-dim);">${t('عرض التفاصيل ▾','Details ▾')}</span></div><div class="multi-agent-content" style="padding:8px;">${stepsHtml}${reviewSection}<div style="font-size:10.5px; color:var(--text-dim); margin-top:6px;">${t('مراجعة لاحقة بعد رد المستوى — لا تحل محل الرد','Post-response review — does not replace answer')}</div></div>`;
+      };
+      render();
+      steps[0].status=t('✓ تمت المتابعة','✓ Tracked'); steps[0].summary=t(`تمت مراقبة رد ${tier}`,'Tracked '+tier); steps[1].status=t('نشط','Active'); render();
+      const prompt = isAr
+        ? `أنت مراقب كود ذكي. راجع الرد:\n\nطلب المستخدم: """${userText.slice(0,800)}"""\n\nرد المطور (${tier}): """${aiResponse.slice(0,2500)}"""\n\nحلل في 5 نقاط موجزة:\n1. هل الرد ملتزم بتعليمات البرمجة؟\n2. هل يوجد تناقض/تكرار/خطأ منطقي؟\n3. هل يوجد ثغرات أمان (XSS/SQLi/eval) أو أخطاء صامتة؟\n4. لو قصة/سكريبت لأشخاص حقيقيين — هل المعلومات موثوقة؟\n5. اقتراح تحسين واحد محدد لرفع الجودة\n\nعربي موجز بنقاط واضحة.`
+        : `You are a code reviewer. User: """${userText.slice(0,800)}""" Response (${tier}): """${aiResponse.slice(0,2500)}""" Provide 5 concise bullets: 1. Instruction compliance 2. Contradiction/bug 3. Security 4. Source reliability if real story 5. One improvement. Keep brief.`;
+      const msgs=[{role:'system',content:isAr?'أنت مراقب كود مختصر':'You are concise reviewer'},{role:'user',content:prompt}];
+      let review='';
+      try{
+        const ac=new AbortController(); const tm=setTimeout(()=>ac.abort(),12000);
+        let tmp='';
+        const engine = window.ModelEngine || null;
+        if(engine && engine.chatWithFallback){
+          for await(const {chunk} of engine.chatWithFallback('FAST', msgs, ac.signal, ()=>{})){ tmp+=chunk; if(tmp.length>30 && steps[1].status!==t('✓ تم','✓ Done')){ steps[1].status=t('✓ تم','✓ Done'); steps[1].summary=t('فحص الالتزام مكتمل','Done'); steps[2].status=t('نشط','Active'); render(tmp.slice(0,400)); } }
+          review=tmp;
+        } else {
+          await DevChatEngine.callSingleAgentStream(DevChatEngine.buildFallbackCascade(DevState.getSelectedAgent())[0]||{id:'openai/gpt-oss-20b',provider:'groq'}, msgs, ac.signal, (d)=>{ review+=d; });
+        }
+        clearTimeout(tm);
+        steps[1].status=t('✓ تم','✓ Done'); steps[2].status=t('✓ تم','✓ Done'); steps[3].status=t('✓ تم','✓ Done'); steps[4].status=t('✓ تم','✓ Done');
+        steps[1].summary=t('الالتزام مكتمل','Compliance done'); steps[2].summary=t('الفحص مكتمل','Check done'); steps[3].summary=t('الأمان مكتمل','Security done'); steps[4].summary=t('التحسين جاهز','Ready');
+        render(review);
+      }catch(e){
+        steps[1].status=t('تخطي','Skipped'); render(t('تعذر المراجعة — الرد الأصلي معتمد','Review skipped — original remains'));
+      }
+    }
+  };
+  try { window.DevObserverEngine = DevObserverEngine; } catch(e) {}
   async function updateDevVersionBadge() {
     const badgeEl = $('dev-status-badge-text');
     if (!badgeEl) return;
