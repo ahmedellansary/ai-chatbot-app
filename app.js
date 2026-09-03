@@ -946,26 +946,7 @@
       };
       conv.messages.push(aiMsgObj);
 
-      if (state.isMultiAgentMode) {
-        try {
-          await MultiAgentEngine.runConsensus(userText, textForPayload, apiMessages, aiMsgId, aiMsgObj, conv);
-        } catch (err) {
-          MessageRenderer.hideTyping();
-          if (err.name !== 'AbortError') {
-            MessageRenderer.showToast('❌ ' + err.message, 'error');
-          }
-        } finally {
-          MessageRenderer.hideTyping();
-          state.isStreaming = false;
-          state.abortController = null;
-          state.sendInFlight = false;
-          state.sendLock = false;
-          UIEngine.updateSendBtnState();
-          MessageRenderer.scrollToBottom();
-        }
-        return;
-      }
-
+      const shouldObserve = !!state.isMultiAgentMode;
       const onModelEvent = (model, isFallback) => {
         aiMsgObj.model = model.name;
         aiMsgObj.provider = model.provider || 'groq';
@@ -1079,6 +1060,12 @@
         UIEngine.updateSendBtnState();
         MessageRenderer.scrollToBottom();
         try { StateController.save(); } catch {}
+        // Observer agents: follow-up review AFTER main level response (non-blocking, prevents freeze)
+        if (shouldObserve && fullContent && !aiMsgObj.isError) {
+          setTimeout(() => {
+            try { if (window.ObserverEngine) window.ObserverEngine.observe(userText, fullContent, tier, aiMsgId, conv); } catch (e) { console.warn('[Observer]', e); }
+          }, 500);
+        }
       }
     }
   };
@@ -1220,6 +1207,103 @@
 
   try { window.ChatEngine = ChatEngine; } catch(e) {}
   try { window.MultiAgentEngine = MultiAgentEngine; } catch(e) {}
+
+  // ─────────────────────────────────────────────────────────────────
+  // 8b. OBSERVER AGENTS — Follow-up reviewers (non-blocking, after main level response)
+  // ─────────────────────────────────────────────────────────────────
+  const ObserverEngine = window.ObserverEngine || {
+    async observe(userText, aiResponse, tier, aiMsgId, conv) {
+      const isAr = /[\u0600-\u06FF]/.test((userText || '') + ' ' + (aiResponse || '').slice(0, 200));
+      const t = (ar, en) => isAr ? ar : en;
+      const aiRow = document.querySelector(`[data-id="${CSS.escape ? CSS.escape(aiMsgId) : aiMsgId}"]`);
+      if (!aiRow) return;
+      // Prevent duplicate observer boxes
+      if (aiRow.querySelector('.observer-box')) return;
+
+      const steps = [
+        { icon: '👁️', title: t('مراقبة الرد', 'Monitoring response'), status: t('نشط', 'Active'), summary: t('جاري متابعة رد المستوى المختار...', 'Tracking selected level response...') },
+        { icon: '📋', title: t('فحص الالتزام بالتعليمات', 'Instruction compliance'), status: t('انتظار', 'Waiting'), summary: t('بانتظار التحليل...', 'Awaiting analysis...') },
+        { icon: '🔍', title: t('كشف التناقض والتكرار', 'Contradiction check'), status: t('انتظار', 'Waiting'), summary: t('بانتظار الفحص...', 'Awaiting check...') },
+        { icon: '🌐', title: t('التحقق من المصادر', 'Source reliability'), status: t('انتظار', 'Waiting'), summary: t('للقصص/الشخصيات الحقيقية فقط', 'For real stories/scripts only') },
+        { icon: '✨', title: t('تحسين الجودة', 'Quality enhancement'), status: t('انتظار', 'Waiting'), summary: t('بانتظار الاقتراح...', 'Awaiting suggestion...') }
+      ];
+
+      const renderObserver = (finalReview = '') => {
+        const stepsHtml = steps.map(s => `
+          <div class="agent-step-item">
+            <div class="agent-step-header">
+              <span class="agent-step-name">${s.icon} ${MessageRenderer.escapeHtml(s.title)}</span>
+              <span class="agent-step-badge">${MessageRenderer.escapeHtml(s.status)}</span>
+            </div>
+            <div class="agent-step-body">${MessageRenderer.escapeHtml(s.summary)}</div>
+          </div>
+        `).join('');
+        const reviewHtml = finalReview ? `<div class="observer-final" style="margin-top:10px; padding:10px; background:rgba(255,255,255,0.04); border-radius:8px; border:1px solid var(--border-subtle);">${MessageRenderer.parseMarkdown(finalReview)}</div>` : '';
+        const box = aiRow.querySelector('.observer-box') || document.createElement('div');
+        box.className = 'observer-box multi-agent-box';
+        box.style.cssText = 'margin-top:12px; border:1px solid var(--border-subtle);';
+        box.innerHTML = `
+          <div class="multi-agent-header" style="cursor:pointer;" onclick="this.nextElementSibling.classList.toggle('hidden')">
+            <div class="multi-agent-title"><span>👁️</span><span>${t('المراقبون — مراجعة الجودة', 'Observers — Quality Review')}</span></div>
+            <span style="font-size:11px; color:var(--text-dim);">${t('عرض التفاصيل ▾', 'Details ▾')}</span>
+          </div>
+          <div class="multi-agent-content" style="padding:8px;">
+            ${stepsHtml}
+            ${reviewHtml}
+            <div style="font-size:10.5px; color:var(--text-dim); margin-top:6px;">${t('مراجعة لاحقة بعد رد المستوى المختار — لا تحل محل الرد الأصلي', 'Post-response review — does not replace original answer')}</div>
+          </div>
+        `;
+        if (!aiRow.querySelector('.observer-box')) {
+          const contentEl = aiRow.querySelector('.msg-content');
+          if (contentEl) contentEl.appendChild(box);
+          else aiRow.appendChild(box);
+        }
+      };
+
+      renderObserver();
+      // Step 1 done
+      steps[0].status = t('✓ تمت المتابعة', '✓ Tracked');
+      steps[0].summary = t(`تمت مراقبة رد ${tier} (${aiResponse.length} حرف)`, `Tracked ${tier} response (${aiResponse.length} chars)`);
+      steps[1].status = t('نشط', 'Active');
+      renderObserver();
+
+      // Build review prompt for FAST tier (non-blocking, avoids HIGH key contention)
+      const reviewPrompt = isAr
+        ? `أنت مراقب جودة ذكي. راجع الرد التالي:\n\nسؤال المستخدم: """${userText.slice(0, 800)}"""\n\nرد النموذج (${tier}): """${aiResponse.slice(0, 2500)}"""\n\nالمطلوب تحليل سريع (4 نقاط موجزة):\n1. هل الرد ملتزم بالتعليمات؟\n2. هل يوجد تناقض أو تكرار مع سياق سابق؟\n3. لو الرد قصة حقيقية/سكريبت لأشخاص حقيقيين — هل المعلومات من مصادر موثوقة أم تحتاج تحقق؟\n4. اقتراح تحسين واحد محدد لرفع الجودة\n\nأجب بصياغة عربية موجزة، نقاط واضحة، بدون مقدمات طويلة.`
+        : `You are a quality observer. Review the response:\n\nUser: """${userText.slice(0, 800)}"""\n\nModel (${tier}) response: """${aiResponse.slice(0, 2500)}"""\n\nProvide 4 concise bullet points:\n1. Instruction compliance\n2. Contradiction/duplication\n3. Source reliability (if real story/script)\n4. One quality improvement\n\nKeep it brief.`;
+
+      const reviewMessages = [
+        { role: 'system', content: isAr ? 'أنت مراقب جودة محترف ومختصر.' : 'You are a concise quality reviewer.' },
+        { role: 'user', content: reviewPrompt }
+      ];
+
+      let reviewText = '';
+      try {
+        const ac = new AbortController();
+        const tm = setTimeout(() => ac.abort(), 12000);
+        const stream = ModelEngine.chatWithFallback('FAST', reviewMessages, ac.signal, () => {});
+        for await (const { chunk } of stream) {
+          reviewText += chunk;
+          // Update step 2-4 progressively
+          if (reviewText.length > 30 && steps[1].status !== t('✓ تم', '✓ Done')) {
+            steps[1].status = t('✓ تم', '✓ Done'); steps[1].summary = t('تم فحص الالتزام', 'Compliance checked');
+            steps[2].status = t('نشط', 'Active');
+            renderObserver(reviewText.slice(0, 400));
+          }
+        }
+        clearTimeout(tm);
+        steps[1].status = t('✓ تم', '✓ Done'); steps[1].summary = t('فحص الالتزام مكتمل', 'Compliance done');
+        steps[2].status = t('✓ تم', '✓ Done'); steps[2].summary = t('فحص التناقض مكتمل', 'Contradiction done');
+        steps[3].status = t('✓ تم', '✓ Done'); steps[3].summary = t('التحقق من المصادر مكتمل', 'Source check done');
+        steps[4].status = t('✓ تم', '✓ Done'); steps[4].summary = t('اقتراح التحسين جاهز', 'Improvement ready');
+        renderObserver(reviewText);
+      } catch (e) {
+        steps[1].status = t('تخطي', 'Skipped'); steps[2].status = t('تخطي', 'Skipped');
+        renderObserver(t('تعذر إكمال المراجعة التلقائية — الرد الأصلي يبقى معتمداً', 'Auto-review skipped — original answer remains authoritative'));
+      }
+    }
+  };
+  try { window.ObserverEngine = ObserverEngine; } catch(e) {}
 
   // ─────────────────────────────────────────────────────────────────
   // 8. SKILLS ENGINE & SANDBOX (SkillsEngine)
