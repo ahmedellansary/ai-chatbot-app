@@ -397,14 +397,22 @@ You must follow this EXACT compact output structure:
    - NO greetings, NO warnings, NO marketing fluff, NO markdown headings (no ###), and NO big vertical gaps.
    - NEVER write full code or raw code blocks (\`\`\`javascript, \`\`\`css, \`\`\`html) in the chat text!
 3. DEPLOY BLOCK: Output the JSON deploy block at the very end of your response:
+3. DEPLOY BLOCK: Output the JSON patch block at the very end of your response.
+For large files (like dev.js, dev_style.css, app.js), use SURGICAL SEARCH & REPLACE (preserves all 3100+ lines without truncation):
 \`\`\`json
 {
   "file": "exact_filename (e.g. dev.js)",
-  "content": "100% complete working file content",
+  "patches": [
+    {
+      "search": "exact unique code lines in active file to find",
+      "replace": "new replacement code lines"
+    }
+  ],
   "message": "Concise git commit message in English"
 }
 \`\`\`
-STRICT RULE: The complete file code MUST exist ONLY inside the JSON block. It will be loaded directly into the Live Preview window for the user to inspect, test, or copy.`;
+For small files (< 300 lines), full "content" is also accepted.
+STRICT RULE: The local engine automatically merges your surgical patches directly into the live master file. Never output raw code in chat.`;
     },
 
     buildFallbackCascade(primaryAgent, estimatedTokens = 0) {
@@ -461,7 +469,7 @@ STRICT RULE: The complete file code MUST exist ONLY inside the JSON block. It wi
             model: agent.id,
             messages: finalMessages,
             stream: true,
-            temperature: 0.3,
+            temperature: 0.1,
             max_tokens: isGroq ? 4096 : 8192
           }),
           signal: combinedSignal
@@ -905,64 +913,128 @@ STRICT RULE: The complete file code MUST exist ONLY inside the JSON block. It wi
 
     async handleDevProposal(content, msgRow) {
       if (!msgRow || !content) return;
-      const jsonMatch = content.match(/```json\s*(\{[\s\S]*?\})\s*```/) || content.match(/(\{[\s\S]*"(?:file|deploy|files)"[\s\S]*"content"[\s\S]*\})/);
+      const jsonMatch = content.match(/```json\s*(\{[\s\S]*?\})\s*```/) || content.match(/(\{[\s\S]*"(?:file|deploy|files)"[\s\S]*"(?:content|patches|search)"[\s\S]*\})/);
       if (!jsonMatch) return;
 
       try {
         const data = JSON.parse(jsonMatch[1]);
         const file = data.file || data.path || data.deploy?.files?.[0]?.path || data.deploy?.files?.[0]?.file || data.files?.[0]?.path || data.files?.[0]?.file;
-        const patchContent = data.content || data.deploy?.files?.[0]?.content || data.files?.[0]?.content;
+        let patchContent = data.content || data.deploy?.files?.[0]?.content || data.files?.[0]?.content;
         const message = data.message || data.deploy?.files?.[0]?.message || data.files?.[0]?.message || 'Ready to commit & deploy to GitHub';
 
-        if (file && patchContent) {
-          const propId = generateId();
-          state.pendingModifications[propId] = { file, content: patchContent, message };
+        if (!file) return;
 
-          const existingCard = msgRow.querySelector('.dev-proposal-box');
-          if (existingCard) existingCard.remove();
+        // Fetch live original file content to enable surgical merging and circuit breaking
+        let originalFileContent = null;
+        try {
+          const res = await fetch('./' + file + '?t=' + Date.now());
+          if (res.ok) originalFileContent = await res.text();
+        } catch {}
+        if (!originalFileContent && window.DevGitHubService) {
+          try {
+            const gh = await DevGitHubService.getFile(file);
+            if (gh && gh.content) originalFileContent = gh.content;
+          } catch {}
+        }
 
-          const card = document.createElement('div');
-          card.id = `proposal-${propId}`;
-          card.className = 'dev-proposal-box';
-          card.innerHTML = `
-            <div class="dev-proposal-title">
-              <span>🛠️</span>
-              <span>Ready to Patch: <code>${escapeHtml(file)}</code></span>
-            </div>
-            <div class="dev-proposal-desc">📝 <strong>Summary:</strong> ${escapeHtml(message)}</div>
-            <div class="dev-proposal-btns">
-              <button class="dev-btn-action preview" onclick="window._previewProposal('${propId}')" title="Live Preview">
-                <span>👁️</span>
-                <span>Preview</span>
+        // 1. Check for Surgical Patch format (Search & Replace)
+        const patches = Array.isArray(data.patches) ? data.patches : ((data.search && data.replace) ? [{ search: data.search, replace: data.replace }] : null);
+        let wasSurgicallyMerged = false;
+
+        if (patches && originalFileContent) {
+          let merged = originalFileContent;
+          let appliedCount = 0;
+          for (const p of patches) {
+            if (p.search && typeof p.replace === 'string') {
+              if (merged.includes(p.search)) {
+                merged = merged.replace(p.search, p.replace);
+                appliedCount++;
+              } else {
+                const cleanSearch = p.search.trim();
+                if (cleanSearch && merged.includes(cleanSearch)) {
+                  merged = merged.replace(cleanSearch, p.replace.trim());
+                  appliedCount++;
+                }
+              }
+            }
+          }
+          if (appliedCount > 0) {
+            patchContent = merged;
+            wasSurgicallyMerged = true;
+            if (window.DevUIEngine) DevUIEngine.showToast?.(`⚡ تم دمج ${appliedCount} تعديل جراحي مع الملف الأصلي بنجاح!`, 'success');
+          }
+        }
+
+        if (!patchContent) return;
+
+        // 2. Circuit Breaker against Blind Overwrite
+        let isCircuitBreakerTriggered = false;
+        let circuitBreakerMsg = '';
+        if (originalFileContent && !wasSurgicallyMerged) {
+          const origLines = originalFileContent.trim().split('\n').length;
+          const patchLines = patchContent.trim().split('\n').length;
+          if (origLines > 300 && patchLines < (origLines * 0.6)) {
+            isCircuitBreakerTriggered = true;
+            circuitBreakerMsg = `🚫 صمام الأمان: تم حظر استبدال أعمى! الكود المقترح يحتوي على ${patchLines} سطر فقط بينما الملف الأصلي ${origLines} سطر (تم منع حذف ${origLines - patchLines} سطر).`;
+          }
+        }
+
+        const propId = generateId();
+        state.pendingModifications[propId] = { file, content: patchContent, message, isBlocked: isCircuitBreakerTriggered };
+
+        const existingCard = msgRow.querySelector('.dev-proposal-box');
+        if (existingCard) existingCard.remove();
+
+        const card = document.createElement('div');
+        card.id = `proposal-${propId}`;
+        card.className = 'dev-proposal-box' + (isCircuitBreakerTriggered ? ' blocked' : '');
+        card.innerHTML = `
+          <div class="dev-proposal-title">
+            <span>${isCircuitBreakerTriggered ? '🚫' : '🛠️'}</span>
+            <span>${isCircuitBreakerTriggered ? 'Blind Overwrite Blocked' : 'Ready to Patch'}: <code>${escapeHtml(file)}</code></span>
+            ${wasSurgicallyMerged ? '<span class="dev-peer-badge ok" style="margin-inline-start:auto;">⚡ Surgical Patch Merged</span>' : ''}
+          </div>
+          ${isCircuitBreakerTriggered ? `<div class="circuit-breaker-banner">${escapeHtml(circuitBreakerMsg)}</div>` : ''}
+          <div class="dev-proposal-desc">📝 <strong>Summary:</strong> ${escapeHtml(message)}</div>
+          <div class="dev-proposal-btns">
+            <button class="dev-btn-action preview" onclick="window._previewProposal('${propId}')" title="Live Preview">
+              <span>👁️</span>
+              <span>Preview</span>
+            </button>
+            ${isCircuitBreakerTriggered ? `
+              <button class="dev-btn-action retry-btn" onclick="window._sendReviewToDev('الكود المقترح قصير جداً واستبدل الملف الأصلي. أرسل التعديل بصيغة patches (Search & Replace) جراحية فقط دون حذف باقي الملف.', this)" title="طلب تعديل جراحي">
+                <span>🔄</span>
+                <span>Request Patch</span>
               </button>
+            ` : `
               <button class="dev-btn-action deploy" onclick="window._deployProposal('${propId}')" title="Deploy to GitHub">
                 <span>🚀</span>
                 <span>Deploy</span>
               </button>
-              <button class="dev-btn-action copy" onclick="window._copyPatchContent('${propId}')" title="Copy Full Code">
-                <span>📋</span>
-                <span>Copy</span>
-              </button>
-              <button class="dev-btn-action review-fix" onclick="window._togglePatchDrawer('${propId}')" title="Inspect Patch">
-                <span>🔍</span>
-                <span>Inspect</span>
-              </button>
-              <button class="dev-btn-action cancel" onclick="window._cancelProposal('${propId}')" title="Cancel">
-                <span>✕</span>
-              </button>
-            </div>
+            `}
+            <button class="dev-btn-action copy" onclick="window._copyPatchContent('${propId}')" title="Copy Full Code">
+              <span>📋</span>
+              <span>Copy</span>
+            </button>
+            <button class="dev-btn-action review-fix" onclick="window._togglePatchDrawer('${propId}')" title="Inspect Patch">
+              <span>🔍</span>
+              <span>Inspect</span>
+            </button>
+            <button class="dev-btn-action cancel" onclick="window._cancelProposal('${propId}')" title="Cancel">
+              <span>✕</span>
+            </button>
+          </div>
 
-            <!-- Collapsible Mini Code Drawer inside Proposal Card -->
-            <div class="dev-patch-drawer hidden" id="drawer-${propId}">
-              <div class="patch-drawer-header">
-                <span>📄 Modified Code (${escapeHtml(file)})</span>
-                <button class="btn-copy-patch" onclick="window._copyPatchContent('${propId}')">📋 Copy Code</button>
-              </div>
-              <pre class="patch-drawer-code"><code>${escapeHtml(patchContent)}</code></pre>
+          <!-- Collapsible Mini Code Drawer inside Proposal Card -->
+          <div class="dev-patch-drawer hidden" id="drawer-${propId}">
+            <div class="patch-drawer-header">
+              <span>📄 Modified Code (${escapeHtml(file)})</span>
+              <button class="btn-copy-patch" onclick="window._copyPatchContent('${propId}')">📋 Copy Code</button>
             </div>
-          `;
-          msgRow.appendChild(card);
-        }
+            <pre class="patch-drawer-code"><code>${escapeHtml(patchContent)}</code></pre>
+          </div>
+        `;
+        msgRow.appendChild(card);
       } catch (e) {
         console.warn('[Proposal Parse]', e);
       }
@@ -2465,6 +2537,10 @@ Reply in exactly 5 brief lines starting with • :
   window._deployProposal = async function(propId) {
     const data = state.pendingModifications[propId];
     if (!data) return;
+    if (data.isBlocked) {
+      DevUIEngine.showToast('🚫 تم حظر النشر بصمام الأمان لمنع حذف ملفات المشروع الأصلية!', 'error');
+      return;
+    }
 
     DevUIEngine.showToast(`🚀 جاري رفع التعديل لملف ${data.file} على GitHub...`, 'info');
     try {
