@@ -954,13 +954,12 @@ When this request requires changing repository code, respond as a concise execut
         { icon:'✨', title:t('اقتراح تحسين','Improvement'), status:t('انتظار','Waiting'), summary:t('بانتظار...','Awaiting...') }
       ];
       const render = (finalReview='') => {
-        const stepsHtml = steps.map(s=>`<div class="thinking-flow-item" dir="${isAr ? 'rtl' : 'ltr'}" style="text-align:${isAr ? 'right' : 'left'};"><span class="flow-icon">${s.icon}</span><span class="flow-text">${s.title} — ${s.summary}</span></div>`).join('');
+        const reviewHtml = finalReview ? (()=>{ let pr=''; try{ pr=window.DevUIEngine ? window.DevUIEngine.parseMarkdown(finalReview) : finalReview; }catch{ pr=finalReview; } return `<div style="margin-top:6px; padding:8px; background:rgba(255,255,255,0.03); border:1px solid var(--border-subtle); border-radius:8px;">${pr}</div>`; })() : `<div style="font-size:12px; color:var(--text-dim); padding:6px 0;">${t('جاري المراجعة...','Reviewing...')}</div>`;
+        const applyBtn = finalReview ? `<button style="font-size:11px; padding:4px 10px; border-radius:6px; background:var(--accent-color); color:#fff; border:1px solid var(--accent-color); cursor:pointer; margin-top:8px;" onclick="(function(btn){ const r=btn.closest('.dev-observer-box').dataset.review||''; if(window._applyObserverSuggestion) window._applyObserverSuggestion(r); })(this)">Apply suggestion</button>` : '';
         let box = row.querySelector('.dev-observer-box');
         if (!box) { box = document.createElement('div'); box.className='dev-observer-box'; box.style.cssText='margin-top:10px; padding:0; border:none; background:transparent;'; row.querySelector('.msg-content')?.appendChild(box) || row.appendChild(box); }
-        let parsedReview = '';
-        try { const md = window.DevUIEngine ? window.DevUIEngine.parseMarkdown(finalReview) : finalReview; parsedReview = md; } catch { parsedReview = finalReview; }
-        const reviewSection = finalReview ? `<div style="margin-top:8px; padding:8px; background:transparent; border:none;">${parsedReview}</div>` : '';
-        box.innerHTML = `<div style="display:flex; align-items:center; gap:6px; cursor:pointer; padding:4px 0;" onclick="this.nextElementSibling.classList.toggle('hidden')"><span>👁️</span><span style="font-size:12.5px; font-weight:600;">${t('المراقبون — مراجعة الكود','Observers — Code Review')}</span><span style="font-size:11px; color:var(--text-dim); margin-left:auto;">${t('عرض التفاصيل ▾','Details ▾')}</span></div><div class="thinking-flow" style="margin-top:6px; padding:0; background:transparent; border:none;">${stepsHtml}${reviewSection}<div style="font-size:10.5px; color:var(--text-dim); margin-top:6px;">${t('مراجعة لاحقة بعد رد المستوى — لا تحل محل الرد','Post-response review — does not replace answer')}</div></div>`;
+        box.dataset.review = finalReview || '';
+        box.innerHTML = `<div style="display:flex; align-items:center; gap:6px; padding:4px 0; border-top:1px solid var(--border-subtle); margin-top:6px;"><span>👁️</span><span style="font-size:11px; color:var(--text-dim);">Review</span></div>${reviewHtml}${applyBtn}`;
       };
       render();
       steps[0].status=t('✓ تمت المتابعة','✓ Tracked'); steps[0].summary=t(`تمت مراقبة رد ${tier}`,'Tracked '+tier); steps[1].status=t('نشط','Active'); render();
@@ -2538,6 +2537,10 @@ When this request requires changing repository code, respond as a concise execut
   window._closeDevSettingsModal = function() {
     $('dev-settings-modal')?.classList.add('hidden');
   };
+  document.addEventListener('click', (e)=>{
+    const m=$('dev-settings-modal');
+    if(m && !m.classList.contains('hidden') && e.target===m) window._closeDevSettingsModal();
+  });
 
   window._saveDevPrompt = function() {
     const textarea = $('dev-prompt-textarea');
