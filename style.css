@@ -1053,48 +1053,9 @@ html, body {
   border-color: var(--border-focus);
 }
 
-/* 🌟 Subtle Ambient Neon Glow & Glowing Top Beam on Thinking 🌟 */
-.input-container.thinking {
-  border-color: rgba(255, 255, 255, 0.18) !important;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7), 0 -2px 16px var(--accent-glow), inset 0 1px 1px rgba(255, 255, 255, 0.12) !important;
-  animation: appNeonBreathing 2.4s ease-in-out infinite alternate;
-}
-
-.input-container.thinking::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: linear-gradient(90deg, transparent 0%, var(--accent-color) 30%, #ffffff 50%, var(--accent-color) 70%, transparent 100%);
-  background-size: 200% 100%;
-  filter: drop-shadow(0 0 8px var(--accent-color)) drop-shadow(0 0 14px var(--accent-color));
-  animation: appNeonBeamSweep 2.2s linear infinite;
-  pointer-events: none;
-  z-index: 10;
-  opacity: 0.95;
-}
-
-@keyframes appNeonBreathing {
-  0% {
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7), 0 -1px 8px var(--accent-glow);
-    border-color: rgba(255, 255, 255, 0.12);
-  }
-  100% {
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7), 0 -4px 24px var(--accent-glow), inset 0 1px 2px rgba(255, 255, 255, 0.2);
-    border-color: rgba(255, 255, 255, 0.28);
-  }
-}
-
-@keyframes appNeonBeamSweep {
-  0% {
-    background-position: 200% 0;
-  }
-  100% {
-    background-position: -200% 0;
-  }
-}
+/* Thinking glow removed per request — no neon on chat box */
+.input-container.thinking{border-color:var(--border-subtle) !important;box-shadow:0 8px 32px rgba(0,0,0,0.5) !important;animation:none !important}
+.input-container.thinking::before{display:none !important}
 
 .chat-textarea {
   width: 100%;
