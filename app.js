@@ -856,6 +856,14 @@
       }
 
       const userMsg = StateController.addMessage('user', userText.trim() || 'ملف مرفق', null, currentAttachments);
+      if (!userMsg) {
+        state.isStreaming = false;
+        state.abortController = null;
+        state.sendInFlight = false;
+        state.sendLock = false;
+        UIEngine.updateSendBtnState();
+        throw new Error('تعذر إضافة رسالتك للمحادثة الحالية');
+      }
       MessageRenderer.appendMessage(userMsg);
 
       state.isStreaming = true;
@@ -1581,7 +1589,13 @@
         if (input) input.value = '';
         this.adjustTextareaHeight();
         this.updateSendBtnState();
-        Promise.resolve(ChatEngine.sendMessage(text)).catch(err => {
+        let sendPromise;
+        try {
+          sendPromise = ChatEngine.sendMessage(text);
+        } catch (err) {
+          sendPromise = Promise.reject(err);
+        }
+        Promise.resolve(sendPromise).catch(err => {
           console.error('[Chat Send] Unhandled send failure:', err);
           state.sendLock = false;
           state.sendInFlight = false;
