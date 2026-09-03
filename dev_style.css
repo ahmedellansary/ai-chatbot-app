@@ -2878,7 +2878,7 @@ pre code {
 
 @media (max-width: 600px) {
   .settings-modal-body {
-    flex-direction: row-reverse;
+    flex-direction: row;
     gap: 10px;
   }
   .settings-modal-tabs-bar {
