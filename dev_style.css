@@ -1256,17 +1256,18 @@ pre code {
   animation: thinkingFlowIn 0.35s ease forwards;
   position: relative;
 }
-.thinking-flow-item::before{
-  content:'';
+.thinking-flow-item .flow-dot{
   position:absolute;
-  left:-15px;
-  top:6px;
-  width:6px;
-  height:6px;
+  left:-16px;
+  top:7px;
+  width:7px;
+  height:7px;
   border-radius:50%;
   background:var(--accent-dev);
   box-shadow:0 0 6px var(--accent-dev-glow);
+  opacity:0;
 }
+.thinking-flow-item.reached .flow-dot{opacity:1;animation:flowDotPulse 1.1s ease-in-out infinite}
 /* Highlight by importance — dev also */
 .hl-important { color: var(--hl-important); font-weight: 700; }
 .hl-critical { color: var(--hl-critical); font-weight: 700; }
