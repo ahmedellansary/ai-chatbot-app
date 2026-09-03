@@ -76,7 +76,7 @@
   // 3. STATE & PERSISTENCE CONTROLLER (StateController)
   // ─────────────────────────────────────────────────────────────────
   const state = {
-    currentMode: (function(){ try{ return localStorage.getItem('xv1_current_mode') || 'MID'; }catch{ return 'MID'; }})(),
+    currentMode: (function(){ try{ const saved = localStorage.getItem('xv1_current_mode'); return saved === 'HIGH' ? 'HARD' : (saved || 'MID'); }catch{ return 'MID'; }})(),
     currentModel: null,
     devModelKey: null,
     modelCatalog: [],
