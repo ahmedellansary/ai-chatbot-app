@@ -630,26 +630,6 @@
             ${multiAgentHtml}
             ${observerHtml}
           </div>
-          <div class="claude-actions-bar">
-            <button class="claude-action-btn" onclick="window._copyMsgText(this)" title="نسخ">
-              <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-              </svg>
-            </button>
-            <button class="claude-action-btn" onclick="window._speakMsg(this)" title="????? ???"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg></button><button class="claude-action-btn" onclick="window._retryMsg('${msg.id}')" title="إعادة المحاولة">
-              <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path>
-              </svg>
-            </button>
-          </div>
-          <div class="claude-footer-note">
-            <div class="claude-terracotta-star"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg></div>
-            <div class="claude-disclaimer-text">
-              <span class="claude-model-name">${this.escapeHtml(msg.model || 'X.v1')}</span>
-              <span>· Verify info</span>
-            </div>
-          </div>
         `;
       }
       return row;
