@@ -839,7 +839,7 @@
 
     async sendMessage(userText) {
       const hasAttachments = state.attachments && state.attachments.length > 0;
-      if (state.isStreaming || state.sendInFlight || state.sendLock || (!userText.trim() && !hasAttachments)) return;
+      if (state.isStreaming || state.sendInFlight || (!userText.trim() && !hasAttachments)) return;
       state.sendInFlight = true;
 
       if (!state.activeConvId) StateController.newConversation();
