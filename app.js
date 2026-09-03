@@ -616,7 +616,7 @@
         const bullets = lines.map(l=> l.replace(/^\d+[\.\)\-]\s*/,'').trim()).filter(Boolean).slice(0,5);
         const ok = bullets.filter(b=>/نعم|yes|✓|مُلتزم|Compliant/i.test(b)).length;
         const warn = bullets.length - ok;
-        const bulletsHtml = bullets.length ? `<ul class="observer-bullets">${bullets.map(b=>`<li class="observer-bullet"><span class="observer-bullet-text">${this.escapeHtml(b)}</span></li>`).join('')}</ul>` : `<div style="font-size:12px;color:var(--text-dim)">${this.escapeHtml(String(msg.observerReview).slice(0,140))}</div>`;
+        const getCls=b=>{ if(b.includes('التناقض:')) return b.includes('نعم')?'warn':'ok'; if(b.includes('الالتزام:')||b.includes('المصادر:')) return (b.includes('نعم')||b.includes('موثوقة')||b.includes('سليم'))?'ok':'warn'; return b.includes('لا')||b.includes('تحتاج')?'warn':'ok'; }; const bulletsHtml = bullets.length ? `<ul class="observer-bullets">${bullets.map(b=>`<li class="observer-bullet ${getCls(b)}"><span class="observer-bullet-text">${this.escapeHtml(b)}</span></li>`).join('')}</ul>` : `<div style="font-size:12px;color:var(--text-dim)">${this.escapeHtml(String(msg.observerReview).slice(0,140))}</div>`;
         observerHtml = `<div class="observer-box" data-review="${this.escapeHtml(msg.observerReview).slice(0,300)}"><div class="agent-committed-header" onclick="this.nextElementSibling.classList.toggle('hidden'); this.classList.toggle('collapsed')"><span>👁️</span><span class="agent-committed-label">COMMITTED</span><span class="agent-committed-nums"><span class="agent-num ok">${ok}</span><span class="agent-num warn">${warn}</span></span><span class="agent-toggle-icon">▾</span></div><div class="observer-details">${bulletsHtml}<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap"><button class="observer-apply-btn" onclick="window._applyObserverSuggestion(this.closest('.observer-box').dataset.review||'')">Apply</button><button class="llm-end-btn" onclick="window._sendToLLM(this)">⚡ Send to LLM</button><button class="llm-send-apply-btn" onclick="window._sendAndApply(this)">⚡ Send & Apply</button></div></div></div>`;
       }
 
@@ -1314,12 +1314,13 @@
 
       const renderObserver = (finalReview = '') => {
         // Floating bullets — no numbers — COMMITTED header with colored numbers, icon toggle, Apply only
-        const buildBullets = (txt)=> {
-          const lines = String(txt||'').split(/\n/).map(s=>s.trim()).filter(Boolean);
-          const bullets = lines.map(l=> l.replace(/^\d+[\.\)\-]\s*/,'').trim()).filter(Boolean).slice(0,5);
-          if(!bullets.length) return `<div style="font-size:12px;color:var(--text-dim)">${MessageRenderer.escapeHtml(String(txt||'').slice(0,140))}</div>`;
-          return `<ul class="observer-bullets">${bullets.map(b=>`<li class="observer-bullet"><span class="observer-bullet-text">${MessageRenderer.escapeHtml(b)}</span></li>`).join('')}</ul>`;
-        };
+          const getCls=b=>{ if(b.includes('التناقض:')) return b.includes('نعم')?'warn':'ok'; if(b.includes('الالتزام:')||b.includes('المصادر:')) return (b.includes('نعم')||b.includes('موثوقة')||b.includes('سليم'))?'ok':'warn'; return b.includes('لا')||b.includes('تحتاج')?'warn':'ok'; };
+          const buildBullets = (txt)=> {
+            const lines = String(txt||'').split(/\n/).map(s=>s.trim()).filter(Boolean);
+            const bullets = lines.map(l=> l.replace(/^\d+[\.\)\-]\s*/,'').trim()).filter(Boolean).slice(0,5);
+            if(!bullets.length) return `<div style="font-size:12px;color:var(--text-dim)">${MessageRenderer.escapeHtml(String(txt||'').slice(0,140))}</div>`;
+            return `<ul class="observer-bullets">${bullets.map(b=>`<li class="observer-bullet ${getCls(b)}"><span class="observer-bullet-text">${MessageRenderer.escapeHtml(b)}</span></li>`).join('')}</ul>`;
+          };
         const okC = (txt)=> (String(txt).match(/نعم|yes|✓|مُلتزم|Compliant/gi)||[]).length;
         const reviewHtml = finalReview ? buildBullets(finalReview) : `<div style="font-size:12px; color:var(--text-dim); padding:6px 0;">${t('جاري المراجعة...','Reviewing...')}</div>`;
         const okN = finalReview ? okC(finalReview) : 0;
