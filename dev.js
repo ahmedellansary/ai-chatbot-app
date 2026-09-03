@@ -2556,6 +2556,8 @@ When this request requires changing repository code, respond as a concise execut
   };
   
   window._sendToLLM = window._endToLLM = function(btn){
+    if(window._devState && (window._devState.isStreaming || window._devState.isThinking)){ if(window.DevUIEngine) window.DevUIEngine.showToast('⏳ انتظر انتهاء الرد الحالي','info'); return; }
+    if(window.state && (window.state.isStreaming || window.state.sendInFlight)){ if(window.MessageRenderer) window.MessageRenderer.showToast('⏳ انتظر انتهاء الرد الحالي','info'); return; }
     try{
       const box = btn.closest('.observer-box, .multi-agent-box, .dev-observer-box');
       const raw = box?.dataset?.review || box?.innerText || '';
@@ -2573,7 +2575,7 @@ When this request requires changing repository code, respond as a concise execut
       if(window.DevUIEngine) window.DevUIEngine.showToast('↗ Contradictions sent to LLM','info');
     }catch(e){}
   };
-  window._sendAndApply = function(btn){ try{ const b=btn.closest('.dev-observer-box, .observer-box, .multi-agent-box'); const rv=b?.dataset?.review||b?.innerText||''; if(rv && window._applyObserverSuggestion) window._applyObserverSuggestion(rv); window._sendToLLM(btn);}catch(e){} };
+  window._sendAndApply = function(btn){ if(window._devState && (window._devState.isStreaming || window._devState.isThinking)){ if(window.DevUIEngine) window.DevUIEngine.showToast('⏳ انتظر انتهاء الرد الحالي','info'); return; } try{ const b=btn.closest('.dev-observer-box, .observer-box, .multi-agent-box'); const rv=b?.dataset?.review||b?.innerText||''; if(rv && window._applyObserverSuggestion) window._applyObserverSuggestion(rv); window._sendToLLM(btn);}catch(e){} };
 
   window._openRollbackModal = async function() {
     const modal = $('rollback-modal');
