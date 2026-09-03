@@ -11,8 +11,8 @@
   <meta name="apple-mobile-web-app-title" content="X.v1">
 
   <title>X.v1</title>
-  <link rel="manifest" href="./manifest.json?v=257">
-  <link rel="stylesheet" href="./style.css?v=257">
+  <link rel="manifest" href="./manifest.json?v=258">
+  <link rel="stylesheet" href="./style.css?v=258">
   <link rel="icon" type="image/png" href="./icons/icon-192.png?v=49">
   <link rel="apple-touch-icon" href="./icons/icon-192.png?v=49">
   <link rel="apple-touch-icon" sizes="512x512" href="./icons/icon-512.png?v=49">
@@ -107,6 +107,10 @@
         <span>＋</span>
         <span>New Chat</span>
       </button>
+      <button class="nav-btn" onclick="window.open('./models.html','_blank')" title="عرض كل النماذج">
+        <span>🤖</span>
+        <span>النماذج</span>
+      </button>
     </div>
 
     <div class="sidebar-section-title">Recent Chats</div>
@@ -118,7 +122,7 @@
         <span>Settings</span>
       </button>
       <div id="app-version-badge" style="font-size:10.5px; color:var(--text-dim); font-family:var(--font-mono); text-align:center; padding:8px 0 2px; border-top:1px solid var(--border-subtle); margin-top:8px; letter-spacing:0.02em;">
-        <span id="app-version-text">v257</span> • <span id="app-last-update">جاري...</span>
+        <span id="app-version-text">v258</span> • <span id="app-last-update">جاري...</span>
       </div>
     </div>
   </aside>
@@ -136,7 +140,7 @@
       </button>
       <div id="chat-top-badge" class="repo-status-badge" style="position:absolute; left:50%; transform:translateX(-50%);">
         <span class="status-dot"></span>
-        <span class="repo-badge-text" id="chat-status-text" style="font-weight:700; letter-spacing:0.02em;">X (V257) —</span>
+        <span class="repo-badge-text" id="chat-status-text" style="font-weight:700; letter-spacing:0.02em;">X (V258) —</span>
       </div>
       <script>
         (function() {
@@ -356,9 +360,9 @@
         
         <!-- ═══ Settings Navigation Tabs (vertical) ═══ -->
         <div class="settings-modal-tabs-bar">
-          <button type="button" class="settings-tab-btn active" data-tab="usage" onclick="window._switchSettingsTab('usage')">
-            <span>📊</span>
-            <span>Usage</span>
+          <button type="button" class="settings-tab-btn active" data-tab="models" onclick="window._switchSettingsTab('models')">
+            <span>🤖</span>
+            <span>النماذج</span>
           </button>
           <button type="button" class="settings-tab-btn" data-tab="themes" onclick="window._switchSettingsTab('themes')">
             <span>🎨</span>
@@ -378,32 +382,18 @@
           </button>
         </div>
 
-        <!-- ═══ Tab 0: Usage & Metrics (First tab!) ═══ -->
-        <div id="settings-tab-usage" class="settings-tab-pane active">
-          <div class="settings-section usage-section" id="usage-section" style="margin-top:0;">
-            <div class="settings-section-title">
-              <span>📊</span>
-              <span>API Usage & Live Metrics</span>
-              <span id="usage-live-dot" class="usage-live-dot" title="Auto-synced"></span>
-            </div>
-            <div class="usage-grid">
-              <div class="usage-card openrouter">
-                <div class="usage-card-head"><span>OpenRouter</span><span class="usage-badge real">Real</span></div>
-                <div class="usage-stats">
-                  <div class="usage-stat"><span class="usage-num" id="or-tokens">—</span><span class="usage-label">Tokens</span></div>
-                  <div class="usage-stat"><span class="usage-num" id="or-reqs">—</span><span class="usage-label">Reqs</span></div>
-                </div>
-                <div class="usage-sub" id="or-sub">Fetching...</div>
-              </div>
-              <div class="usage-card groq">
-                <div class="usage-card-head"><span>Groq</span><span class="usage-badge local">Tracked</span></div>
-                <div class="usage-stats">
-                  <div class="usage-stat"><span class="usage-num" id="groq-tokens">—</span><span class="usage-label">Tokens</span></div>
-                  <div class="usage-stat"><span class="usage-num" id="groq-reqs">—</span><span class="usage-label">Reqs</span></div>
-                </div>
-                <div class="usage-sub" id="groq-sub">Last Model: —</div>
-              </div>
-            </div>
+        <!-- ═══ Tab: Models — Sorted strongest→weakest, per-model usage === -->
+        <div id="settings-tab-models" class="settings-tab-pane active">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+            <div style="font-size:13px; font-weight:800;">📊 النماذج المستخدمة</div>
+            <a href="./models.html" target="_blank" style="font-size:11px; color:var(--accent-color); text-decoration:none; border:1px solid var(--border-subtle); padding:4px 8px; border-radius:8px;">فتح صفحة كاملة ↗</a>
+          </div>
+          <div style="font-size:11px; color:var(--text-dim); margin-bottom:8px;">مرتبة من الأقوى للأضعف — فعّل/ألغِ أي نموذج من الفول باك (يعود لمكانه الأصلي)</div>
+          <div style="overflow:auto; max-height:320px; border:1px solid var(--border-subtle); border-radius:10px;">
+            <table style="width:100%; border-collapse:collapse; font-size:12.5px;">
+              <thead><tr style="background:rgba(0,0,0,0.2);"><th style="padding:8px; text-align:right; width:32px;">✓</th><th style="padding:8px; text-align:right;">النموذج</th><th style="padding:8px; text-align:right;">المزود</th><th style="padding:8px; text-align:right;">الاستهلاك</th></tr></thead>
+              <tbody id="models-tbody-inline"></tbody>
+            </table>
           </div>
         </div>
 
@@ -550,11 +540,11 @@
 </div>
 
 <!-- Consolidated High-Performance Script Bundle -->
-<script src="./config.js?v=257"></script>
-<script src="./auth.js?v=257"></script>
-<script src="./models.js?v=257"></script>
-<script src="./github.js?v=257"></script>
-<script src="./instruction-manager.js?v=257"></script>
-<script src="./app.js?v=257"></script>
+<script src="./config.js?v=258"></script>
+<script src="./auth.js?v=258"></script>
+<script src="./models.js?v=258"></script>
+<script src="./github.js?v=258"></script>
+<script src="./instruction-manager.js?v=258"></script>
+<script src="./app.js?v=258"></script>
 </body>
 </html>
