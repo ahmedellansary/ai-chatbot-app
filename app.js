@@ -637,7 +637,7 @@
                 <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
               </svg>
             </button>
-            <button class="claude-action-btn" onclick="window._retryMsg('${msg.id}')" title="إعادة المحاولة">
+            <button class="claude-action-btn" onclick="window._speakMsg(this)" title="????? ???"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg></button><button class="claude-action-btn" onclick="window._retryMsg('${msg.id}')" title="إعادة المحاولة">
               <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path>
               </svg>
@@ -913,7 +913,15 @@
       if (!state.activeConvId) StateController.newConversation();
       const conv = StateController.getActiveConv();
 
-      const { textForPayload, currentAttachments } = this.preparePayload(userText);
+      let { textForPayload, currentAttachments } = this.preparePayload(userText);
+      // Web Browse + RAG-lite enrichment
+      try{
+        const urls=[...textForPayload.matchAll(/https?:\/\/[^\s"']+/g)].map(m=>m[0]).slice(0,2);
+        for(const u of urls){ try{ const r=await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,{signal:AbortSignal.timeout(5000)}); if(r.ok){ const t=await r.text(); textForPayload+=`\n\n--- محتوى الرابط ${u} ---\n${t.slice(0,3500)}\n---`; } }catch{} }
+        const ragKeys=['index.html','style.css','app.js','dev.js','dev_style.css','config.js','github.js','instructions.json'];
+        const hit=ragKeys.filter(k=> textForPayload.toLowerCase().includes(k.toLowerCase()));
+        for(const f of hit.slice(0,2)){ try{ const r=await fetch(`./${f}?t=${Date.now()}`); if(r.ok){ const t=await r.text(); textForPayload+=`\n\n--- ملف ${f} (مقتطف) ---\n${t.slice(0,3500)}\n---`; } }catch{} }
+      }catch{}
 
       // Clear previews & state
       state.attachments = [];
@@ -971,13 +979,15 @@
         state.sendLock = false;
         return;
       }
+      const visImages = currentAttachments.filter(a=> a.type.startsWith('image/') && a.dataUrl);
+      const userContent = visImages.length ? [{type:'text', text: textForPayload}, ...visImages.slice(0,3).map(a=>({type:'image_url', image_url:{url:a.dataUrl}}))] : textForPayload;
       const apiMessages = [
         { role: 'system', content: systemPromptForCall },
         ...conv.messages
           .filter(m => m.id !== userMsg.id)
           .slice(-this.getAdaptiveConfig(tier).recentCount)
           .map(m => ({ role: m.role === 'ai' ? 'assistant' : m.role, content: m.content })),
-        { role: 'user', content: textForPayload }
+        { role: 'user', content: userContent }
       ];
 
       let fullContent = '';
