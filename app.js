@@ -76,7 +76,7 @@
   // 3. STATE & PERSISTENCE CONTROLLER (StateController)
   // ─────────────────────────────────────────────────────────────────
   const state = {
-    currentMode: (function(){ try{ const saved = localStorage.getItem('xv1_current_mode'); return saved === 'HIGH' ? 'HARD' : (saved || 'MID'); }catch{ return 'MID'; }})(),
+    currentMode: (function(){ try{ const saved = localStorage.getItem('xv1_current_mode'); return saved === 'HARD' ? 'HIGH' : (saved || 'MID'); }catch{ return 'MID'; }})(),
     currentModel: null,
     devModelKey: null,
     modelCatalog: [],
@@ -826,11 +826,11 @@
     },
 
     async buildSystemPrompt(userText = '', attachments = [], conv = null, tier = 'MID') {
-      if (tier === 'HARD') return '';
       if (!InstructionManager.files || !InstructionManager.files.length) {
         await InstructionManager.load();
       }
       const basePrompt = InstructionManager.assemblePrompt(userText, attachments, tier);
+      if (tier === 'HIGH') return basePrompt;
       const briefing = this.generateBriefing(conv, tier);
       if (!briefing) return basePrompt;
       return `${basePrompt}\n\n═══════════════════════════════════════════════════════════════\n${briefing}\n═══════════════════════════════════════════════════════════════\n(هذه خلاصة ذكية للمحادثة الكاملة — استخدمها كسياق كأنك كنت حاضراً من البداية. آخر ${this.getAdaptiveConfig(tier).recentCount} رسائل التالية هي النص الحرفي الأحدث)`;
@@ -863,9 +863,7 @@
       debugCheckpoint('send-start', { tier, textLength: textForPayload.length });
       let systemPromptForCall;
       try {
-        systemPromptForCall = tier === 'HARD'
-          ? ''
-          : await this.buildSystemPrompt(textForPayload, currentAttachments, conv, tier);
+        systemPromptForCall = await this.buildSystemPrompt(textForPayload, currentAttachments, conv, tier);
         debugCheckpoint('prompt-ready', { tier, promptLength: systemPromptForCall.length });
       } catch (err) {
         state.isStreaming = false;
@@ -874,8 +872,8 @@
         UIEngine.updateSendBtnState();
         return;
       }
-      const apiMessages = tier === 'HARD'
-        ? [{ role: 'user', content: textForPayload }]
+      const apiMessages = tier === 'HIGH'
+        ? [{ role: 'system', content: systemPromptForCall }, { role: 'user', content: textForPayload }]
         : [
             { role: 'system', content: systemPromptForCall },
             ...conv.messages
