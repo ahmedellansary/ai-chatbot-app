@@ -117,7 +117,7 @@
       if (contentTextarea) {
         let val = '';
         if (file.tiers) {
-          val = JSON.stringify(file.tiers.HARD || file.tiers, null, 2);
+          val = JSON.stringify(file.tiers.HIGH || file.tiers, null, 2);
         } else if (file.content) {
           try {
             val = JSON.stringify(JSON.parse(file.content), null, 2);
@@ -260,11 +260,11 @@
       if (!this.files || !this.files.length) return 'You are X.v1 Claude Intelligence Engine.';
       const coreFile = this.files.find(f => f.isCore && f.enabled) || this.files[0];
       let coreContent = '';
-      const normalizedTier = (tier === 'FAST') ? 'FAST' : ((tier === 'HARD' || tier === 'HIGH' || tier === 'DEEP') ? 'HARD' : 'MID');
+      const normalizedTier = (tier === 'FAST') ? 'FAST' : ((tier === 'HIGH' || tier === 'HARD' || tier === 'DEEP') ? 'HIGH' : 'MID');
       
       const isComplex = this.isComplexQuery(userText, attachments);
       // For simple/casual messages across ALL 3 tiers: use FAST concise summary (1.1k chars)
-      // For complex/deep reasoning: use the selected tier (HARD = full rules, MID = balanced summary, FAST = fast summary)
+      // For complex/deep reasoning: use the selected tier (HIGH = full rules, MID = balanced summary, FAST = fast summary)
       const effectiveTier = isComplex ? normalizedTier : 'FAST';
 
       if (coreFile) {
