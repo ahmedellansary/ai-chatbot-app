@@ -800,7 +800,7 @@ When this request requires changing repository code, respond as a concise execut
         `;
 
         const parsedFinal = finalContent ? DevUIEngine.parseMarkdown(finalContent) : (isThinking ? '<div style="color:var(--text-dim); font-size:12.5px; padding:4px;">⏳ Synthesizing verified response...</div>' : '');
-        msgContent.innerHTML = boxHtml + parsedFinal;
+        msgContent.innerHTML = parsedFinal + boxHtml;
       };
 
       const steps = [
@@ -986,7 +986,7 @@ When this request requires changing repository code, respond as a concise execut
         const okN = finalReview ? (String(finalReview).match(/نعم|yes|✓|مُلتزم|Compliant/gi)||[]).length : 0;
         const warnN = finalReview ? (String(finalReview).split(/\n/).filter(Boolean).length - okN) : 0;
         const reviewHtml = finalReview ? buildBullets(finalReview) : `<div style="font-size:12px; color:var(--text-dim); padding:6px 0;">${t('جاري المراجعة...','Reviewing...')}</div>`;
-        const applyBtn = finalReview ? `<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap"><button class="observer-apply-btn" onclick="(function(btn){ const r=btn.closest('.dev-observer-box').dataset.review||''; if(window._applyObserverSuggestion) window._applyObserverSuggestion(r); })(this)">Apply</button><button class="llm-end-btn" onclick="window._endToLLM && window._endToLLM(this)" title="SSend to LLM">⚡ Send to LLM</button></div>` : '';
+        const applyBtn = finalReview ? `<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap"><button class="observer-apply-btn" onclick="(function(btn){ const r=btn.closest('.dev-observer-box').dataset.review||''; if(window._applyObserverSuggestion) window._applyObserverSuggestion(r); })(this)">Apply</button><button class="llm-end-btn" onclick="window._sendToLLM(this)">⚡ Send to LLM</button><button class="llm-send-apply-btn" onclick="window._sendAndApply(this)">⚡ Send & Apply</button></div>` : '';
         let box = row.querySelector('.dev-observer-box');
         if (!box) { box = document.createElement('div'); box.className='dev-observer-box'; box.style.cssText='margin-top:10px; padding:0; border:none; background:transparent;'; row.querySelector('.msg-content')?.appendChild(box) || row.appendChild(box); }
         box.dataset.review = finalReview || '';
@@ -995,8 +995,8 @@ When this request requires changing repository code, respond as a concise execut
       render();
       steps[0].status=t('✓ تمت المتابعة','✓ Tracked'); steps[0].summary=t(`تمت مراقبة رد ${tier}`,'Tracked '+tier); steps[1].status=t('نشط','Active'); render();
       const prompt = isAr
-        ? `أنت مراقب كود ذكي. راجع الرد:\n\nطلب المستخدم: """${userText.slice(0,800)}"""\n\nرد المطور (${tier}): """${aiResponse.slice(0,2500)}"""\n\nحلل في 5 نقاط موجزة:\n1. هل الرد ملتزم بتعليمات البرمجة؟\n2. هل يوجد تناقض/تكرار/خطأ منطقي؟\n3. هل يوجد ثغرات أمان (XSS/SQLi/eval) أو أخطاء صامتة؟\n4. لو قصة/سكريبت لأشخاص حقيقيين — هل المعلومات موثوقة؟\n5. اقتراح تحسين واحد *عام* للمشروع كله (ليس خاصا بهذا السؤال) — مثال: تحسين وصولية عام، أو أمان عام، أو أداء عام\n\nمهم: النقطة 5 يجب أن تكون اقتراحا عاما يصلح لأي طلب، لا اقتراحا مرتبطا بسؤال المستخدم الحالي. عربي موجز بنقاط واضحة.`
-        : `You are a code reviewer. User: """${userText.slice(0,800)}""" Response (${tier}): """${aiResponse.slice(0,2500)}""" Provide 5 concise bullets: 1. Instruction compliance 2. Contradiction/bug 3. Security 4. Source reliability if real story 5. ONE *GENERAL* improvement for the whole project (not tied to this specific question) — e.g. general a11y, security hardening, or perf. Keep brief. Bullet 5 MUST be general.`;
+        ? `أنت مراقب كود ذكي. راجع الرد:\n\nطلب المستخدم: """${userText.slice(0,800)}"""\n\nرد المطور (${tier}): """${aiResponse.slice(0,2500)}"""\n\nأجب بهذا الشكل فقط (نقاط عائمة • بدون ترقيم):\n• الالتزام: إذا نعم فاكتب "نعم" فقط، إذا لا فاكتب "لا — السبب بجملة واحدة"\n• التناقض: إذا لا يوجد فاكتب "لا" فقط، إذا يوجد فاكتب "نعم — السبب بجملة واحدة"\n• الأمان: إذا سليم فاكتب "سليم" فقط، إذا فيه ثغرة فاذكرها\n• المصادر: إذا موثوقة فاكتب "موثوقة" فقط، إذا تحتاج تحقق فاذكر السبب\n• تحسين عام: جملة واحدة عامة تنفع لأي سؤال (أمان/أداء/وصولية) — ممنوع ربطها بهذا السؤال\n`
+        : `You are code reviewer. User: """${userText.slice(0,800)}""" Response (${tier}): """${aiResponse.slice(0,2500)}""" Reply as bullets • : Compliance: if yes "yes" only, if no "no — reason" | Contradiction: if none "no" only else "yes — reason" | Security: "safe" only if ok else reason | Sources: "reliable" only if ok else reason | One GENERAL improvement (any question, e.g. a11y/perf/security) — never question-specific`;
       const msgs=[{role:'system',content:isAr?'أنت مراقب كود مختصر':'You are concise reviewer'},{role:'user',content:prompt}];
       let review='';
       try{
@@ -2524,6 +2524,7 @@ When this request requires changing repository code, respond as a concise execut
     const box = document.getElementById(`box-${msgId}`);
     if (box) box.classList.toggle('collapsed');
   };
+  
   window._sendToLLM = window._endToLLM = function(btn){
     try{
       const box = btn.closest('.observer-box, .multi-agent-box, .dev-observer-box');
@@ -2542,6 +2543,7 @@ When this request requires changing repository code, respond as a concise execut
       if(window.DevUIEngine) window.DevUIEngine.showToast('↗ Contradictions sent to LLM','info');
     }catch(e){}
   };
+  window._sendAndApply = function(btn){ try{ const b=btn.closest('.dev-observer-box, .observer-box, .multi-agent-box'); const rv=b?.dataset?.review||b?.innerText||''; if(rv && window._applyObserverSuggestion) window._applyObserverSuggestion(rv); window._sendToLLM(btn);}catch(e){} };
 
   window._openRollbackModal = async function() {
     const modal = $('rollback-modal');
