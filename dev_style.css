@@ -3093,3 +3093,149 @@ pre code {
 .user-actions-bar{display:none !important}
 .claude-actions-bar{display:none !important}
 @media(max-width:600px){.observer-bullet{padding:8px 10px;font-size:12.5px}}
+
+/* ─── Smooth Dev Peer Code Review Card ─── */
+.dev-peer-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  margin-top: 10px;
+  overflow: hidden;
+  transition: all 0.2s ease;
+  font-family: var(--font-sans);
+}
+.dev-peer-card:hover {
+  border-color: rgba(255, 255, 255, 0.14);
+}
+.dev-peer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.22);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+  user-select: none;
+}
+.dev-peer-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+.dev-peer-icon {
+  font-size: 14px;
+}
+.dev-peer-badge {
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-family: var(--font-mono);
+}
+.dev-peer-badge.running {
+  background: rgba(59, 130, 246, 0.15);
+  color: #93c5fd;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+.dev-peer-badge.ok {
+  background: rgba(16, 185, 129, 0.14);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+.dev-peer-badge.warn {
+  background: rgba(245, 158, 11, 0.14);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+.dev-peer-toggle {
+  font-size: 11px;
+  color: var(--text-dim);
+  transition: transform 0.2s ease;
+}
+.dev-peer-card.collapsed .dev-peer-toggle {
+  transform: rotate(-90deg);
+}
+.dev-peer-card.collapsed .dev-peer-body {
+  display: none !important;
+}
+.dev-peer-body {
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.peer-bullets-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.peer-bullet {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-main);
+  padding: 5px 8px;
+  border-radius: 6px;
+}
+.peer-bullet.ok {
+  background: rgba(16, 185, 129, 0.05);
+}
+.peer-bullet.warn {
+  background: rgba(245, 158, 11, 0.08);
+  color: #fde68a;
+}
+.peer-bullet-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  margin-top: 6px;
+  flex-shrink: 0;
+}
+.peer-bullet.ok .peer-bullet-dot {
+  background: #10b981;
+}
+.peer-bullet.warn .peer-bullet-dot {
+  background: #f59e0b;
+}
+.peer-actions-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  margin-top: 4px;
+}
+.peer-action-btn {
+  padding: 5px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.peer-action-btn.apply-btn {
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  color: #fbbf24;
+}
+.peer-action-btn.apply-btn:hover {
+  background: rgba(245, 158, 11, 0.22);
+}
+.peer-action-btn.retry-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-dim);
+}
+.peer-action-btn.retry-btn:hover {
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.1);
+}
+
