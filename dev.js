@@ -952,7 +952,7 @@ When this request requires changing repository code, respond as a concise execut
         { icon:'✨', title:t('اقتراح تحسين','Improvement'), status:t('انتظار','Waiting'), summary:t('بانتظار...','Awaiting...') }
       ];
       const render = (finalReview='') => {
-        const stepsHtml = steps.map(s=>`<div class="thinking-flow-item"><span class="flow-icon">${s.icon}</span><span class="flow-text">${s.title} — ${s.summary}</span><span class="flow-dot" style="${s.status.includes('✓')||s.status.includes('Done')?'opacity:0;':''}"></span></div>`).join('');
+        const stepsHtml = steps.map(s=>`<div class="thinking-flow-item" dir="${isAr ? 'rtl' : 'ltr'}" style="text-align:${isAr ? 'right' : 'left'};"><span class="flow-icon">${s.icon}</span><span class="flow-text">${s.title} — ${s.summary}</span></div>`).join('');
         let box = row.querySelector('.dev-observer-box');
         if (!box) { box = document.createElement('div'); box.className='dev-observer-box'; box.style.cssText='margin-top:10px; padding:0; border:none; background:transparent;'; row.querySelector('.msg-content')?.appendChild(box) || row.appendChild(box); }
         let parsedReview = '';
@@ -972,7 +972,7 @@ When this request requires changing repository code, respond as a concise execut
         let tmp='';
         const engine = window.ModelEngine || null;
         if(engine && engine.chatWithFallback){
-          for await(const {chunk} of engine.chatWithFallback('FAST', msgs, ac.signal, ()=>{})){ tmp+=chunk; if(tmp.length>30 && steps[1].status!==t('✓ تم','✓ Done')){ steps[1].status=t('✓ تم','✓ Done'); steps[1].summary=t('فحص الالتزام مكتمل','Done'); steps[2].status=t('نشط','Active'); render(tmp.slice(0,400)); } }
+          for await(const {chunk} of engine.chatWithFallback('MID', msgs, ac.signal, ()=>{})){ tmp+=chunk; if(tmp.length>30 && steps[1].status!==t('✓ تم','✓ Done')){ steps[1].status=t('✓ تم','✓ Done'); steps[1].summary=t('فحص الالتزام مكتمل','Done'); steps[2].status=t('نشط','Active'); render(tmp.slice(0,400)); } }
           review=tmp;
         } else {
           await DevChatEngine.callSingleAgentStream(DevChatEngine.buildFallbackCascade(DevState.getSelectedAgent())[0]||{id:'openai/gpt-oss-20b',provider:'groq'}, msgs, ac.signal, (d)=>{ review+=d; });
@@ -1433,6 +1433,9 @@ When this request requires changing repository code, respond as a concise execut
         { icon:'✨', text:'Crafting solution', delay:8300 },
         { icon:'✅', text:'Security review', delay:11800 }
       ];
+      // Ensure flow alignment matches language (strong model English → LTR, no right icon)
+      const flowEl = document.getElementById('dev-thinking-flow');
+      if (flowEl) { const isArFlow = /[\u0600-\u06FF]/.test(flowStages[0]?.text||''); flowEl.setAttribute('dir', isArFlow ? 'rtl' : 'ltr'); flowEl.style.textAlign = isArFlow ? 'right' : 'left'; }
       this._devThinkingTimers = [];
       flowStages.forEach(s => {
         const t = setTimeout(() => {
@@ -1440,7 +1443,7 @@ When this request requires changing repository code, respond as a concise execut
           if (!flow) return;
           const item = document.createElement('div');
           item.className = 'thinking-flow-item';
-          item.innerHTML = `<span class="flow-icon">${s.icon}</span><span class="flow-text">${this.escapeHtml(s.text)}</span><span class="flow-dot"></span>`;
+          item.innerHTML = `<span class="flow-icon">${s.icon}</span><span class="flow-text">${this.escapeHtml(s.text)}</span>`;
           flow.appendChild(item);
           const ca = $('chat-area'); if (ca) ca.scrollTop = ca.scrollHeight;
         }, s.delay);
