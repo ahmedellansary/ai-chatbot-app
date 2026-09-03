@@ -66,16 +66,6 @@
 
   const DEV_AGENTS = [
     {
-      id: 'qwen/qwen3.8-27b',
-      provider: 'groq',
-      name: 'Qwen 3.8 27B Fast Coder',
-      icon: '⚡',
-      category: 'code',
-      params: '27B Coder (179ms)',
-      desc: 'الموديل البرمجي الأسرع والأدق عالمياً لتوليد أكواد الجافاسكريبت والـ Search & Replace.',
-      priority: 1
-    },
-    {
       id: 'openai/gpt-oss-120b',
       provider: 'groq',
       name: 'GPT OSS 120B Lead Architect',
@@ -93,6 +83,16 @@
       category: 'code',
       params: '118B Coder',
       desc: 'بطل البرمجة وهندسة الأكواد المتصدر لاختبارات Terminal-Bench و DeepSWE.',
+      priority: 1
+    },
+    {
+      id: 'qwen/qwen3.8-27b',
+      provider: 'groq',
+      name: 'Qwen 3.8 27B Fast Coder',
+      icon: '⚡',
+      category: 'code',
+      params: '27B Coder (179ms)',
+      desc: 'الموديل البرمجي الأسرع والأدق عالمياً لتوليد أكواد الجافاسكريبت والـ Search & Replace.',
       priority: 1
     },
     {
@@ -167,7 +167,7 @@
     conversations: [],
     activeConvId: null,
     devPrompt: '',
-    currentMode: localStorage.getItem('xv1_dev_mode') || 'MID',
+    currentMode: 'HIGH',
     selectedAgentId: 'openai/gpt-oss-120b',
     activeAgentId: localStorage.getItem('active_dev_agent_id') || 'openai/gpt-oss-120b',
     isMultiAgentMode: localStorage.getItem('is_dev_multi_agent_mode') === '1',
@@ -416,8 +416,7 @@ STRICT RULE: The local engine automatically merges your surgical patches directl
     },
 
     buildFallbackCascade(primaryAgent, estimatedTokens = 0) {
-      const mode = state.currentMode || 'MID';
-      const tierList = (DEV_TIER_MODELS && DEV_TIER_MODELS[mode]) ? DEV_TIER_MODELS[mode] : null;
+      const tierList = (DEV_TIER_MODELS && DEV_TIER_MODELS.HIGH) ? DEV_TIER_MODELS.HIGH : [];
       if (tierList && tierList.length) {
         const primaryKey = primaryAgent ? `${primaryAgent.provider}:${primaryAgent.id}` : '';
         return [
@@ -596,7 +595,7 @@ STRICT RULE: The local engine automatically merges your surgical patches directl
       DevUIEngine.showDevThinking(isArDev ? 'تحليل' : 'Analyzing');
       const _shouldObserve = !!state.isMultiAgentMode;
 
-       const tier = state.currentMode || 'MID';
+       const tier = 'HIGH';
       const rawDevPrompt = this.assembleDevPrompt(tier, state.devPrompt, state.liveRepoFiles);
       const _devTierCfg = this.getAdaptiveConfigForDev(DevState.getSelectedAgent(), Math.ceil(((textForPayload?.length || 0) + (rawDevPrompt?.length || 0)) / 3.5));
       const _devBriefing = this.generateDevBriefing(conv, DevState.getSelectedAgent(), Math.ceil(((textForPayload?.length || 0) + (rawDevPrompt?.length || 0)) / 3.5));
