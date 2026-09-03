@@ -63,7 +63,7 @@ const rotateGroqKey = () => {
 // ─── Model Tiers — Unified active model set (Strictly Isolated within Tier) ───
 const MODELS = {
   HARD: [
-    { id: 'nvidia/nemotron-3-ultra-550b-a55b:free', name: 'Nemotron 3 Ultra 550B', provider: 'openrouter' }
+    { id: 'openai/gpt-oss-120b', name: 'GPT OSS 120B (Hard Temporary)', provider: 'groq' }
   ],
   MID: [
     { id: 'openai/gpt-oss-120b', name: 'GPT OSS 120B (Balanced Core)', provider: 'groq' },
