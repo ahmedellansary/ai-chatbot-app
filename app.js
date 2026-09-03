@@ -31,10 +31,10 @@
   // ── Usage Tracker — Extracted to modules/usage-tracker.js (Phase 3)
   const UsageTracker = window.UsageTracker || {
     key: 'xv1_usage_stats',
-    load() { try { return JSON.parse(localStorage.getItem(this.key) || 'null') || { or: {t:0,r:0}, groq: {t:0,r:0}, lastModel: '', lastAt: '' }; } catch { return { or: {t:0,r:0}, groq: {t:0,r:0}, lastModel: '', lastAt: '' }; } },
+    load() { try { const v=JSON.parse(localStorage.getItem(this.key) || 'null'); if(v && typeof v==='object'){ if(!v.perModel) v.perModel={}; if(!v.or) v.or={t:0,r:0}; if(!v.groq) v.groq={t:0,r:0}; return v; } return { or: {t:0,r:0}, groq: {t:0,r:0}, perModel:{}, lastModel: '', lastAt: '' }; } catch { return { or: {t:0,r:0}, groq: {t:0,r:0}, perModel:{}, lastModel: '', lastAt: '' }; } },
     save(d) { try { localStorage.setItem(this.key, JSON.stringify(d)); } catch {} },
     estimateTokens(t) { return Math.ceil((t||'').length / 3.5); },
-    record(m,p,pt,ct){ const d=this.load(); const tot=this.estimateTokens(pt)+this.estimateTokens(ct); const k=p==='openrouter'?'or':'groq'; d[k].t+=tot; d[k].r+=1; d.lastModel=m||k; d.lastAt=new Date().toISOString(); this.save(d); this.render(); },
+    record(m,p,pt,ct){ const d=this.load(); const tot=this.estimateTokens(pt)+this.estimateTokens(ct); const k=p==='openrouter'?'or':'groq'; d[k].t+=tot; d[k].r+=1; if(m){ if(!d.perModel[m]) d.perModel[m]={t:0,r:0,lastAt:''}; d.perModel[m].t+=tot; d.perModel[m].r+=1; d.perModel[m].lastAt=new Date().toISOString(); } d.lastModel=m||k; d.lastAt=new Date().toISOString(); this.save(d); this.render(); try{ if(window.ModelsPage) window.ModelsPage.refreshRow(m); }catch{} },
     async fetchRealOpenRouter(){ const el=document.getElementById('or-sub'); try{ const k=(window.ConfigVault&&window.ConfigVault.getOpenRouterKey)?window.ConfigVault.getOpenRouterKey():'';
         if(!k) return;
         const ctrl = new AbortController();
@@ -607,12 +607,23 @@
         `;
       }
 
+      // Observer persistence — collapsed concise briefing after refresh
+      let observerHtml = '';
+      if (msg.observerReview) {
+        const brief = this.escapeHtml((msg.observerBrief || msg.observerReview).slice(0,140));
+        const isOk = /نعم|yes|✓|مُلتزم/i.test(msg.observerReview);
+        const color = isOk ? '#10b981' : '#f59e0b';
+        const label = isOk ? '✓ نعم — ملتزم' : '✗ لا — ' + brief.slice(0,60);
+        observerHtml = `<div class="observer-box collapsed" style="margin-top:10px; padding:0; border:none; background:transparent;"><div style="display:flex; align-items:center; gap:6px; padding:4px 0;"><span>👁️</span><span style="font-size:11px; color:${color}; background:rgba(16,185,129,0.08); padding:2px 6px; border-radius:6px;">${label}</span><span style="font-size:10px; color:var(--text-dim); margin-left:auto; cursor:pointer;" onclick="this.closest('.observer-box').classList.toggle('collapsed'); this.closest('.observer-box').querySelector('.observer-details').classList.toggle('hidden')">[عرض]</span></div><div class="observer-details hidden" style="margin-top:6px; font-size:12px; border:1px solid var(--border-subtle); border-radius:8px; padding:8px; background:rgba(255,255,255,0.02);">${this.parseMarkdown(msg.observerReview)}</div></div>`;
+      }
+
       if (msg.role === 'user') {
         row.innerHTML = `<div class="msg-content" ${dirAttr}>${parsed}${attachmentsHtml}</div>`;
       } else {
         row.innerHTML = `
           <div class="msg-content" ${dirAttr}>
             ${multiAgentHtml}
+            ${observerHtml}
             ${parsed}
             ${attachmentsHtml}
           </div>
@@ -1308,10 +1319,10 @@
       steps[1].status = t('نشط', 'Active');
       renderObserver();
 
-      // Build review prompt for FAST tier (non-blocking, avoids HIGH key contention)
+      // Build review prompt for FAST tier — concise yes/no briefing
       const reviewPrompt = isAr
-        ? `أنت مراقب جودة ذكي. راجع الرد التالي:\n\nسؤال المستخدم: """${userText.slice(0, 800)}"""\n\nرد النموذج (${tier}): """${aiResponse.slice(0, 2500)}"""\n\nالمطلوب تحليل سريع (4 نقاط موجزة):\n1. هل الرد ملتزم بالتعليمات؟\n2. هل يوجد تناقض أو تكرار مع سياق سابق؟\n3. لو الرد قصة حقيقية/سكريبت لأشخاص حقيقيين — هل المعلومات من مصادر موثوقة أم تحتاج تحقق؟\n4. اقتراح تحسين واحد محدد لرفع الجودة\n\nأجب بصياغة عربية موجزة، نقاط واضحة، بدون مقدمات طويلة.`
-        : `You are a quality observer. Review the response:\n\nUser: """${userText.slice(0, 800)}"""\n\nModel (${tier}) response: """${aiResponse.slice(0, 2500)}"""\n\nProvide 4 concise bullet points:\n1. Instruction compliance\n2. Contradiction/duplication\n3. Source reliability (if real story/script)\n4. One quality improvement\n\nKeep it brief.`;
+        ? `أنت مراقب جودة ذكي ومختصر. راجع الرد:\n\nسؤال: """${userText.slice(0, 800)}"""\nرد (${tier}): """${aiResponse.slice(0, 2500)}"""\n\nأجب بهذا الشكل المختصر فقط (بدون مقدمات):\n1. الالتزام: نعم/لا — السبب بجملة واحدة\n2. التناقض: نعم/لا — السبب\n3. المصادر (لو قصة حقيقية): موثوقة/تحتاج تحقق — السبب\n4. تحسين: جملة واحدة محددة\n`
+        : `You are concise reviewer. User: """${userText.slice(0, 800)}""" Response (${tier}): """${aiResponse.slice(0, 2500)}""" Reply as: 1. Compliance: yes/no — reason 2. Contradiction: yes/no — reason 3. Sources: reliable/needs check — reason 4. Improvement: one sentence`;
 
       const reviewMessages = [
         { role: 'system', content: isAr ? 'أنت مراقب جودة محترف ومختصر.' : 'You are a concise quality reviewer.' },
@@ -1337,10 +1348,44 @@
         steps[2].status = t('✓ تم', '✓ Done'); steps[2].summary = t('فحص التناقض مكتمل', 'Contradiction done');
         steps[3].status = t('✓ تم', '✓ Done'); steps[3].summary = t('التحقق من المصادر مكتمل', 'Source check done');
         steps[4].status = t('✓ تم', '✓ Done'); steps[4].summary = t('اقتراح التحسين جاهز', 'Improvement ready');
+        // Collapse after done — show only concise briefing, no motion
+        const concise = reviewText.split('\n').slice(0,4).join(' | ').slice(0,220);
+        // Save to message for persistence after refresh
+        try {
+          const msg = conv.messages.find(m=> m.id===aiMsgId);
+          if(msg){ msg.observerReview = reviewText; msg.observerBrief = concise; msg.observerSteps = steps; if(window.StateController) window.StateController.save(); }
+        } catch {}
+        // Render collapsed: hide details, show only briefing line with yes/no
+        const isCompliant = /نعم|yes|✓|مُلتزم/i.test(reviewText);
+        const brief = isCompliant ? t('✓ نعم — ملتزم', '✓ Yes — compliant') : t('✗ لا — ' + (reviewText.split('\n')[0]||'').slice(0,80), '✗ No — see details');
+        // Re-render collapsed
+        const box = aiRow.querySelector('.observer-box');
+        if(box){
+          box.classList.add('collapsed');
+          const briefEl = document.createElement('div');
+          briefEl.style.cssText='font-size:11px; color:'+(isCompliant?'#10b981':'#f59e0b')+'; margin-top:6px; padding:4px 8px; background:rgba(16,185,129,0.08); border-radius:6px; display:inline-block;';
+          briefEl.textContent = brief;
+          // Remove old flow dots animation
+          box.querySelectorAll('.flow-dot').forEach(d=> d.style.display='none');
+          const flow = box.querySelector('.thinking-flow');
+          if(flow) flow.style.display='none';
+          // Show brief instead of full review
+          const existingBrief = box.querySelector('.observer-brief');
+          if(existingBrief) existingBrief.remove();
+          const b = document.createElement('div');
+          b.className='observer-brief';
+          b.style.cssText='font-size:12px; margin-top:6px;';
+          b.textContent = concise || brief;
+          box.appendChild(b);
+        }
         renderObserver(reviewText);
+        // Ensure no glow/motion remains
+        try{ document.querySelectorAll('.input-container.thinking').forEach(el=> el.classList.remove('thinking')); }catch{}
+        try{ document.querySelectorAll('.flow-dot').forEach(d=> d.style.animation='none'); }catch{}
       } catch (e) {
         steps[1].status = t('تخطي', 'Skipped'); steps[2].status = t('تخطي', 'Skipped');
         renderObserver(t('تعذر إكمال المراجعة التلقائية — الرد الأصلي يبقى معتمداً', 'Auto-review skipped — original answer remains authoritative'));
+        try{ document.querySelectorAll('.input-container.thinking').forEach(el=> el.classList.remove('thinking')); }catch{}
       }
     }
   };
@@ -2173,6 +2218,7 @@
       mgr.renderList();
       mgr.closeEditor();
     } catch(e) {}
+    try { renderModelsInline(); } catch(e) {}
     if (window.UsageTracker) {
       window.UsageTracker.render();
       try { window.UsageTracker.fetchRealOpenRouter().catch(() => {}); } catch(e) {}
@@ -2483,6 +2529,23 @@
     window.location.reload();
   };
 
+  function renderModelsInline(){
+    const tbody=document.getElementById('models-tbody-inline');
+    if(!tbody || !window.MODELS) return;
+    const getParam=(n)=>{ const m=String(n||'').match(/(\d+(?:\.\d+)?)\s*B/i); return m? parseFloat(m[1]):0; };
+    const all=[];
+    ['HIGH','MID','FAST'].forEach(tier=> (window.MODELS[tier]||[]).forEach(m=> all.push({...m, tier, params:getParam(m.name)})));
+    all.sort((a,b)=> b.params - a.params || (['HIGH','MID','FAST'].indexOf(a.tier)-['HIGH','MID','FAST'].indexOf(b.tier)));
+    const per=(window.UsageTracker? window.UsageTracker.load().perModel||{} : {});
+    const getRenew=(p)=>{ const now=new Date(); if(p==='groq'){ const t=new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()+1,0,0,0)); return `غداً ${Math.round((t-now)/3600000)}س`; } else { const t=new Date(now.getFullYear(), now.getMonth()+1,1); return `أول الشهر ${Math.ceil((t-now)/86400000)}يوم`; } };
+    tbody.innerHTML=all.map(m=>{
+      const en=window.isModelEnabled? window.isModelEnabled(m.id):true;
+      const u=per[m.id]||{t:0,r:0};
+      return `<tr><td><input type="checkbox" style="width:16px;height:16px;accent-color:var(--accent-color);" data-id="${m.id}" ${en?'checked':''} onchange="toggleModelInline(this)"></td><td><div style="font-weight:700;">${m.name} <span style="font-size:10px; padding:2px 5px; border-radius:6px; background:rgba(255,255,255,0.06);">${m.tier}</span></div><div style="font-size:11px; color:var(--text-dim); font-family:var(--font-mono);">${m.id}</div></td><td><span style="font-size:11px; padding:3px 7px; border-radius:999px; background:${m.provider==='groq'?'rgba(16,185,129,0.15)':'rgba(99,102,241,0.15)'}; border:1px solid var(--border-subtle);">${m.provider}</span></td><td><div style="font-size:11px; font-family:var(--font-mono);">${u.t.toLocaleString()} توكن · ${u.r} طلب</div><div style="height:4px; background:rgba(255,255,255,0.08); border-radius:999px; margin-top:4px;"><div style="height:100%; width:${Math.min(100,Math.round((u.t/6000)*100))}%; background:var(--accent-color);"></div></div><div style="font-size:10px; color:var(--text-dim); margin-top:3px;">${getRenew(m.provider)}</div></td></tr>`;
+    }).join('');
+  }
+  window.toggleModelInline=function(el){ const id=el.dataset.id; const en=el.checked; if(window.setModelEnabled) window.setModelEnabled(id,en); };
+  window.ModelsPage={ refreshRow: renderModelsInline, render: renderModelsInline };
   window._switchSettingsTab = function(tabName) {
     $$('#settings-modal .settings-tab-btn').forEach(btn => {
       btn.classList.toggle('active', btn.getAttribute('data-tab') === tabName);
@@ -2494,6 +2557,7 @@
     if (tabName === 'instructions' && window.InstructionManager) {
       window.InstructionManager.renderList();
     }
+    if (tabName === 'models') renderModelsInline();
   };
 
   window._clearAppCache = async function() {
