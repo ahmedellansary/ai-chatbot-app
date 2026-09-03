@@ -415,6 +415,69 @@ For small files (< 300 lines), full "content" is also accepted.
 STRICT RULE: The local engine automatically merges your surgical patches directly into the live master file. Never output raw code in chat.`;
     },
 
+    async resolveTargetFileContext(userText) {
+      try {
+        const repoFiles = state.liveRepoFiles || [];
+        let targetFileName = null;
+        for (const file of repoFiles) {
+          const baseName = file.split('/').pop();
+          if (userText.includes(file) || userText.includes(baseName)) {
+            targetFileName = file;
+            break;
+          }
+        }
+        if (!targetFileName && state.currentEditingFile) {
+          targetFileName = state.currentEditingFile;
+        }
+        if (!targetFileName) return '';
+
+        let fileContent = '';
+        if (state.repoFileContentCache && state.repoFileContentCache[targetFileName]) {
+          fileContent = state.repoFileContentCache[targetFileName];
+        } else {
+          try {
+            const res = await fetch('./' + targetFileName + '?t=' + Date.now());
+            if (res.ok) fileContent = await res.text();
+          } catch(e) {}
+        }
+        if (!fileContent) return '';
+
+        const lines = fileContent.split('\n');
+        let snippet = '';
+
+        if (lines.length <= 150) {
+          snippet = fileContent;
+        } else {
+          const words = userText.match(/[a-zA-Z0-9_\-#\.]+/g) || [];
+          const matchedIndices = [];
+          const defRegex = /(?:function\s+|=|\{|\:)/;
+
+          for (let idx = 0; idx < lines.length; idx++) {
+            const line = lines[idx];
+            for (const w of words) {
+              if (w.length > 3 && line.includes(w) && defRegex.test(line)) {
+                matchedIndices.push(idx);
+                break;
+              }
+            }
+          }
+
+          if (matchedIndices.length > 0) {
+            const centerIdx = matchedIndices[0];
+            const start = Math.max(0, centerIdx - 15);
+            const end = Math.min(lines.length, centerIdx + 45);
+            snippet = lines.slice(start, end).join('\n');
+          } else {
+            snippet = lines.slice(0, 60).join('\n');
+          }
+        }
+
+        return `═══════════════════════════════════════════════════════════════\n📄 TARGET FILE CONTEXT (${targetFileName}):\n═══════════════════════════════════════════════════════════════\n${snippet}\n═══════════════════════════════════════════════════════════════\nCRITICAL SURGEON DIRECTIVE: For the "search" field in your patch, you MUST copy the exact characters and indentation from the TARGET FILE CONTEXT above.`;
+      } catch (err) {
+        return '';
+      }
+    },
+
     buildFallbackCascade(primaryAgent, estimatedTokens = 0) {
       const tierList = (DEV_TIER_MODELS && DEV_TIER_MODELS.HIGH) ? DEV_TIER_MODELS.HIGH : [];
       if (tierList && tierList.length) {
@@ -602,6 +665,8 @@ STRICT RULE: The local engine automatically merges your surgical patches directl
       let systemPrompt = rawDevPrompt;
       if (this.isCodeChangeRequest(textForPayload)) {
         systemPrompt += this.getCodeChangeResponseProtocol();
+        const fileContext = await this.resolveTargetFileContext(textForPayload);
+        if (fileContext) systemPrompt += '\n\n' + fileContext;
       }
       if (_devBriefing) {
         systemPrompt = `${systemPrompt}\n\n═══════════════════════════════════════════════════════════════\n${_devBriefing}\n═══════════════════════════════════════════════════════════════\n(خلاصة ذكية للجلسة الكاملة — استخدمها كسياق كأنك حاضر من البداية. آخر ${_devTierCfg.recentCount} رسائل هي النص الحرفي الأحدث)`;
