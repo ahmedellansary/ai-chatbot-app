@@ -70,11 +70,10 @@ const MODELS = {
     { id: 'poolside/laguna-s-2.1:free', name: 'Laguna S 2.1 (118B)', provider: 'openrouter' }
   ],
   HIGH: [
-    { id: 'nvidia/nemotron-3-ultra-550b-a55b', name: 'Nemotron 3 Ultra 550B (High)', provider: 'openrouter' },
-    { id: 'cohere/north-mini-code:free', name: 'North Mini Code (30B)', provider: 'openrouter' },
-    { id: 'inclusionai/ling-3.0-flash-fin:free', name: 'Ling 3.0 Flash Fin', provider: 'openrouter' },
-    { id: 'thinkingmachines/inkling-small:free', name: 'Inkling Small 276B', provider: 'openrouter' },
-    { id: 'poolside/laguna-s-2.1:free', name: 'Laguna S 2.1 (118B)', provider: 'openrouter' }
+    { id: 'nvidia/nemotron-3-ultra-550b-a55b', name: 'Nemotron 3 Ultra 550B (High) — 550B', provider: 'openrouter' },
+    { id: 'thinkingmachines/inkling-small', name: 'Inkling Small 276B — 276B', provider: 'openrouter' },
+    { id: 'poolside/laguna-s-2.1', name: 'Laguna S 2.1 — 118B', provider: 'openrouter' },
+    { id: 'deepseek/deepseek-chat', name: 'DeepSeek V3 — 671B', provider: 'openrouter' }
   ],
   FAST: [
     { id: 'groq/compound', name: 'Groq Compound', provider: 'groq' },
