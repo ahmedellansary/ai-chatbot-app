@@ -62,11 +62,10 @@ const rotateGroqKey = () => {
 
 // ─── Model Tiers — Unified active model set (Strictly Isolated within Tier) ───
 const MODELS = {
-  HARD: [
-    { id: 'openai/gpt-oss-120b', name: 'GPT OSS 120B (Hard Temporary)', provider: 'groq' }
+  HIGH: [
+    { id: 'openai/gpt-oss-120b', name: 'GPT OSS 120B (High Temporary)', provider: 'groq' }
   ],
   MID: [
-    { id: 'openai/gpt-oss-120b', name: 'GPT OSS 120B (Balanced Core)', provider: 'groq' },
     { id: 'cohere/north-mini-code:free', name: 'North Mini Code (30B)', provider: 'openrouter' },
     { id: 'inclusionai/ling-3.0-flash-fin:free', name: 'Ling 3.0 Flash Fin', provider: 'openrouter' },
     { id: 'thinkingmachines/inkling-small:free', name: 'Inkling Small 276B', provider: 'openrouter' },
