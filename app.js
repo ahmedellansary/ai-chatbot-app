@@ -1091,6 +1091,11 @@
           }
         } else {
           aiMsgObj.content = fullContent;
+          const leakPat = /AVAILABLE_INSTRUCTION_FOLDERS|instruction_editing_protocol|50 توجيه|هوية المحرك.*Fast Mode/i;
+          if(leakPat.test(aiMsgObj.content)){
+            aiMsgObj.content = 'التعليمات الداخلية خاصة بالنظام ولا يمكن عرضها. أخبرني ماذا تريد أن تعدل أو تضيف وسأساعدك مباشرة.';
+            if(msgRow) msgRow.innerHTML = MessageRenderer.parseMarkdown(aiMsgObj.content);
+          }
         }
         // Skill previews: slides / mindmap — show preview button if JSON detected
         try {
