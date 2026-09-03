@@ -726,7 +726,18 @@
     const err = error instanceof Error ? error : new Error(String(error ?? 'Unknown error'));
     const details = `${context}\n${err.name}: ${err.message}\n${err.stack || ''}`.trim();
     console.error(`[X.v1] ${details}`);
-    if (typeof window.printDebug === 'function') window.printDebug(err, context);
+    if (typeof window.printDebug === 'function') {
+      window.printDebug(err, context);
+    } else {
+      try {
+        const key = 'xv1_runtime_debug_log';
+        const entries = JSON.parse(localStorage.getItem(key) || '[]');
+        entries.push({ at: new Date().toISOString(), context, message: err.message, stack: err.stack || '' });
+        localStorage.setItem(key, JSON.stringify(entries.slice(-30)));
+      } catch (storageError) {
+        console.error('[X.v1 debug log failed]', storageError);
+      }
+    }
     const container = $('toast-container');
     if (!container) return;
     const toast = document.createElement('div');
