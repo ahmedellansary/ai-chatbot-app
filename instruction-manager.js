@@ -8,7 +8,20 @@
     files: [],
     activeEditingId: null,
 
+    _loadPromise: null,
+
     async load() {
+      if (this.files && this.files.length) return this.files;
+      if (this._loadPromise) return this._loadPromise;
+      this._loadPromise = this._loadFromSource();
+      try {
+        return await this._loadPromise;
+      } finally {
+        this._loadPromise = null;
+      }
+    },
+
+    async _loadFromSource() {
       const CURRENT_VERSION = 'v200_claude_intelligence_tiers';
       try {
         if (this.files && this.files.length) {
