@@ -270,9 +270,14 @@ async function* readStream(response, signal, model) {
     }
   };
 
+  const streamStart = Date.now();
+  try { if (typeof window !== 'undefined') window.__model_stream_start_ts = streamStart; } catch {}
+  let hasContent = false;
   try {
     while (true) {
       if (signal && signal.aborted) break;
+      // Overall 10s content timeout for giant models — prevents infinite heartbeat wait
+      if (!hasContent && Date.now() - streamStart > 10000) throw new Error('STREAM_STALL');
       const isNemotronUltra = model?.id === 'nvidia/nemotron-3-ultra-550b-a55b';
       const timeoutMs = receivedFirstChunk
         ? (isNemotronUltra ? 10000 : 8000)
@@ -310,6 +315,7 @@ async function* readStream(response, signal, model) {
           if (parsed.error) throw new Error(parsed.error.message || 'Stream error');
           const delta = parsed.choices?.[0]?.delta?.content;
           if (delta) {
+            hasContent = true;
             // mark stream activity timestamp for heartbeat display
             try { if (typeof window !== 'undefined') window.__model_stream_last_chunk_ts = Date.now(); } catch(e){}
             yield delta;
