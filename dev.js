@@ -979,32 +979,54 @@ STRICT RULE: The local engine automatically merges your surgical patches directl
           }
         }
 
+        // 3. Local Instant Syntax & Integrity Check (Zero AI latency)
+        let syntaxError = null;
+        if (file.endsWith('.js')) {
+          try {
+            new Function(patchContent);
+          } catch (err) {
+            syntaxError = err.message;
+          }
+        } else if (file.endsWith('.json')) {
+          try {
+            JSON.parse(patchContent);
+          } catch (err) {
+            syntaxError = 'JSON Syntax Error: ' + err.message;
+          }
+        }
+
+        const isBlocked = isCircuitBreakerTriggered || Boolean(syntaxError);
+        const blockReason = isCircuitBreakerTriggered 
+          ? circuitBreakerMsg 
+          : (syntaxError ? `🚫 تم رصد خطأ نحوي محلياً (Syntax Error): ${syntaxError} — تم حظر النشر لحماية المشروع!` : '');
+
         const propId = generateId();
-        state.pendingModifications[propId] = { file, content: patchContent, message, isBlocked: isCircuitBreakerTriggered };
+        state.pendingModifications[propId] = { file, content: patchContent, message, isBlocked };
 
         const existingCard = msgRow.querySelector('.dev-proposal-box');
         if (existingCard) existingCard.remove();
 
         const card = document.createElement('div');
         card.id = `proposal-${propId}`;
-        card.className = 'dev-proposal-box' + (isCircuitBreakerTriggered ? ' blocked' : '');
+        card.className = 'dev-proposal-box' + (isBlocked ? ' blocked' : '');
         card.innerHTML = `
           <div class="dev-proposal-title">
-            <span>${isCircuitBreakerTriggered ? '🚫' : '🛠️'}</span>
-            <span>${isCircuitBreakerTriggered ? 'Blind Overwrite Blocked' : 'Ready to Patch'}: <code>${escapeHtml(file)}</code></span>
+            <span>${isBlocked ? '🚫' : '🛠️'}</span>
+            <span>${isBlocked ? (syntaxError ? 'Syntax Error Detected' : 'Blind Overwrite Blocked') : 'Ready to Patch'}: <code>${escapeHtml(file)}</code></span>
             ${wasSurgicallyMerged ? '<span class="dev-peer-badge ok" style="margin-inline-start:auto;">⚡ Surgical Patch Merged</span>' : ''}
+            ${(!isBlocked && !syntaxError) ? '<span class="dev-peer-badge ok" style="margin-inline-start:auto;">✓ Syntax Validated</span>' : ''}
           </div>
-          ${isCircuitBreakerTriggered ? `<div class="circuit-breaker-banner">${escapeHtml(circuitBreakerMsg)}</div>` : ''}
+          ${isBlocked ? `<div class="circuit-breaker-banner">${escapeHtml(blockReason)}</div>` : ''}
           <div class="dev-proposal-desc">📝 <strong>Summary:</strong> ${escapeHtml(message)}</div>
           <div class="dev-proposal-btns">
             <button class="dev-btn-action preview" onclick="window._previewProposal('${propId}')" title="Live Preview">
               <span>👁️</span>
               <span>Preview</span>
             </button>
-            ${isCircuitBreakerTriggered ? `
-              <button class="dev-btn-action retry-btn" onclick="window._sendReviewToDev('الكود المقترح قصير جداً واستبدل الملف الأصلي. أرسل التعديل بصيغة patches (Search & Replace) جراحية فقط دون حذف باقي الملف.', this)" title="طلب تعديل جراحي">
+            ${isBlocked ? `
+              <button class="dev-btn-action retry-btn" onclick="window._sendReviewToDev('${escapeHtml(blockReason)}', this)" title="طلب تصحيح من المطور">
                 <span>🔄</span>
-                <span>Request Patch</span>
+                <span>${syntaxError ? 'Fix Syntax' : 'Request Patch'}</span>
               </button>
             ` : `
               <button class="dev-btn-action deploy" onclick="window._deployProposal('${propId}')" title="Deploy to GitHub">
