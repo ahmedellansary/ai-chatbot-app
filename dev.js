@@ -311,6 +311,8 @@
   // ─────────────────────────────────────────────────────────────────
   const DevChatEngine = window.DevChatEngine || {
     getAdaptiveConfigForDev(agent, estimatedTokens = 0) {
+      // HIGH tier gets full session context: 18 lines + 3200 chars briefing
+      if (state.currentMode === 'HIGH') return { recentCount: 18, maxBriefingChars: 3200 };
       if (estimatedTokens > 5000) return { recentCount: 10, maxBriefingChars: 1200 };
       if (!agent) return { recentCount: 10, maxBriefingChars: 1200 };
       if (agent.category === 'fast' || agent.id.includes('20b') || agent.id.includes('compound-mini')) return { recentCount: 6, maxBriefingChars: 600 };
@@ -319,12 +321,19 @@
     },
 
     generateDevBriefing(conv, agent, estimatedTokens = 0) {
-      if (!conv || !Array.isArray(conv.messages) || conv.messages.length <= 10) return '';
+      if (!conv || !Array.isArray(conv.messages) || conv.messages.length <= 8) return '';
       const cfg = this.getAdaptiveConfigForDev(agent, estimatedTokens);
-      const firstUser = (conv.messages.find(m => m.role === 'user')?.content || '').slice(0, 220).replace(/\n/g, ' ').trim();
-      const recentAi = conv.messages.filter(m => m.role === 'ai').slice(-3).map(m => (m.content || '').slice(0, 200).replace(/\n/g, ' ').trim()).filter(Boolean).join(' | ');
+      const firstUser = (conv.messages.find(m => m.role === 'user')?.content || '').slice(0, 250).replace(/\n/g, ' ').trim();
       const turns = conv.messages.length;
       const title = conv.title || 'جلسة تطوير';
+      if (state.currentMode === 'HIGH') {
+        const recentAi = conv.messages.filter(m => m.role === 'ai').slice(-5).map(m => (m.content || '').slice(0, 220).replace(/\n/g, ' ').trim()).filter(Boolean).join(' | ');
+        const recentUser = conv.messages.filter(m => m.role === 'user').slice(-5).map(m => (m.content || '').slice(0, 180).replace(/\n/g, ' ').trim()).filter(Boolean).join(' | ');
+        let briefing = `📋 بريفنج جلسة المطور الكاملة (${title}):\n- طلب التطوير الأساسي: ${firstUser.slice(0, 250)}\n- عدد التبادلات: ${turns}\n- آخر رسائل المستخدم: ${recentUser.slice(0, 500)}\n- آخر مخرجات: ${recentAi.slice(0, 600)}\n- ملاحظة: آخر 18 رسالة مرسلة حرفيا كسياق كامل`;
+        if (briefing.length > cfg.maxBriefingChars) briefing = briefing.slice(0, cfg.maxBriefingChars) + '...';
+        return briefing;
+      }
+      const recentAi = conv.messages.filter(m => m.role === 'ai').slice(-3).map(m => (m.content || '').slice(0, 200).replace(/\n/g, ' ').trim()).filter(Boolean).join(' | ');
       let briefing = `📋 بريفنج جلسة المطور (${title}):\n- طلب التطوير الأساسي: ${firstUser.slice(0, 200)}\n- عدد التبادلات: ${turns}\n- آخر مخرجات: ${recentAi.slice(0, 380)}`;
       if (briefing.length > cfg.maxBriefingChars) briefing = briefing.slice(0, cfg.maxBriefingChars) + '...';
       return briefing;
@@ -364,6 +373,20 @@
         resolvedContent += '\n\n═══════════════════════════════════════════════════════════════\n🗺️ LIVE GITHUB REPO DIRECTORY MAP (Auto-Synced on Startup):\n═══════════════════════════════════════════════════════════════\nActive Repository Files in main branch:\n' + 
           liveRepoFiles.map(f => `- ${f}`).join('\n') + 
           '\n\nUse this live file directory to know exactly which file to inspect and propose modifications for when requested by the user.';
+      }
+      // HIGH: inject available instruction folders for smart editing (dev programming instructions)
+      if ((tier === 'HIGH' || tier === 'DEEP') && window.InstructionManager && window.InstructionManager.files && window.InstructionManager.files.length) {
+        try {
+          const folders = window.InstructionManager.files.map(f => ({
+            id: f.id,
+            name: f.name,
+            isCore: !!f.isCore,
+            enabled: !!f.enabled,
+            keywords: f.keywords || [],
+            preview: (f.content || JSON.stringify(f.tiers || '')).slice(0, 500)
+          }));
+          resolvedContent += `\n\n═══════════════════════════════════════════════════════════════\n📁 AVAILABLE_INSTRUCTION_FOLDERS (for smart editing — JSON strict):\n${JSON.stringify(folders, null, 2)}\n═══════════════════════════════════════════════════════════════\nUse this list to decide: if keywords/domain match existing file → append there; else create new folder. Always check duplicate/conflict before outputting JSON block.`;
+        } catch {}
       }
       return resolvedContent;
     },
@@ -559,6 +582,7 @@ When this request requires changing repository code, respond as a concise execut
       state.isStreaming = true;
       state.abortController = new AbortController();
       DevUIEngine.updateSendBtn();
+      DevUIEngine.setThinking(true);
 
        const tier = state.currentMode || 'MID';
       const rawDevPrompt = this.assembleDevPrompt(tier, state.devPrompt, state.liveRepoFiles);
@@ -600,6 +624,7 @@ When this request requires changing repository code, respond as a concise execut
             }
           }
         } finally {
+          DevUIEngine.setThinking(false);
           state.isStreaming = false;
           state.abortController = null;
           DevUIEngine.updateSendBtn();
@@ -611,6 +636,8 @@ When this request requires changing repository code, respond as a concise execut
 
       let succeeded = false;
       let usedAgent = chosenAgent;
+      let _thinkingCleared = false;
+      const _clearThinking = () => { if (!_thinkingCleared) { _thinkingCleared = true; DevUIEngine.setThinking(false); } };
 
       for (let i = 0; i < fallbackList.length; i++) {
         const currentAgent = fallbackList[i];
@@ -630,6 +657,7 @@ When this request requires changing repository code, respond as a concise execut
 
           fullContent = '';
           await this.callSingleAgentStream(currentAgent, apiMessages, state.abortController.signal, (delta) => {
+            _clearThinking();
             fullContent += delta;
             const msgRow = document.querySelector(`[data-id="${aiMsgId}"]`);
             if (msgRow) {
@@ -664,6 +692,7 @@ When this request requires changing repository code, respond as a concise execut
               if (retryMsg) retryMsg.innerHTML = `<span style="color:#fbbf24; font-size:12.5px;">🔄 إعادة محاولة مع <strong>${escapeHtml(currentAgent.name)}</strong>...</span>`;
               await new Promise(r => setTimeout(r, 700));
               await this.callSingleAgentStream(currentAgent, apiMessages, state.abortController.signal, (delta) => {
+                _clearThinking();
                 fullContent += delta;
                 const mRow = document.querySelector(`[data-id="${aiMsgId}"]`);
                 if (mRow) {
@@ -686,6 +715,7 @@ When this request requires changing repository code, respond as a concise execut
             try {
               fullContent = '';
               await this.callSingleAgentStream(currentAgent, apiMessages, state.abortController.signal, (delta) => {
+                _clearThinking();
                 fullContent += delta;
                 const msgElem = document.querySelector(`[data-id="${aiMsgId}"] .msg-content`);
                 if (msgElem) msgElem.innerHTML = DevUIEngine.parseMarkdown(fullContent);
@@ -714,6 +744,7 @@ When this request requires changing repository code, respond as a concise execut
         if (errRow) errRow.innerHTML = `<span style="color:var(--accent-rose);">⚠️ ${errorMsg}</span>`;
       }
 
+      DevUIEngine.setThinking(false);
       state.isStreaming = false;
       state.abortController = null;
       DevUIEngine.updateSendBtn();
@@ -1330,13 +1361,13 @@ When this request requires changing repository code, respond as a concise execut
       DevChatEngine.sendMessage(text);
     },
 
+    setThinking(on) {
+      const inputContainer = document.querySelector('#input-section .input-container') || document.querySelector('.input-container');
+      if (inputContainer) inputContainer.classList.toggle('thinking', !!on);
+    },
     updateSendBtn() {
       const input = $('user-input');
       const sendBtn = $('send-btn');
-      const inputContainer = document.querySelector('#input-section .input-container') || document.querySelector('.input-container');
-      if (inputContainer) {
-        inputContainer.classList.toggle('thinking', Boolean(state.isStreaming));
-      }
       if (!input || !sendBtn) return;
       const hasAtt = state.attachments && state.attachments.length > 0;
       const hasText = input.value.trim().length > 0;
