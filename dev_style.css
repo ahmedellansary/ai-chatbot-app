@@ -708,6 +708,21 @@ pre code {
   animation: fadeIn 0.25s ease;
 }
 
+.dev-proposal-box.blocked {
+  border-color: rgba(239, 68, 68, 0.6);
+  background: rgba(239, 68, 68, 0.04);
+}
+.circuit-breaker-banner {
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: #fca5a5;
+  font-size: 12px;
+  line-height: 1.45;
+  font-weight: 500;
+}
+
 .dev-proposal-title {
   font-size: 14px;
   font-weight: 700;
