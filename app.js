@@ -1442,6 +1442,231 @@
   };
   window.OtherModelsController = OtherModelsController;
 
+  // ─────────────────────────────────────────────────────────────────
+  // X.v1 — Image Intent + Model Picker (compact, inline, theme-matched)
+  // ─────────────────────────────────────────────────────────────────
+  const ImageIntent = {
+    // triggers for image generation (Ar + En)
+    re: /(صورة|صور|ارسم|ارسمني|توليد.*صورة|انشئ.*صورة|اعملي.*صورة|اعمل.*صورة|generate.*image|create.*image|draw.*image|text.*to.*image|تصميم.*صورة)/i,
+    reStrict: /(اعملي|اعمل|ارسم|انشاء|انشئ|توليد|صممي|generate|create|draw)/i,
+    isImageRequest(t){
+      if(!t) return false;
+      const s=String(t).trim();
+      if(s.length<3) return false;
+      if(!this.re.test(s)) return false;
+      // avoid false positive on "صورة" inside long non-request? require verb or image noun
+      return true;
+    },
+    // explicit switch via chat: "غير موديل الصور الى X لمدة Y" / "استخدم X للصور"
+    parseExplicit(text){
+      if(!text) return null;
+      const t=String(text);
+      // pattern 1: غير/بدل/استخدم + موديل + name + لمدة + duration
+      // e.g. "غير موديل الصور الى flux لمدة ساعتين" , "غير الموديل لكذا"
+      const durMatch=t.match(/لمدة\s*(\d+)?\s*(ساعة|ساعتين|ساعات|دقيقة|دقائق|hour|hours|min)/i);
+      let durMs=3600000;
+      if(durMatch){
+        const n=parseInt(durMatch[1]||'1',10);
+        const unit=durMatch[2].toLowerCase();
+        if(/دقيقة|min/.test(unit)) durMs=n*60000;
+        else if(/ساعتين/.test(unit)) durMs=2*3600000;
+        else durMs=n*3600000;
+      }
+      // try to extract model id after "الى" / "ل" / "استخدم"
+      const m1=t.match(/(?:الى|إلى|ل|استخدم|غير|بدل)\s*([a-z0-9._\-\/]+)(?:\s|$)/i);
+      // also Arabic model mention like "flux" "dall-e-3" "sora" etc
+      const candidates=['flux','sora','dall','stable','midjourney','imagen','kandinsky','sd','veo','runway','pika'];
+      let model=null;
+      if(m1){
+        const raw=m1[1].toLowerCase();
+        // if looks like model-ish (contains letter + maybe dash)
+        if(/[a-z]/.test(raw) && raw.length>=2) model=raw;
+      }
+      if(!model){
+        // search known substrings in text
+        for(const c of candidates){ if(t.toLowerCase().includes(c)) { model=c; break; } }
+      }
+      // full id extraction like "flux-1" "dall-e-3"
+      const fullId=t.match(/([a-z0-9\-_]+\/[a-z0-9\-_\.]+|[a-z0-9\-_]+\-e\-?\d|[a-z]+\-?\d+(\.\d+)?)/i);
+      if(fullId && fullId[1].length>3) model=fullId[1].toLowerCase();
+      if(!model) return null;
+      // check it is an image-ish directive
+      if(!/(موديل|للصور|توليد|صور|image)/i.test(t)) return null;
+      return {model, durMs};
+    },
+    extractPrompt(text){
+      // remove directive wrapper, keep core description
+      let s=String(text||'').trim();
+      // remove explicit switch part "غير موديل الصور الى X..."
+      s=s.replace(/غير\s*موديل.*$/i,'').replace(/استخدم\s*.*للصور.*$/i,'').trim();
+      // if starts with "اعملي صورة..." take after
+      const m=s.match(/(?:اعملي|اعمل|ارسم|انشئ|توليد|صمم|generate|create|draw)\s*(?:لي|لنا)?\s*(?:صورة)?\s*[:\-]?\s*(.*)/i);
+      if(m && m[1] && m[1].trim().length>=2) return m[1].trim().slice(0,800);
+      return s.slice(0,800);
+    }
+  };
+  const ImagePref = {
+    key:'xv1_image_model_pref',
+    get(){
+      try{ const v=JSON.parse(localStorage.getItem(this.key)||'null'); if(!v) return null; if(Date.now()>v.expiresAt){ localStorage.removeItem(this.key); return null; } return v; }catch{ return null; }
+    },
+    set(modelId, durMs){
+      try{ const v={modelId:String(modelId).trim(), expiresAt:Date.now()+(durMs||3600000), setAt:Date.now()}; localStorage.setItem(this.key, JSON.stringify(v)); return v; }catch{}
+    },
+    clear(){ try{ localStorage.removeItem(this.key); }catch{} },
+    remainingText(){
+      const v=this.get(); if(!v) return ''; const rem=Math.max(0, v.expiresAt-Date.now()); const m=Math.ceil(rem/60000); if(m>=60) return Math.round(m/60)+' ساعة'; return m+' دقيقة';
+    }
+  };
+  const ImageGen = {
+    async fetchImageModels(){
+      // reuse OtherModels fetch or live SeekAI /v1/models filtered
+      try{
+        const key=(window.ConfigVault?.getSeekAIKey?.()||'');
+        const base=(window.ConfigVault?.getSeekAIUrl?.()||'https://seekai.cc').replace(/\/+$/,'');
+        const r=await fetch(base+'/v1/models',{headers:{'Authorization':`Bearer ${key}`}});
+        if(r.ok){
+          const j=await r.json();
+          const list=j.data||[];
+          const img=list.filter(m=>{
+            const id=(m.id||'').toLowerCase();
+            return id.includes('dall')||id.includes('flux')||id.includes('stable')||id.includes('image')||id.includes('midjourney')||id.includes('sora')||id.includes('veo')||id.includes('pika')||id.includes('runway')||id.includes('imagen')||id.includes('kandinsky')||id.includes('sd');
+          });
+          if(img.length) return img;
+          // fallback: if no pure image, return all with chat fallback but mark as image-capable
+          return list.slice(0,12);
+        }
+      }catch{}
+      // hard fallback known
+      return [{id:'flux'},{id:'dall-e-3'},{id:'stable-diffusion'},{id:'sora'}];
+    },
+    async generate(modelId, prompt, conv){
+      if(!conv) conv=StateController.getActiveConv();
+      const clean=String(prompt||'').trim().slice(0,900) || 'a beautiful scene';
+      const aiId=generateId();
+      const aiMsg={id:aiId, role:'ai', content:'⏳ جاري توليد الصورة عبر `'+modelId+'`...', timestamp:new Date().toISOString(), model:modelId};
+      conv.messages.push(aiMsg); MessageRenderer.appendMessage(aiMsg); StateController.save();
+      state.isStreaming=true; state.isThinking=true; UIEngine.updateSendBtnState();
+      try{
+        const key=window.ConfigVault?.getSeekAIKey?.()||'';
+        const base=(window.ConfigVault?.getSeekAIUrl?.()||'https://seekai.cc').replace(/\/+$/,'');
+        const r=await fetch(base+'/v1/images/generations',{method:'POST', headers:{'Authorization':`Bearer ${key}`,'Content-Type':'application/json'}, body: JSON.stringify({model:modelId, prompt:clean, n:1, size:'1024x1024'})});
+        const j=await r.json();
+        const url=j.data?.[0]?.url || (j.data?.[0]?.b64_json && ('data:image/png;base64,'+j.data[0].b64_json));
+        if(url){
+          aiMsg.content=`![generated](${url})\n\n**${MessageRenderer.escapeHtml(clean)}** — \`${modelId}\``;
+        } else if(j.error){
+          aiMsg.content='⚠️ فشل التوليد `'+modelId+'`: '+(j.error.message||JSON.stringify(j).slice(0,600));
+        } else {
+          aiMsg.content='```json\n'+JSON.stringify(j,null,2).slice(0,2000)+'\n```';
+        }
+        MessageRenderer.appendMessage(aiMsg); StateController.save();
+        try{ window.UsageTracker?.record(modelId,'seekai',clean, aiMsg.content); }catch{}
+      }catch(e){
+        aiMsg.content='⚠️ خطأ توليد الصورة: '+(e.message||'unknown');
+        MessageRenderer.appendMessage(aiMsg);
+      } finally {
+        state.isStreaming=false; state.isThinking=false; UIEngine.updateSendBtnState(); MessageRenderer.scrollToBottom(); try{ StateController.save(); }catch{}
+      }
+    }
+  };
+  const ImagePicker = {
+    _pending:null,
+    async show(models, rawPrompt, conv, userMsg){
+      // remove existing picker if any
+      document.querySelectorAll('.img-picker-card').forEach(el=> el.remove());
+      const prompt=ImageIntent.extractPrompt(rawPrompt);
+      this._pending={prompt, conv, userMsg};
+      const list=models && models.length? models : await ImageGen.fetchImageModels();
+      const pref=ImagePref.get();
+      const prefHint=pref? ` (نشط: ${pref.modelId} — متبقي ${ImagePref.remainingText()})` : '';
+      const card=document.createElement('div');
+      card.className='img-picker-card';
+      card.id='img-picker-'+generateId();
+      const chips=list.slice(0,8).map(m=>{
+        const id=m.id||m;
+        const short=(m.name||id).slice(0,18);
+        const active=pref && pref.modelId===id ? ' active' : '';
+        return `<button class="img-picker-chip${active}" data-model="${id}" title="${id}">${MessageRenderer.escapeHtml(short)}</button>`;
+      }).join('');
+      card.innerHTML=`
+        <div class="img-picker-header" onclick="window._toggleImgPicker(this)">
+          <span class="img-picker-title">🖼️ اختر موديل الصورة${prefHint}</span>
+          <span class="img-picker-arrow">▾</span>
+          <span class="img-picker-badge">${list.length}</span>
+        </div>
+        <div class="img-picker-body">
+          <div class="img-picker-prompt">“${MessageRenderer.escapeHtml(prompt.slice(0,80))}”</div>
+          <div class="img-picker-models">${chips}</div>
+          <label class="img-picker-remember"><input type="checkbox" class="img-picker-check" checked> تفعيل هذا الموديل لمدة ساعة</label>
+          <div class="img-picker-actions">
+            <button class="img-picker-btn primary" onclick="window._confirmImgPicker(this)">توليد ✨</button>
+            <button class="img-picker-btn ghost" onclick="window._dismissImgPicker(this)">إلغاء</button>
+          </div>
+        </div>`;
+      // insert inside chat as inline system message (theme-matched, compact)
+      const container=document.getElementById('chat-container');
+      const row=document.createElement('div');
+      row.className='message-row ai img-picker-row';
+      row.appendChild(card);
+      // insert after last user message
+      const lastUser=document.querySelector('.message-row.user:last-of-type');
+      if(lastUser && lastUser.nextSibling) lastUser.parentNode.insertBefore(row, lastUser.nextSibling);
+      else if(container) container.appendChild(row);
+      MessageRenderer.scrollToBottom();
+      // chip selection
+      card.querySelectorAll('.img-picker-chip').forEach(ch=>{
+        ch.addEventListener('click', ()=>{
+          card.querySelectorAll('.img-picker-chip').forEach(c=> c.classList.remove('selected'));
+          ch.classList.add('selected');
+        });
+      });
+      // auto-select first if none active
+      if(!card.querySelector('.img-picker-chip.active') && !card.querySelector('.img-picker-chip.selected')){
+        const first=card.querySelector('.img-picker-chip');
+        if(first) first.classList.add('selected');
+      } else if(card.querySelector('.img-picker-chip.active')){
+        card.querySelector('.img-picker-chip.active').classList.add('selected');
+      }
+    }
+  };
+  window.ImageIntent=ImageIntent; window.ImagePref=ImagePref; window.ImageGen=ImageGen; window.ImagePicker=ImagePicker;
+  window._toggleImgPicker=function(header){
+    const card=header.closest('.img-picker-card');
+    if(!card) return;
+    card.classList.toggle('collapsed');
+    const arr=header.querySelector('.img-picker-arrow');
+    if(arr) arr.textContent=card.classList.contains('collapsed')?'▸':'▾';
+  };
+  window._confirmImgPicker=async function(btn){
+    const card=btn.closest('.img-picker-card');
+    if(!card) return;
+    const sel=card.querySelector('.img-picker-chip.selected') || card.querySelector('.img-picker-chip.active') || card.querySelector('.img-picker-chip');
+    if(!sel){ MessageRenderer.showToast('اختر موديل أولاً','warning'); return; }
+    const modelId=sel.dataset.model;
+    const remember=card.querySelector('.img-picker-check')?.checked;
+    if(remember) ImagePref.set(modelId, 3600000);
+    const pending=ImagePicker._pending;
+    // collapse to header (exposed as compact preference header)
+    card.classList.add('collapsed');
+    const h=card.querySelector('.img-picker-header');
+    if(h){
+      const title=h.querySelector('.img-picker-title');
+      if(title) title.textContent='🖼️ موديل الصور: '+modelId+(remember?' — ساعة':'');
+      const arr=h.querySelector('.img-picker-arrow'); if(arr) arr.textContent='▸';
+    }
+    card.querySelector('.img-picker-body')?.classList.add('hidden');
+    // slight delay then generate
+    setTimeout(()=>{ if(pending) ImageGen.generate(modelId, pending.prompt, pending.conv); }, 180);
+    MessageRenderer.showToast('✅ تم اختيار '+modelId,'success');
+  };
+  window._dismissImgPicker=function(btn){
+    const card=btn.closest('.img-picker-card');
+    const row=card?.closest('.img-picker-row');
+    if(row) row.remove(); else card?.remove();
+    ImagePicker._pending=null;
+  };
+
   // ── Usage Pie Controller — tiny pie next to refresh, popup on click ──
   const UsagePieController = {
     getCurrentModelId(){
@@ -1643,6 +1868,64 @@
         const hit=ragKeys.filter(k=> textForPayload.toLowerCase().includes(k.toLowerCase()));
         for(const f of hit.slice(0,2)){ try{ const r=await fetch(`./${f}?t=${Date.now()}`); if(r.ok){ const t=await r.text(); textForPayload+=`\n\n--- ملف ${f} (مقتطف) ---\n${t.slice(0,3500)}\n---`; } }catch{} }
       }catch{}
+
+      // ── Image model explicit switch (dynamic via chat) ──
+      try{
+        if(window.ImageIntent && window.ImageIntent.parseExplicit){
+          const exp=window.ImageIntent.parseExplicit(textForPayload);
+          if(exp && exp.model){
+            // resolve to full image model id if short alias
+            let full=exp.model;
+            // try to map alias to real image model
+            try{
+              const pool=await window.ImageGen.fetchImageModels();
+              const low=exp.model.toLowerCase();
+              const found=pool.find(m=> (m.id||'').toLowerCase().includes(low) || (m.id||'').toLowerCase()===low);
+              if(found) full=found.id;
+            }catch{}
+            window.ImagePref.set(full, exp.durMs||3600000);
+            // if this message is only a switch command (no image prompt), acknowledge and exit
+            const isOnlySwitch=/^(غير|بدل|استخدم).*(موديل|للصور)/i.test(textForPayload.trim()) && !window.ImageIntent.isImageRequest(textForPayload.replace(/غير.*$/i,''));
+            // if pure switch, show toast as user message then return
+            if(isOnlySwitch || textForPayload.trim().length<60){
+              state.attachments=[]; const pcE=$('attachment-preview-container'); if(pcE){ pcE.classList.add('hidden'); pcE.innerHTML=''; }
+              const uMsg=StateController.addMessage('user', userText.trim()||textForPayload, null, currentAttachments);
+              if(uMsg) MessageRenderer.appendMessage(uMsg);
+              state.sendInFlight=false; state.sendLock=false; state._lastSendStart=0; UIEngine.updateSendBtnState();
+              const aiAck={id:generateId(), role:'ai', content:`✅ تم تثبيت موديل الصور على \`${full}\` لمدة ${Math.round((exp.durMs||3600000)/60000)} دقيقة — أي طلب صورة خلالها سيستخدمه تلقائياً.`, timestamp:new Date().toISOString()};
+              conv.messages.push(aiAck); MessageRenderer.appendMessage(aiAck); StateController.save();
+              return;
+            }
+            // else let it fall through to image generation using new pref
+            MessageRenderer.showToast('🔄 موديل الصور → '+full,'info');
+          }
+        }
+      }catch{}
+
+      // ── Image intent: auto-detect, show compact picker or auto-generate ──
+      if(window.ImageIntent && window.ImageIntent.isImageRequest(textForPayload)){
+        const pref=window.ImagePref ? window.ImagePref.get() : null;
+        if(pref && pref.modelId){
+          // auto-generate silently with preferred model
+          state.attachments=[]; const pcI=$('attachment-preview-container'); if(pcI){ pcI.classList.add('hidden'); pcI.innerHTML=''; }
+          const uMsgI=StateController.addMessage('user', userText.trim()||textForPayload, null, currentAttachments);
+          if(uMsgI) MessageRenderer.appendMessage(uMsgI);
+          state.sendInFlight=false; state.sendLock=false; state._lastSendStart=0; UIEngine.updateSendBtnState();
+          const promptI=window.ImageIntent.extractPrompt(textForPayload);
+          await window.ImageGen.generate(pref.modelId, promptI, conv);
+          return;
+        }
+        // no pref → show inline picker (compact, collapsible, theme-matched)
+        state.attachments=[]; const pcP=$('attachment-preview-container'); if(pcP){ pcP.classList.add('hidden'); pcP.innerHTML=''; }
+        const uMsgP=StateController.addMessage('user', userText.trim()||textForPayload, null, currentAttachments);
+        if(uMsgP) MessageRenderer.appendMessage(uMsgP);
+        state.sendInFlight=false; state.sendLock=false; state._lastSendStart=0; UIEngine.updateSendBtnState();
+        try{
+          const models=await window.ImageGen.fetchImageModels();
+          await window.ImagePicker.show(models, textForPayload, conv, uMsgP);
+        }catch(e){ console.warn('[ImagePicker]',e); }
+        return;
+      }
 
       // ── TTS delegation: text models → audio models ──
       if(window.TTSEngine && window.TTSEngine.isTTSRequest(textForPayload)){
