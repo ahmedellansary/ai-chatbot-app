@@ -752,26 +752,12 @@
     startProgressiveThinking(initialWord = 'Analyzing') {
       this.hideTyping();
       this.showTyping(initialWord);
-      const isAr = /[\u0600-\u06FF]/.test(initialWord) || /[\u0600-\u06FF]/.test(document.getElementById('user-input')?.value || '');
+      const isAr = false;
       const tier = (window.state && window.state.currentMode) || 'MID';
       const fast = tier === 'FAST';
       const high = tier === 'HIGH';
-      // HIGH: Claude 6-stage visible then hidden after done
-      const flowStages = isAr ? (high ? [
-        { icon: '🧠', text: 'فهم النية الحقيقية', delay: 500 },
-        { icon: '📂', text: 'جمع السياق والملفات', delay: 1100 },
-        { icon: '📋', text: 'تخطيط هيكل الرد', delay: 1800 },
-        { icon: '✍️', text: 'صياغة أولية', delay: 2500 },
-        { icon: '🔍', text: 'نقد ذاتي — هلوسة/تسريب؟', delay: 3200 },
-        { icon: '✨', text: 'صقل نهائي', delay: 4000 }
-      ] : fast ? [
-        { icon: '🧠', text: 'فهم النية', delay: 400 },
-        { icon: '✨', text: 'صياغة الرد', delay: 900 }
-      ] : [
-        { icon: '🧠', text: 'فهم النية', delay: 500 },
-        { icon: '🔍', text: 'تحليل السياق', delay: 1200 },
-        { icon: '✨', text: 'صياغة الرد', delay: 2000 }
-      ]) : (high ? [
+      // English only — per user request (no Arabic thinking stages)
+      const flowStages = high ? [
         { icon: '🧠', text: 'Intent', delay: 500 },
         { icon: '📂', text: 'Gather context', delay: 1100 },
         { icon: '📋', text: 'Plan structure', delay: 1800 },
@@ -785,11 +771,11 @@
         { icon: '🧠', text: 'Understanding', delay: 500 },
         { icon: '🔍', text: 'Analyzing', delay: 1200 },
         { icon: '✨', text: 'Composing', delay: 2000 }
-      ]);
+      ];
       const wordStages = [
-        { word: isAr ? 'تحليل' : 'Analyzing', delay: 0 },
-        { word: isAr ? 'صياغة' : 'Composing', delay: 900 },
-        { word: isAr ? 'تدقيق' : 'Refining', delay: 1900 }
+        { word: 'Analyzing', delay: 0 },
+        { word: 'Composing', delay: 900 },
+        { word: 'Refining', delay: 1900 }
       ];
       this._thinkingTimers = [];
       wordStages.slice(1).forEach(stage => {
@@ -1406,14 +1392,33 @@
         // (dall-e-3 etc caused "No available channel" on this channel)
         const catName={chat:'💬 Chat', image:'🖼️ Image', video:'🎬 Video', audio:'🎙️ Audio'};
         const catAttr={chat:'data-seekai-model', image:'data-seekai-model', video:'data-seekai-model', audio:'data-seekai-model'};
+        const strengthRank = (id)=>{
+          const s=String(id).toLowerCase();
+          if(s.includes('opus')) return 100;
+          if(s.includes('gpt-5-6')||s.includes('gpt-5')) return 95;
+          if(s.includes('grok-4-6')||s.includes('grok')) return 90;
+          if(s.includes('deepseek-v4-pro')) return 85;
+          if(s.includes('sonnet')) return 80;
+          if(s.includes('deepseek-v4-flash')) return 75;
+          if(s.includes('kimi')) return 70;
+          if(s.includes('fable')) return 65;
+          const m=s.match(/(\d+(?:\.\d+)?)b/); if(m) return 50+parseFloat(m[1])/10;
+          return 10;
+        };
         let html='';
         ['chat','image','video','audio'].forEach(cat=>{
           if(!groups[cat].length) return;
+          groups[cat].sort((a,b)=> strengthRank(b.id||b)-strengthRank(a.id||a));
           html+=`<div style="font-size:10px; color:#a78bfa; padding:6px 6px 2px; font-weight:700;">${catName[cat]}</div>`;
           groups[cat].forEach(m=>{
-            const id=m.id||m; const name=(m.name||id).slice(0,16);
+            const id=m.id||m;
+            const raw=(m.name||id);
+            // short name: strip provider prefix, tech suffix like :free, -0731, params
+            let short=String(raw).split('/').pop().split(':')[0].replace(/[-_](0731|0813|0827|free|pro|flash|turbo).*$/i,'').replace(/[-_]/g,' ');
+            short=short.replace(/\b\w/g,c=>c.toUpperCase()).trim().slice(0,18);
+            if(!short) short=String(id).split('/').pop().slice(0,16);
             const attr=catAttr[cat];
-            html+=`<button class="dropdown-opt" ${attr}="${id}"><div class="opt-title" style="font-size:12px;">${name}</div></button>`;
+            html+=`<button class="dropdown-opt" ${attr}="${id}"><div class="opt-title" style="font-size:12px;">${short}</div></button>`;
           });
         });
         container.innerHTML=html;
@@ -1446,20 +1451,23 @@
   // X.v1 — Image Intent + Model Picker (compact, inline, theme-matched)
   // ─────────────────────────────────────────────────────────────────
   const ImageIntent = {
-    // triggers for image generation (Ar + En)
-    re: /(صورة|صور|ارسم|ارسمني|توليد.*صورة|انشئ.*صورة|اعملي.*صورة|اعمل.*صورة|generate.*image|create.*image|draw.*image|text.*to.*image|تصميم.*صورة)/i,
+    // triggers for image generation - must be explicit generation intent, not just mentioning "صور"
+    re: /(اعملي[^\n]{0,30}صورة|اعمل[^\n]{0,30}صورة|توليد[^\n]{0,30}صورة|انشئ[^\n]{0,30}صورة|انشاء[^\n]{0,30}صورة|صممي[^\n]{0,30}صورة|تصميم[^\n]{0,30}صورة|generate[^\n]{0,30}image|create[^\n]{0,30}image|draw[^\n]{0,30}image|^\s*ارسم(\s|$)|ارسمني)/i,
     reStrict: /(اعملي|اعمل|ارسم|انشاء|انشئ|توليد|صممي|generate|create|draw)/i,
     isImageRequest(t){
       if(!t) return false;
-      const s=String(t).trim();
-      if(s.length<3) return false;
+      // strip URLs before check to avoid false positives on links like seekai.cc/keys
+      const s=String(t).replace(/https?:\/\/\S+/g,'').trim();
+      if(s.length<4) return false;
       if(!this.re.test(s)) return false;
-      // avoid false positive on "صورة" inside long non-request? require verb or image noun
+      // must contain both verb and image noun in same clause
       return true;
     },
-    // explicit switch via chat: "غير موديل الصور الى X لمدة Y" / "استخدم X للصور"
+    // explicit switch via chat: "غير موديل الصور الى X لمدة Y" / "استخدم X للصور" - must be explicit, not URL-triggered
     parseExplicit(text){
       if(!text) return null;
+      // ignore pure URLs/troubleshooting without explicit switch verb
+      if(!/(غير|بدل|استخدم|موديل.*صور|للصور)/i.test(text)) return null;
       const t=String(text);
       // pattern 1: غير/بدل/استخدم + موديل + name + لمدة + duration
       // e.g. "غير موديل الصور الى flux لمدة ساعتين" , "غير الموديل لكذا"
@@ -1515,12 +1523,27 @@
     },
     clear(){ try{ localStorage.removeItem(this.key); }catch{} },
     remainingText(){
-      const v=this.get(); if(!v) return ''; const rem=Math.max(0, v.expiresAt-Date.now()); const m=Math.ceil(rem/60000); if(m>=60) return Math.round(m/60)+' ساعة'; return m+' دقيقة';
+      const v=this.get(); if(!v) return ''; const rem=Math.max(0, v.expiresAt-Date.now()); const m=Math.ceil(rem/60000); if(m>=60) return Math.round(m/60)+'h left'; return m+'m left';
     }
   };
   const ImageGen = {
+    // priority: quality + cheapest price first (user request)
+    PRIORITY:['flux','gpt-image-1','stable-diffusion-xl','imagen-3','flux-1.1-pro','dall-e-3','dall-e-2','kandinsky','midjourney','sora'],
+    getPriorityModel(){ return this.PRIORITY[0]; },
     async fetchImageModels(){
-      // reuse OtherModels fetch or live SeekAI /v1/models filtered
+      // curate ONLY real image models - never show chat models - ordered by quality+price
+      const CURATED=[
+        {id:'flux', name:'Flux (cheapest+good)'},
+        {id:'gpt-image-1', name:'GPT Image 1 (good/cheap)'},
+        {id:'stable-diffusion-xl', name:'SDXL'},
+        {id:'imagen-3', name:'Imagen 3'},
+        {id:'flux-1.1-pro', name:'Flux 1.1 Pro'},
+        {id:'dall-e-3', name:'DALL·E 3 (quality but pricey)'},
+        {id:'dall-e-2', name:'DALL·E 2'},
+        {id:'kandinsky', name:'Kandinsky'},
+        {id:'midjourney', name:'Midjourney'},
+        {id:'sora', name:'Sora Image'}
+      ];
       try{
         const key=(window.ConfigVault?.getSeekAIKey?.()||'');
         const base=(window.ConfigVault?.getSeekAIUrl?.()||'https://seekai.cc').replace(/\/+$/,'');
@@ -1530,40 +1553,60 @@
           const list=j.data||[];
           const img=list.filter(m=>{
             const id=(m.id||'').toLowerCase();
-            return id.includes('dall')||id.includes('flux')||id.includes('stable')||id.includes('image')||id.includes('midjourney')||id.includes('sora')||id.includes('veo')||id.includes('pika')||id.includes('runway')||id.includes('imagen')||id.includes('kandinsky')||id.includes('sd');
+            return id.includes('dall')||id.includes('flux')||id.includes('stable')||id.includes('image')||id.includes('midjourney')||id.includes('sora')||id.includes('veo')||id.includes('pika')||id.includes('runway')||id.includes('imagen')||id.includes('kandinsky')||id.includes('sd')||id.includes('diffusion');
           });
           if(img.length) return img;
-          // fallback: if no pure image, return all with chat fallback but mark as image-capable
-          return list.slice(0,12);
+          // no image models on this key -> return curated (real image engines)
+          return CURATED;
         }
       }catch{}
-      // hard fallback known
-      return [{id:'flux'},{id:'dall-e-3'},{id:'stable-diffusion'},{id:'sora'}];
+      return CURATED;
     },
     async generate(modelId, prompt, conv){
       if(!conv) conv=StateController.getActiveConv();
       const clean=String(prompt||'').trim().slice(0,900) || 'a beautiful scene';
       const aiId=generateId();
-      const aiMsg={id:aiId, role:'ai', content:'⏳ جاري توليد الصورة عبر `'+modelId+'`...', timestamp:new Date().toISOString(), model:modelId};
+      const aiMsg={id:aiId, role:'ai', content:'⏳ Generating image via `'+modelId+'`...', timestamp:new Date().toISOString(), model:modelId};
       conv.messages.push(aiMsg); MessageRenderer.appendMessage(aiMsg); StateController.save();
       state.isStreaming=true; state.isThinking=true; UIEngine.updateSendBtnState();
-      try{
-        const key=window.ConfigVault?.getSeekAIKey?.()||'';
-        const base=(window.ConfigVault?.getSeekAIUrl?.()||'https://seekai.cc').replace(/\/+$/,'');
-        const r=await fetch(base+'/v1/images/generations',{method:'POST', headers:{'Authorization':`Bearer ${key}`,'Content-Type':'application/json'}, body: JSON.stringify({model:modelId, prompt:clean, n:1, size:'1024x1024'})});
+      const key=window.ConfigVault?.getSeekAIKey?.()||'';
+      const base=(window.ConfigVault?.getSeekAIUrl?.()||'https://seekai.cc').replace(/\/+$/,'');
+      const tryOne=async (mid)=>{
+        const r=await fetch(base+'/v1/images/generations',{method:'POST', headers:{'Authorization':`Bearer ${key}`,'Content-Type':'application/json'}, body: JSON.stringify({model:mid, prompt:clean, n:1, size:'1024x1024'})});
         const j=await r.json();
-        const url=j.data?.[0]?.url || (j.data?.[0]?.b64_json && ('data:image/png;base64,'+j.data[0].b64_json));
+        return {r,j};
+      };
+      try{
+        let {r,j}=await tryOne(modelId);
+        let url=j.data?.[0]?.url || (j.data?.[0]?.b64_json && ('data:image/png;base64,'+j.data[0].b64_json));
+        // auto-fallback if channel not enabled (503 model_not_found) -> try curated chain
+        if(!url && j.error && /No available channel/i.test(j.error.message||'')){
+          const fallbacks=(window.ImageGen.PRIORITY||['flux','gpt-image-1','stable-diffusion-xl','imagen-3','dall-e-3']).filter(x=> x!==modelId);
+          for(const fb of fallbacks){
+            try{
+              const res=await tryOne(fb);
+              const uj=res.j.data?.[0]?.url || (res.j.data?.[0]?.b64_json && ('data:image/png;base64,'+res.j.data[0].b64_json));
+              if(uj){ url=uj; j=res.j; modelId=fb; break; }
+              if(res.j.error && !/No available channel/i.test(res.j.error.message||'')) { j=res.j; break; }
+            }catch{}
+          }
+        }
         if(url){
           aiMsg.content=`![generated](${url})\n\n**${MessageRenderer.escapeHtml(clean)}** — \`${modelId}\``;
         } else if(j.error){
-          aiMsg.content='⚠️ فشل التوليد `'+modelId+'`: '+(j.error.message||JSON.stringify(j).slice(0,600));
+          const isChannelErr=/No available channel/i.test(j.error.message||'');
+          if(isChannelErr){
+            aiMsg.content=`⚠️ Image generation not enabled for this account (tried ${modelId} + fallbacks).\nAuto-tried: ${(window.ImageGen.PRIORITY||[]).join(', ')} — all returned 503.\nAdmin must enable an image channel in SeekAI/NewAPI Dashboard → Channel Management.\n<details><summary>Details</summary>${MessageRenderer.escapeHtml(j.error.message)}</details>`;
+          } else {
+            aiMsg.content='⚠️ Generation failed `'+modelId+'`: '+(j.error.message||JSON.stringify(j).slice(0,600));
+          }
         } else {
           aiMsg.content='```json\n'+JSON.stringify(j,null,2).slice(0,2000)+'\n```';
         }
         MessageRenderer.appendMessage(aiMsg); StateController.save();
         try{ window.UsageTracker?.record(modelId,'seekai',clean, aiMsg.content); }catch{}
       }catch(e){
-        aiMsg.content='⚠️ خطأ توليد الصورة: '+(e.message||'unknown');
+        aiMsg.content='⚠️ Image error: '+(e.message||'unknown');
         MessageRenderer.appendMessage(aiMsg);
       } finally {
         state.isStreaming=false; state.isThinking=false; UIEngine.updateSendBtnState(); MessageRenderer.scrollToBottom(); try{ StateController.save(); }catch{}
@@ -1579,11 +1622,11 @@
       this._pending={prompt, conv, userMsg};
       const list=models && models.length? models : await ImageGen.fetchImageModels();
       const pref=ImagePref.get();
-      const prefHint=pref? ` (نشط: ${pref.modelId} — متبقي ${ImagePref.remainingText()})` : '';
+      const prefHint=pref? ` (active: ${pref.modelId} — ${ImagePref.remainingText()})` : '';
       const card=document.createElement('div');
       card.className='img-picker-card';
       card.id='img-picker-'+generateId();
-      const chips=list.slice(0,8).map(m=>{
+      const chips=list.slice(0,10).map(m=>{
         const id=m.id||m;
         const short=(m.name||id).slice(0,18);
         const active=pref && pref.modelId===id ? ' active' : '';
@@ -1591,17 +1634,17 @@
       }).join('');
       card.innerHTML=`
         <div class="img-picker-header" onclick="window._toggleImgPicker(this)">
-          <span class="img-picker-title">🖼️ اختر موديل الصورة${prefHint}</span>
+          <span class="img-picker-title">🖼️ Choose image model${prefHint}</span>
           <span class="img-picker-arrow">▾</span>
           <span class="img-picker-badge">${list.length}</span>
         </div>
         <div class="img-picker-body">
           <div class="img-picker-prompt">“${MessageRenderer.escapeHtml(prompt.slice(0,80))}”</div>
           <div class="img-picker-models">${chips}</div>
-          <label class="img-picker-remember"><input type="checkbox" class="img-picker-check" checked> تفعيل هذا الموديل لمدة ساعة</label>
+          <label class="img-picker-remember"><input type="checkbox" class="img-picker-check"> Keep this model for 1 hour</label>
           <div class="img-picker-actions">
-            <button class="img-picker-btn primary" onclick="window._confirmImgPicker(this)">توليد ✨</button>
-            <button class="img-picker-btn ghost" onclick="window._dismissImgPicker(this)">إلغاء</button>
+            <button class="img-picker-btn primary" onclick="window._confirmImgPicker(this)">Generate ✨</button>
+            <button class="img-picker-btn ghost" onclick="window._dismissImgPicker(this)">Cancel</button>
           </div>
         </div>`;
       // insert inside chat as inline system message (theme-matched, compact)
@@ -1642,7 +1685,7 @@
     const card=btn.closest('.img-picker-card');
     if(!card) return;
     const sel=card.querySelector('.img-picker-chip.selected') || card.querySelector('.img-picker-chip.active') || card.querySelector('.img-picker-chip');
-    if(!sel){ MessageRenderer.showToast('اختر موديل أولاً','warning'); return; }
+    if(!sel){ MessageRenderer.showToast('Select a model first','warning'); return; }
     const modelId=sel.dataset.model;
     const remember=card.querySelector('.img-picker-check')?.checked;
     if(remember) ImagePref.set(modelId, 3600000);
@@ -1652,13 +1695,13 @@
     const h=card.querySelector('.img-picker-header');
     if(h){
       const title=h.querySelector('.img-picker-title');
-      if(title) title.textContent='🖼️ موديل الصور: '+modelId+(remember?' — ساعة':'');
+      if(title) title.textContent='🖼️ Image model: '+modelId+(remember?' — 1h':'');
       const arr=h.querySelector('.img-picker-arrow'); if(arr) arr.textContent='▸';
     }
     card.querySelector('.img-picker-body')?.classList.add('hidden');
     // slight delay then generate
     setTimeout(()=>{ if(pending) ImageGen.generate(modelId, pending.prompt, pending.conv); }, 180);
-    MessageRenderer.showToast('✅ تم اختيار '+modelId,'success');
+    MessageRenderer.showToast('✅ Selected '+modelId,'success');
   };
   window._dismissImgPicker=function(btn){
     const card=btn.closest('.img-picker-card');
@@ -1869,61 +1912,40 @@
         for(const f of hit.slice(0,2)){ try{ const r=await fetch(`./${f}?t=${Date.now()}`); if(r.ok){ const t=await r.text(); textForPayload+=`\n\n--- ملف ${f} (مقتطف) ---\n${t.slice(0,3500)}\n---`; } }catch{} }
       }catch{}
 
-      // ── Image model explicit switch (dynamic via chat) ──
-      try{
-        if(window.ImageIntent && window.ImageIntent.parseExplicit){
+      // ── Image intent: auto-generate (no picker) — priority = quality + cheapest ──
+      if(window.ImageIntent && window.ImageIntent.isImageRequest(textForPayload)){
+        // optional explicit model override via chat (e.g. "استخدم flux للصور")
+        let explicitModel=null;
+        try{
           const exp=window.ImageIntent.parseExplicit(textForPayload);
           if(exp && exp.model){
-            // resolve to full image model id if short alias
             let full=exp.model;
-            // try to map alias to real image model
             try{
               const pool=await window.ImageGen.fetchImageModels();
               const low=exp.model.toLowerCase();
-              const found=pool.find(m=> (m.id||'').toLowerCase().includes(low) || (m.id||'').toLowerCase()===low);
+              const found=pool.find(m=> (m.id||'').toLowerCase().includes(low));
               if(found) full=found.id;
             }catch{}
-            window.ImagePref.set(full, exp.durMs||3600000);
-            // if this message is only a switch command (no image prompt), acknowledge and exit
-            const isOnlySwitch=/^(غير|بدل|استخدم).*(موديل|للصور)/i.test(textForPayload.trim()) && !window.ImageIntent.isImageRequest(textForPayload.replace(/غير.*$/i,''));
-            // if pure switch, show toast as user message then return
-            if(isOnlySwitch || textForPayload.trim().length<60){
+            explicitModel=full;
+            const isOnlySwitch=/^(غير|بدل|استخدم).*(موديل|للصور)/i.test(textForPayload.trim()) && textForPayload.trim().length<80;
+            if(isOnlySwitch){
               state.attachments=[]; const pcE=$('attachment-preview-container'); if(pcE){ pcE.classList.add('hidden'); pcE.innerHTML=''; }
               const uMsg=StateController.addMessage('user', userText.trim()||textForPayload, null, currentAttachments);
               if(uMsg) MessageRenderer.appendMessage(uMsg);
               state.sendInFlight=false; state.sendLock=false; state._lastSendStart=0; UIEngine.updateSendBtnState();
-              const aiAck={id:generateId(), role:'ai', content:`✅ تم تثبيت موديل الصور على \`${full}\` لمدة ${Math.round((exp.durMs||3600000)/60000)} دقيقة — أي طلب صورة خلالها سيستخدمه تلقائياً.`, timestamp:new Date().toISOString()};
-              conv.messages.push(aiAck); MessageRenderer.appendMessage(aiAck); StateController.save();
-              return;
+              // treat as prompt too if contains image request
             }
-            // else let it fall through to image generation using new pref
-            MessageRenderer.showToast('🔄 موديل الصور → '+full,'info');
           }
-        }
-      }catch{}
-
-      // ── Image intent: auto-detect, show compact picker or auto-generate ──
-      if(window.ImageIntent && window.ImageIntent.isImageRequest(textForPayload)){
-        const pref=window.ImagePref ? window.ImagePref.get() : null;
-        if(pref && pref.modelId){
-          // auto-generate silently with preferred model
-          state.attachments=[]; const pcI=$('attachment-preview-container'); if(pcI){ pcI.classList.add('hidden'); pcI.innerHTML=''; }
-          const uMsgI=StateController.addMessage('user', userText.trim()||textForPayload, null, currentAttachments);
-          if(uMsgI) MessageRenderer.appendMessage(uMsgI);
-          state.sendInFlight=false; state.sendLock=false; state._lastSendStart=0; UIEngine.updateSendBtnState();
-          const promptI=window.ImageIntent.extractPrompt(textForPayload);
-          await window.ImageGen.generate(pref.modelId, promptI, conv);
-          return;
-        }
-        // no pref → show inline picker (compact, collapsible, theme-matched)
-        state.attachments=[]; const pcP=$('attachment-preview-container'); if(pcP){ pcP.classList.add('hidden'); pcP.innerHTML=''; }
-        const uMsgP=StateController.addMessage('user', userText.trim()||textForPayload, null, currentAttachments);
-        if(uMsgP) MessageRenderer.appendMessage(uMsgP);
+        }catch{}
+        state.attachments=[]; const pcI=$('attachment-preview-container'); if(pcI){ pcI.classList.add('hidden'); pcI.innerHTML=''; }
+        const uMsgI=StateController.addMessage('user', userText.trim()||textForPayload, null, currentAttachments);
+        if(uMsgI) MessageRenderer.appendMessage(uMsgI);
         state.sendInFlight=false; state.sendLock=false; state._lastSendStart=0; UIEngine.updateSendBtnState();
-        try{
-          const models=await window.ImageGen.fetchImageModels();
-          await window.ImagePicker.show(models, textForPayload, conv, uMsgP);
-        }catch(e){ console.warn('[ImagePicker]',e); }
+        const promptI=window.ImageIntent.extractPrompt(textForPayload);
+        // priority queue: cheapest + quality first (flux/gpt-image-1 cheapest & good)
+        const priority = explicitModel ? [explicitModel] : null;
+        const first = priority ? priority[0] : (await window.ImageGen.getPriorityModel());
+        await window.ImageGen.generate(first, promptI, conv);
         return;
       }
 
@@ -1954,24 +1976,54 @@
         const aiMsg2 = {id:aiId2, role:'ai', content:'', timestamp:new Date().toISOString(), model:state.seekaiDirectModel};
         conv.messages.push(aiMsg2);
         state.isStreaming=true; state.isThinking=true; state.abortController=new AbortController();
-        MessageRenderer.startProgressiveThinking('فهم النية');
+        // ── Multi-Agent for Other (same logic as HIGH) ──
+        if(state.isMultiAgentMode){
+          try{
+            // 3-agent consensus using SeekAI models: analyst→reviewer→synthesizer (selected)
+            const keyS=window.ConfigVault?.getSeekAIKey?.()||'';
+            const baseS=(window.ConfigVault?.getSeekAIUrl?.()||'https://seekai.cc').replace(/\/+$/,'');
+            const seekFetch=async (model, msgs)=>{
+              const rr=await fetch(baseS+'/v1/chat/completions',{method:'POST', headers:{'Authorization':`Bearer ${keyS}`,'Content-Type':'application/json'}, body: JSON.stringify({model, messages:msgs, stream:false}), signal: state.abortController.signal});
+              const jj=await rr.json();
+              if(jj.error) throw new Error(jj.error.message||JSON.stringify(jj));
+              return jj.choices?.[0]?.message?.content||'';
+            };
+            MessageRenderer.startProgressiveThinking('Understanding');
+            MessageRenderer.setThinkingStage('Analyst: '+ 'kimi-k3');
+            await new Promise(r=>setTimeout(r,300));
+            const a1=await seekFetch('kimi-k3', [{role:'user', content: textForPayload+'\n[Analyst: provide concise draft]'}]);
+            MessageRenderer.setThinkingStage('Reviewer: deepseek-v4-pro');
+            const a2=await seekFetch('deepseek-v4-pro', [{role:'user', content: `User: ${textForPayload}\nDraft: ${a1}\n[Reviewer: critique in 2 bullets]`}]);
+            MessageRenderer.setThinkingStage('Synthesizer: '+state.seekaiDirectModel);
+            const final=await seekFetch(state.seekaiDirectModel, [{role:'user', content: `${textForPayload}\n\nAnalyst: ${a1}\nReviewer: ${a2}\n[Synthesizer: final polished answer]`}]);
+            let contentF=String(final||'').replace(/https?:\/\/seekai\.cc[^\s]*/gi,'').trim();
+            MessageRenderer.hideTyping(); state.isThinking=false;
+            aiMsg2.content=contentF; MessageRenderer.appendMessage(aiMsg2); StateController.save();
+            try{ window.UsageTracker?.record(aiMsg2.model,'seekai',textForPayload,contentF); }catch{}
+          }catch(e){
+            MessageRenderer.hideTyping(); state.isThinking=false;
+            if(e.name!=='AbortError'){ aiMsg2.content='⚠️ SeekAI multi-agent: '+(e.message||'error'); MessageRenderer.appendMessage(aiMsg2); }
+          }
+          state.isStreaming=false; state.isThinking=false; state.abortController=null; state.sendInFlight=false; state.sendLock=false; state._lastSendStart=0; UIEngine.updateSendBtnState(); MessageRenderer.scrollToBottom(); StateController.save();
+          return;
+        }
+        MessageRenderer.startProgressiveThinking('Understanding');
         UIEngine.updateSendBtnState();
         // stage 1: intent
         await new Promise(r=>setTimeout(r, 350));
-        MessageRenderer.setThinkingStage('تحليل السياق');
+        MessageRenderer.setThinkingStage('Analyzing context');
         // stage 2: connect
-        MessageRenderer.setThinkingStage('الاتصال بـ '+state.seekaiDirectModel);
+        MessageRenderer.setThinkingStage('Connecting to '+state.seekaiDirectModel);
         let r, j;
         try{
           const key=window.ConfigVault?.getSeekAIKey?.()||'';
           const base=(window.ConfigVault?.getSeekAIUrl?.()||'https://seekai.cc').replace(/\/+$/,'');
-          MessageRenderer.setThinkingStage('توليد الرد');
-          r=await fetch(base+'/v1/chat/completions',{method:'POST', headers:{'Authorization':`Bearer ${key}`,'Content-Type':'application/json'}, body: JSON.stringify({model:state.seekaiDirectModel, messages:[{role:'user', content: textForPayload}], stream:false}), signal: state.abortController.signal});
-          j=await r.json();
-          MessageRenderer.setThinkingStage('تدقيق');
+          MessageRenderer.setThinkingStage('Generating response');
           await new Promise(r=>setTimeout(r, 300));
-          const content=j.choices?.[0]?.message?.content || j.choices?.[0]?.delta?.content || j.error?.message || JSON.stringify(j).slice(0,3000);
+          let content=j.choices?.[0]?.message?.content || j.choices?.[0]?.delta?.content || j.error?.message || JSON.stringify(j).slice(0,3000);
           if(j.error) throw new Error(content);
+          // strip seekai footer/link injected by Other models
+          content = String(content||'').replace(/https?:\/\/seekai\.cc[^\s]*/gi,'').replace(/.*seekai\.cc.*$/gmi,'').replace(/.*Powered by.*$/gmi,'').replace(/\n{3,}/g,'\n\n').trim();
           MessageRenderer.hideTyping(); state.isThinking=false;
           aiMsg2.content=content; MessageRenderer.appendMessage(aiMsg2); StateController.save();
           try{ window.UsageTracker?.record(aiMsg2.model,'seekai',textForPayload,content); }catch{}
@@ -2075,6 +2127,18 @@
         }
       };
 
+      // ── Multi-Agent active → same consensus logic for MID/FAST/HIGH/OTHER (copied as-is) ──
+      if(state.isMultiAgentMode){
+        try{
+          await MultiAgentEngine.runConsensus(userText, textForPayload, apiMessages, aiMsgId, aiMsgObj, conv);
+        }catch(e){
+          if(e.name!=='AbortError') debugPrint(e, 'MultiAgent consensus failed');
+        }
+        StateController.save();
+        // unlock and exit (observer will handle follow-up)
+        MessageRenderer.hideTyping(); state.isThinking=false; state.isStreaming=false; state.abortController=null; state.sendInFlight=false; state.sendLock=false; state._lastSendStart=0; UIEngine.updateSendBtnState(); MessageRenderer.scrollToBottom(); try{ StateController.save(); }catch{}
+        return;
+      }
       try {
         debugCheckpoint('stream-start', { tier, messageCount: apiMessages.length });
         const stream = ModelEngine.chatWithFallback(state.currentMode, apiMessages, state.abortController.signal, onModelEvent);
@@ -3064,8 +3128,22 @@
       let isTracking = false;
       const TOP_THRESHOLD = 50;
 
+      const findInnerScrollable = (target) => {
+        let el = target;
+        while (el && el !== document.body && el !== document.documentElement) {
+          if (el.id === 'chat-area') return null;
+          const st = window.getComputedStyle ? window.getComputedStyle(el) : null;
+          const oy = st ? st.overflowY : '';
+          const isScroll = (oy === 'auto' || oy === 'scroll' || el.classList.contains('img-picker-body') || el.classList.contains('code-window')) && el.scrollHeight > el.clientHeight + 4;
+          if (isScroll) return el;
+          el = el.parentElement;
+        }
+        return null;
+      };
       const onTouchStart = (e) => {
         if (e.touches.length !== 1) return;
+        const inner = findInnerScrollable(e.target);
+        if (inner && inner.scrollTop > 4) return;
         if (chatArea.scrollTop <= 4) {
           startY = e.touches[0].clientY;
           isTracking = true;
