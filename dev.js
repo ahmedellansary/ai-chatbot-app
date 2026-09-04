@@ -3459,6 +3459,56 @@ Reply in exactly 5 brief lines starting with • :
     DevUIEngine.init();
   }
 
+  // Dev model pill — Default + Other (SeekAI) with priority
+  try{
+    const pill=document.getElementById('dev-model-pill-trigger');
+    const dd=document.getElementById('dev-model-dropdown');
+    const otherTab=document.getElementById('dev-other-tab');
+    const pillText=document.getElementById('dev-model-pill-text');
+    const updatePill=()=>{
+      const m=localStorage.getItem('dev_seekai_model');
+      if(m && pillText) pillText.textContent=m.split('/').pop().slice(0,12);
+      else if(pillText) pillText.textContent='Default';
+      document.querySelectorAll('#dev-model-dropdown .dropdown-opt, #dev-other-tab .dropdown-opt').forEach(b=>{
+        const isSeek=b.dataset.seekaiDev && b.dataset.seekaiDev===m;
+        const isDef=b.dataset.devMode==='DEFAULT' && !m;
+        b.classList.toggle('active', !!(isSeek||isDef));
+      });
+    };
+    pill?.addEventListener('click', (e)=>{ e.preventDefault(); e.stopPropagation(); dd?.classList.toggle('show'); document.getElementById('dev-other-tab').style.display='none'; });
+    document.getElementById('dev-other-trigger')?.addEventListener('click', (e)=>{ e.preventDefault(); e.stopPropagation(); const t=document.getElementById('dev-other-tab'); if(t) t.style.display=(t.style.display==='none'||!t.style.display||t.style.display==='')?'block':'none'; });
+    document.addEventListener('click', (e)=>{
+      if(e.target.closest('#dev-other-trigger') || e.target.closest('#dev-other-tab')) return;
+      if(!e.target.closest('#dev-model-dropdown') && !e.target.closest('#dev-model-pill-trigger')){
+        dd?.classList.remove('show');
+        const ot=document.getElementById('dev-other-tab'); if(ot) ot.style.display='none';
+      }
+    });
+    document.querySelectorAll('[data-seekai-dev]').forEach(b=>{
+      b.addEventListener('click', (e)=>{
+        e.preventDefault();
+        const m=b.dataset.seekaiDev;
+        localStorage.setItem('dev_seekai_model', m);
+        localStorage.setItem('dev_seekai_active','1');
+        dd?.classList.remove('show'); document.getElementById('dev-other-tab').style.display='none';
+        updatePill();
+        if(window.DevUIEngine?.showToast) window.DevUIEngine.showToast('SeekAI '+m+' — له أولوية', 'success');
+      });
+    });
+    document.querySelectorAll('[data-dev-mode="DEFAULT"]').forEach(b=>{
+      b.addEventListener('click', (e)=>{
+        e.preventDefault();
+        localStorage.removeItem('dev_seekai_model'); localStorage.removeItem('dev_seekai_active');
+        dd?.classList.remove('show'); document.getElementById('dev-other-tab').style.display='none';
+        updatePill();
+        if(window.DevUIEngine?.showToast) window.DevUIEngine.showToast('Default — النظام القديم', 'info');
+      });
+    });
+    updatePill();
+    // hook dev chat to prioritize seekai model if selected
+    const origSend = window.DevChatEngine?.sendMessage || null;
+  }catch(e){ console.warn('[dev pill]',e); }
+
   // Global safety handlers: clear streaming state on uncaught errors/promises
   try {
     window.addEventListener('unhandledrejection', function (evt) {
