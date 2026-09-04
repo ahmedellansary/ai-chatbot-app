@@ -3652,6 +3652,12 @@ html, body {
 #voice-input-section.hidden, #input-section.hidden, #seekai-input-section.hidden{ display:none !important; }
 .seekai-container{ border-color: rgba(124,58,237,0.22) !important; }
 .seekai-container .voice-ctrl-label{ color:#a78bfa; }
+.usage-pie-wrap{ position:relative; display:flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:50%; background: rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); cursor:pointer; }
+.usage-pie{ display:block; }
+.usage-pie .pie-bg{ fill:none; stroke: rgba(255,255,255,0.10); stroke-width:4; }
+.usage-pie .pie-fg{ fill:none; stroke: var(--accent-color, #da7756); stroke-width:4; stroke-linecap:round; transform: rotate(-90deg); transform-origin: 50% 50%; transition: stroke-dasharray .35s ease; }
+.usage-popup{ position:absolute; top:34px; right:0; min-width:240px; max-width:300px; background:#18181d; border:1px solid rgba(255,255,255,0.12); border-radius:12px; padding:12px 14px; box-shadow:0 16px 40px rgba(0,0,0,0.55); z-index:120; text-align:right; direction:rtl; }
+.usage-popup.hidden{ display:none !important; }
 .voice-container{ border-color: rgba(146,64,14,0.22) !important; }
 .voice-controls-top{ display:flex; align-items:center; gap:8px; padding:6px 2px 2px; flex-wrap:wrap; }
 .voice-ctrl-label{ font-size:11px; font-weight:700; color: var(--text-dim); letter-spacing:0.02em; }
