@@ -994,6 +994,15 @@ STRICT RULE: The local engine automatically merges your surgical patches directl
 
         if (!file) return;
 
+        // ── Smart pipeline guard: auto-fix paste memory leak ──
+        if (patchContent && patchContent.includes('createObjectURL') && !patchContent.includes('revokeObjectURL')) {
+          patchContent = patchContent.replace(/(img\.src\s*=\s*URL\.createObjectURL\([^)]+\);?)/, `$1\n      img.onload = () => URL.revokeObjectURL(img.src);`);
+          if (data.content) data.content = patchContent;
+          else if (data.deploy?.files?.[0]) data.deploy.files[0].content = patchContent;
+          else if (data.files?.[0]) data.files[0].content = patchContent;
+          console.log('[PipelineGuard] auto-injected revokeObjectURL');
+        }
+
         // Fetch live original file content to enable surgical merging and circuit breaking
         let originalFileContent = null;
         try {
