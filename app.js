@@ -1284,6 +1284,107 @@
   };
   window.SeekAIController = SeekAIController;
 
+  // ── Usage Pie Controller — tiny pie next to refresh, popup on click ──
+  const UsagePieController = {
+    getCurrentModelId(){
+      const mode = window.VoiceChatController?.current || 'text';
+      if(mode==='voice'){
+        return document.getElementById('tts-model-select')?.value || 'fishaudio/fish-speech-1.5:free';
+      }
+      if(mode==='seekai'){
+        return document.getElementById('seekai-model-select')?.value || 'claude-opus-5';
+      }
+      // main chat — first enabled model of current tier
+      try{
+        const tier = (window.state?.currentMode || 'MID');
+        const list = window.MODELS?.[tier] || window.MODELS?.MID || [];
+        const enabled = list.filter(m=> window.isModelEnabled? window.isModelEnabled(m.id): true);
+        return (enabled[0]||list[0])?.id || 'openai/gpt-oss-120b';
+      }catch{ return 'openai/gpt-oss-120b'; }
+    },
+    getMaxForModel(id){
+      const v = String(id||'').toLowerCase();
+      if(v.includes('groq') || v.includes('compound') || v.includes('qwen') || v.includes('gpt-oss')) return 6000;
+      if(v.includes('fish')) return 50000;
+      if(v.includes('claude') || v.includes('grok') || v.includes('deepseek') || v.includes('kimi') || v.includes('gpt-5')) return 80000;
+      return 100000;
+    },
+    getRenewal(modelId){
+      const isGroq = String(modelId).toLowerCase().includes('groq') || String(modelId).toLowerCase().includes('qwen') || String(modelId).toLowerCase().includes('gpt-oss');
+      const now=new Date();
+      if(isGroq){
+        const t=new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()+1,0,0,0));
+        const h=Math.max(0, Math.round((t-now)/3600000));
+        return {label:'Re', text:`غداً 00:00 UTC (بعد ${h} ساعة)`, date: t.toLocaleDateString('ar-EG')};
+      } else {
+        const t=new Date(now.getFullYear(), now.getMonth()+1, 1);
+        const d=Math.max(0, Math.ceil((t-now)/86400000));
+        return {label:'Ex', text:`أول الشهر (بعد ${d} يوم)`, date: t.toLocaleDateString('ar-EG')};
+      }
+    },
+    update(){
+      try{
+        const modelId=this.getCurrentModelId();
+        const tracker=window.UsageTracker? window.UsageTracker.load(): {perModel:{}};
+        const per=tracker.perModel||{};
+        const u=per[modelId]||{t:0,r:0};
+        const max=this.getMaxForModel(modelId);
+        const pct=Math.min(100, Math.round((u.t/max)*100));
+        const circ=2*Math.PI*14;
+        const dash=(pct/100)*circ;
+        const fg=document.querySelector('#usage-pie-wrap .pie-fg');
+        if(fg) fg.setAttribute('stroke-dasharray', `${dash} ${circ}`);
+        // color by usage
+        if(fg){
+          if(pct>85) fg.setAttribute('stroke','#ef4444');
+          else if(pct>65) fg.setAttribute('stroke','#f59e0b');
+          else fg.setAttribute('stroke','var(--accent-color, #da7756)');
+        }
+        // prepare popup content (without showing)
+        const rem=Math.max(0, max - u.t);
+        const ren=this.getRenewal(modelId);
+        const popup=document.getElementById('usage-popup-content');
+        if(popup){
+          const shortId=modelId.length>22? modelId.slice(0,22)+'…': modelId;
+          popup.innerHTML=`
+            <div style="font-weight:800; font-size:13px; margin-bottom:6px; color:var(--text-main);">${shortId}</div>
+            <div style="display:flex; justify-content:space-between; gap:12px;"><span>المستهلك</span><span>${u.t.toLocaleString()} / ${max.toLocaleString()}</span></div>
+            <div style="display:flex; justify-content:space-between; gap:12px;"><span>المتبقي</span><span style="color:#10b981; font-weight:700;">${rem.toLocaleString()}</span></div>
+            <div style="display:flex; justify-content:space-between; gap:12px;"><span>الطلبات</span><span>${u.r}</span></div>
+            <div style="margin-top:8px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.08); display:flex; justify-content:space-between; gap:12px;"><span>${ren.label}</span><span>${ren.text}</span></div>
+            <div style="font-size:11px; color:var(--text-dim); margin-top:4px;">${ren.date}</div>
+          `;
+        }
+      }catch(e){ console.warn('[pie]',e); }
+    },
+    init(){
+      this.update();
+      const wrap=document.getElementById('usage-pie-wrap');
+      const popup=document.getElementById('usage-popup');
+      if(!wrap || !popup) return;
+      const toggle=(e)=>{
+        e.stopPropagation();
+        popup.classList.toggle('hidden');
+        if(!popup.classList.contains('hidden')) this.update();
+      };
+      wrap.addEventListener('click', toggle);
+      document.addEventListener('click', (e)=>{ if(!wrap.contains(e.target)) popup.classList.add('hidden'); });
+      // update on model/mode changes
+      ['tts-model-select','tts-voice-select','seekai-model-select','seekai-service-select'].forEach(id=>{
+        document.getElementById(id)?.addEventListener('change', ()=> setTimeout(()=>this.update(), 100));
+      });
+      document.querySelectorAll('.chat-dot').forEach(d=> d.addEventListener('click', ()=> setTimeout(()=>this.update(), 150)));
+      // hook UsageTracker.record
+      const orig=window.UsageTracker?.record;
+      if(orig){
+        const self=this;
+        window.UsageTracker.record=function(...a){ const r=orig.apply(this,a); try{ self.update(); }catch{} return r; };
+      }
+      setInterval(()=> this.update(), 15000);
+    }
+  };
+  window.UsagePieController = UsagePieController;
+
   // ─────────────────────────────────────────────────────────────────
   // 7. CHAT CONTROLLER & STREAM ORCHESTRATOR — Extracted to modules/chat-engine.js
   // ─────────────────────────────────────────────────────────────────
@@ -3255,6 +3356,7 @@
     UIEngine.setupEventListeners();
     try{ window.VoiceChatController?.init(); }catch{}
     try{ window.SeekAIController?.init(); }catch{}
+    try{ window.UsagePieController?.init(); }catch{}
     AuthManager.setupGate();
     StateController.load();
     setupSmoothKineticScroll();
