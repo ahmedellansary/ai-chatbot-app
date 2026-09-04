@@ -78,7 +78,7 @@
   const normalizeMode = (m)=>{ const v=String(m||'').toUpperCase(); if(v==='BALANCED'||v==='BALANCE'||v==='BALANCE2') return 'BALANCED'; if(v==='MID') return 'BALANCED'; if(v==='HARD') return 'HIGH'; if(v==='AUTO') return 'BALANCED'; return (v==='HIGH'||v==='FAST')?v:'BALANCED'; };
   window.normalizeMode = normalizeMode;
   const state = {
-    currentLayer: (function(){ try{ const v=localStorage.getItem('xv1_chat_layer'); return (v==='voice')? v : 'general'; }catch{ return 'general'; }})(),
+    currentLayer: (function(){ try{ const v=localStorage.getItem('xv1_chat_layer'); return (v==='voice'||v==='genspark')? v : 'general'; }catch{ return 'general'; }})(),
     currentMode: (function(){ try{ return normalizeMode(localStorage.getItem('xv1_current_mode')||'BALANCED'); }catch{ return 'BALANCED'; }})(),
     seekaiDirectModel: (function(){ try{ return localStorage.getItem('xv1_seekai_direct') || null; }catch{ return null; }})(),
     currentModel: null,
@@ -128,7 +128,7 @@
     },
     getLayerConvs(layer){ const l=layer||state.currentLayer||'general'; return state.conversations.filter(c=> (c.layer||'general')===l); },
     setLayer(layer){
-      const l=(layer==='voice'||layer==='seekai')? layer : 'general';
+      const l=(layer==='voice'||layer==='genspark'||layer==='seekai')? layer : 'general';
       state.currentLayer=l;
       try{ localStorage.setItem('xv1_chat_layer', l); }catch{}
       // switch active to last conv of this layer or none
@@ -1371,30 +1371,36 @@
       });
       // voice mic reuse main recognition
       vMic?.addEventListener('click', ()=> document.getElementById('mic-btn')?.click());
-      // swipe on chat area to switch (2-way: general ↔ voice)
+      // swipe on chat area to switch (3-way: text ↔ voice ↔ genspark)
       let sx=0;
       const area = document.getElementById('chat-area');
       area?.addEventListener('touchstart', e=> sx=e.touches[0].clientX, {passive:true});
       area?.addEventListener('touchend', e=>{
         const dx = e.changedTouches[0].clientX - sx;
-        if(Math.abs(dx)>70){
-          if(dx<0 && this.current==='text') this.apply('voice', true);
-          else if(dx>0 && this.current==='voice') this.apply('text', true);
+        if(Math.abs(dx)>60){
+          const order=['text','voice','genspark'];
+          const idx = order.indexOf(this.current);
+          if(dx<0 && idx < order.length - 1){
+            this.apply(order[idx + 1], true);
+          } else if(dx>0 && idx > 0){
+            this.apply(order[idx - 1], true);
+          }
         }
       }, {passive:true});
     },
     apply(mode, save){
-      const order=['text','voice'];
+      const order=['text','voice','genspark'];
       this.current = order.includes(mode)? mode : 'text';
-      const layer = this.current==='text'?'general':'voice';
+      const layer = this.current==='text'?'general': this.current;
       state.currentLayer = layer;
-      if(save) try{ localStorage.setItem('xv1_chat_layer', layer); }catch{}
-      try{ localStorage.setItem('xv1_chat_layer', layer); }catch{}
+      if(save) try{ localStorage.setItem('xv1_chat_layer', layer); localStorage.setItem('xv1_chat_mode', this.current); }catch{}
       document.querySelectorAll('.chat-dot').forEach(d=> d.classList.toggle('active', d.dataset.mode===this.current));
       const inpSec=document.getElementById('input-section');
       const voiceSec=document.getElementById('voice-input-section');
-      if(inpSec){ inpSec.classList.toggle('hidden', this.current!=='text'); inpSec.style.display = this.current==='text'?'block':'none'; }
-      if(voiceSec){ voiceSec.classList.toggle('hidden', this.current!=='voice'); voiceSec.style.display = this.current==='voice'?'block':'none'; if(this.current==='voice'){ voiceSec.style.visibility='visible'; voiceSec.style.opacity='1'; } }
+      const gensparkSec=document.getElementById('genspark-input-section');
+      if(inpSec) inpSec.classList.toggle('hidden', this.current!=='text');
+      if(voiceSec) voiceSec.classList.toggle('hidden', this.current!=='voice');
+      if(gensparkSec) gensparkSec.classList.toggle('hidden', this.current!=='genspark');
       // switch history/layer persistence
       try{
         const list = state.conversations.filter(c=> (c.layer||'general')===layer);
@@ -1410,7 +1416,7 @@
         UIEngine.renderConversationsList();
         UIEngine.updateHeaderUI();
       }catch{}
-      const focusId=this.current==='voice'?'voice-input': this.current==='seekai'?'seekai-input':'user-input';
+      const focusId=this.current==='voice'?'voice-input': this.current==='genspark'?'genspark-input':'user-input';
       setTimeout(()=> document.getElementById(focusId)?.focus(), 100);
     },
     async sendVoice(rawText){
@@ -1433,6 +1439,206 @@
     }
   };
   window.VoiceChatController = VoiceChatController;
+
+  // ── Genspark Controller — Super Agent & Tools API ──
+  const GensparkController = {
+    init(){
+      const sSel = document.getElementById('genspark-service-select');
+      const input = document.getElementById('genspark-input');
+      const send = document.getElementById('genspark-send-btn');
+      const mic = document.getElementById('genspark-mic-btn');
+      const attach = document.getElementById('genspark-attach-btn');
+      const badge = document.getElementById('genspark-credit-badge');
+      if (!input || !send) return;
+
+      const placeholders = {
+        'web_search': 'ابحث في الويب عبر Genspark...',
+        'deep_research': 'اكتب موضوع البحث الاستقصائي والعميق...',
+        'image_generation': 'صف الصورة المطلوبة للتوليد...',
+        'understand_images': 'اكتب سؤالك أو ارفق صورة لفحصها وتحليلها...',
+        'slides': 'اكتب موضوع العرض التقديمي لإنشاء الشرائح...',
+        'docs': 'اكتب محتوى المستند أو التقرير المطلوب...',
+        'super_agent': 'اطلب مهمة متكاملة للوكيل الفائق (Super Agent)...'
+      };
+
+      const updatePlaceholder = () => {
+        const svc = sSel?.value || 'web_search';
+        if (input && placeholders[svc]) input.placeholder = placeholders[svc];
+      };
+
+      sSel?.addEventListener('change', () => {
+        try { localStorage.setItem('genspark_service', sSel.value); } catch {}
+        updatePlaceholder();
+      });
+
+      try {
+        const saved = localStorage.getItem('genspark_service');
+        if (saved && sSel && [...sSel.options].some(o => o.value === saved)) {
+          sSel.value = saved;
+        }
+      } catch {}
+      updatePlaceholder();
+
+      // Refresh credit badge
+      const refreshCredit = async () => {
+        try {
+          const key = window.ConfigVault?.getGensparkKey?.() || '';
+          const url = (window.ConfigVault?.getGensparkUrl?.() || 'https://www.genspark.ai').replace(/\/+$/, '');
+          const r = await fetch(`${url}/api/tool_cli/me`, {
+            headers: { 'Content-Type': 'application/json', 'X-Api-Key': key }
+          });
+          if (r.ok) {
+            const data = await r.json();
+            const bal = data.credit_balance !== undefined ? data.credit_balance : 0;
+            const balStr = bal >= 1000 ? (bal / 1000).toFixed(1) + 'K' : bal;
+            if (badge) badge.textContent = `${data.plan || 'Plus'} • ${balStr} ⟳`;
+          }
+        } catch {}
+      };
+      badge?.addEventListener('click', refreshCredit);
+      refreshCredit();
+
+      const trigger = async () => {
+        const txt = input ? input.value.trim() : '';
+        if (!txt) { MessageRenderer.showToast('اكتب طلبك أولاً', 'warning'); return; }
+        if (state.isStreaming || state.sendInFlight) { MessageRenderer.showToast('⏳ انتظر انتهاء العملية الحالية', 'info'); return; }
+        input.value = '';
+        input.dispatchEvent(new Event('input'));
+        await this.send(sSel ? sSel.value : 'web_search', txt);
+      };
+
+      send.addEventListener('click', trigger);
+      input.addEventListener('keydown', e => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          trigger();
+        }
+      });
+
+      input.addEventListener('input', () => {
+        const has = input.value.trim().length > 0;
+        if (send) {
+          if (has && !state.isStreaming) send.removeAttribute('disabled');
+          else send.setAttribute('disabled', 'true');
+          send.classList.toggle('active', has);
+        }
+        input.style.height = 'auto';
+        input.style.height = Math.min(Math.max(input.scrollHeight, 26), 120) + 'px';
+        const isAr = /[\u0600-\u06FF]/.test(input.value);
+        input.dir = isAr ? 'rtl' : 'ltr';
+        input.style.textAlign = isAr ? 'right' : 'left';
+      });
+
+      mic?.addEventListener('click', () => document.getElementById('mic-btn')?.click());
+      attach?.addEventListener('click', () => document.getElementById('file-upload-input')?.click());
+    },
+
+    async send(service, prompt) {
+      if (!state.activeConvId) StateController.newConversation();
+      const conv = StateController.getActiveConv();
+      const userMsg = StateController.addMessage('user', prompt, null, []);
+      if (userMsg) {
+        userMsg.gensparkService = service;
+        MessageRenderer.appendMessage(userMsg);
+      }
+
+      const aiId = generateId();
+      const aiMsg = {
+        id: aiId,
+        role: 'ai',
+        content: `⏳ جارٍ تشغيل خدمة Genspark (${service})...`,
+        timestamp: new Date().toISOString(),
+        model: `genspark/${service}`
+      };
+      conv.messages.push(aiMsg);
+      MessageRenderer.appendMessage(aiMsg);
+      state.isStreaming = true;
+      state.isThinking = true;
+      UIEngine.updateSendBtnState();
+
+      try {
+        const key = window.ConfigVault?.getGensparkKey?.() || '';
+        const url = (window.ConfigVault?.getGensparkUrl?.() || 'https://www.genspark.ai').replace(/\/+$/, '');
+        let endpoint = '';
+        let payload = {};
+
+        if (service === 'web_search') {
+          endpoint = '/api/tool_cli/web_search';
+          payload = { q: prompt };
+        } else if (service === 'image_generation') {
+          endpoint = '/api/tool_cli/image_generation';
+          payload = { prompt: prompt };
+        } else if (service === 'understand_images') {
+          endpoint = '/api/tool_cli/understand_images';
+          payload = { prompt: prompt };
+        } else {
+          // deep_research, slides, docs, super_agent -> create_task
+          endpoint = '/api/tool_cli/create_task';
+          payload = { task_type: service, prompt: prompt };
+        }
+
+        const res = await fetch(url + endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Api-Key': key
+          },
+          body: JSON.stringify(payload)
+        });
+
+        const text = await res.text();
+        let content = '';
+
+        try {
+          const lines = text.trim().split('\n');
+          let lastJson = null;
+          for (const l of lines) {
+            if (l.trim().startsWith('{')) {
+              try { lastJson = JSON.parse(l); } catch {}
+            }
+          }
+
+          if (lastJson) {
+            if (lastJson.status === 'ok' && lastJson.data) {
+              const d = lastJson.data;
+              if (service === 'web_search' && d.organic_results) {
+                content = `### 🔍 نتائج بحث Genspark:\n\n` +
+                  d.organic_results.slice(0, 6).map((item, i) =>
+                    `**${i + 1}. [${MessageRenderer.escapeHtml(item.title)}](${item.link})**\n> ${item.snippet || ''}\n`
+                  ).join('\n');
+              } else if (service === 'image_generation' && (d.image_url || d.url || (d.images && d.images[0]?.url))) {
+                const img = d.image_url || d.url || d.images[0].url;
+                content = `![Genspark Generated Image](${img})\n\n**${MessageRenderer.escapeHtml(prompt)}**`;
+              } else if (d.task_url || d.project_id) {
+                content = `✨ **تم بدء مهمة Genspark بنجاح!**\n\n- **نوع المهمة:** \`${service}\`\n${d.task_url ? `- **رابط المتابعة والتحميل:** [فتح النتيجة في Genspark](${d.task_url})\n` : ''}${d.summary ? `\n> ${d.summary}\n` : ''}`;
+              } else {
+                content = typeof d === 'string' ? d : (d.result || d.content || d.output || ('```json\n' + JSON.stringify(d, null, 2).slice(0, 2500) + '\n```'));
+              }
+            } else if (lastJson.message) {
+              content = `⚠️ Genspark: ${lastJson.message}`;
+            }
+          }
+        } catch (parseErr) {
+          content = text.slice(0, 1500);
+        }
+
+        if (!content) content = text.slice(0, 1500) || 'تم تنفيذ العملية.';
+        aiMsg.content = content;
+        MessageRenderer.appendMessage(aiMsg);
+        StateController.save();
+      } catch (err) {
+        aiMsg.content = `⚠️ خطأ في الاتصال بـ Genspark: ${err.message || 'فشل الطلب'}`;
+        MessageRenderer.appendMessage(aiMsg);
+      } finally {
+        state.isStreaming = false;
+        state.isThinking = false;
+        UIEngine.updateSendBtnState();
+        MessageRenderer.scrollToBottom();
+        try { StateController.save(); } catch {}
+      }
+    }
+  };
+  window.GensparkController = GensparkController;
 
   // ── SeekAI Controller — third box with all services from seekai.cc ──
   const SeekAIController = {
@@ -3370,7 +3576,7 @@ ${stage3Output}
       const layer = state.currentLayer || 'general';
       const filtered = state.conversations.filter(c=> (c.layer||'general')===layer);
       if(!filtered.length){
-        list.innerHTML = `<div style="padding:12px; font-size:12px; color:var(--text-dim); text-align:center;">لا توجد محادثات في ${layer==='voice'?'الصوت':layer==='seekai'?'SeekAI':'العام'}</div>`;
+        list.innerHTML = `<div style="padding:12px; font-size:12px; color:var(--text-dim); text-align:center;">لا توجد محادثات في ${layer==='voice'?'الصوت':layer==='genspark'?'Genspark':layer==='seekai'?'SeekAI':'العام'}</div>`;
         return;
       }
       list.innerHTML = filtered.map(conv => `
@@ -3383,7 +3589,7 @@ ${stage3Output}
       const settingsBtn=document.querySelector('.sidebar-footer .footer-btn');
       if(settingsBtn) settingsBtn.style.display = (layer==='general'?'':'none');
       const secTitle=document.querySelector('.sidebar-section-title');
-      if(secTitle) secTitle.textContent = layer==='voice'?'محادثات الصوت':layer==='seekai'?'محادثات SeekAI':'Recent Chats';
+      if(secTitle) secTitle.textContent = layer==='voice'?'محادثات الصوت':layer==='genspark'?'محادثات Genspark':layer==='seekai'?'محادثات SeekAI':'Recent Chats';
     },
 
     highlightActiveConv(id) {
@@ -4560,27 +4766,10 @@ ${stage3Output}
     initAppCustomization();
     UIEngine.setupEventListeners();
     try{ window.VoiceChatController?.init(); }catch(e){ console.warn('[voice init]',e); }
+    try{ window.GensparkController?.init(); }catch(e){ console.warn('[genspark init]',e); }
     try{ window.SeekAIController?.init(); }catch(e){ console.warn('[seekai init]',e); }
     try{ window.OtherModelsController?.init(); }catch(e){ console.warn('[other init]',e); }
     try{ window.UsagePieController?.init(); }catch(e){ console.warn('[pie init]',e); }
-    // fallback direct dot handler (ensures voice page loads even if controller fails)
-    try{
-      document.querySelectorAll('.chat-dot').forEach(d=>{
-        d.addEventListener('click', ()=>{
-          const m=d.dataset.mode;
-          const inp=document.getElementById('input-section');
-          const voice=document.getElementById('voice-input-section');
-          if(m==='voice'){
-            if(inp){ inp.classList.add('hidden'); inp.style.display='none'; }
-            if(voice){ voice.classList.remove('hidden'); voice.style.display='block'; voice.style.visibility='visible'; voice.style.opacity='1'; }
-          } else if(m==='text'){
-            if(inp){ inp.classList.remove('hidden'); inp.style.display='block'; }
-            if(voice){ voice.classList.add('hidden'); voice.style.display='none'; }
-          }
-          document.querySelectorAll('.chat-dot').forEach(x=> x.classList.toggle('active', x===d));
-        });
-      });
-    }catch{}
     AuthManager.setupGate();
     setupSmoothKineticScroll();
 
