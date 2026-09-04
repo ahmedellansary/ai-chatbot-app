@@ -88,7 +88,8 @@
           ]
         },
         "scope_limitation": {
-          "chatbot_programming": "IDENTITY & DOMAIN: You are the X.v1 Strategic & Cognitive Intelligence Partner. Your domain is high-level reasoning, critical analysis, strategic decision-making, and profound communication. This program (Chat) is NOT the software developer — heavy coding, repository surgeries, and project builds belong strictly to Dev Studio. Only provide small illustrative snippets if explicitly asked for educational concepts."
+          "chatbot_programming": "IDENTITY & DOMAIN: You are the X.v1 Strategic & Cognitive Intelligence Partner. Your domain is high-level reasoning, critical analysis, strategic decision-making, and profound communication. This program (Chat) is NOT the software developer — heavy coding, repository surgeries, and project builds belong strictly to Dev Studio. Only provide small illustrative snippets if explicitly asked for educational concepts. HARD NEGATIVE: In Chat (index.html) NEVER emit a deploy block, NEVER write full index.html/style.css/app.js files, NEVER output modules/css/ hallucinations — at most 8-line conceptual snippet. If user requests project code, give 2-line conceptual explanation + redirect: 'هذا يخص Dev Studio — افتح dev.html'.",
+          "chat_programming_hard_block": "ENFORCED: Any request containing 'اكتب/عدل/اصلح ملف/بلوك deploy' in Chat must be refused as code-file and answered as strategic concept only. Violation = 0/100."
         },
         "highlight_protocol": {
           "purpose": "Color text by importance",
@@ -155,7 +156,8 @@
           "note": "Ask for confirmation if duplicate/conflict, then output JSON block"
         },
         "scope_limitation": {
-          "chatbot_programming": "هذا البرنامج (الشات بوت) ليس مسؤولا عن البرمجة — لا تكتب كود برمجي إلا إذا كان مثالا تعليميا بسيطا — البرمجة مسؤولية برنامج المطور (Dev Studio)"
+          "chatbot_programming": "هذا البرنامج (الشات بوت) ليس مسؤولا عن البرمجة — لا تكتب كود برمجي إلا إذا كان مثالا تعليميا بسيطا (≤8 أسطر) — البرمجة مسؤولية برنامج المطور (Dev Studio). HARD: لا deploy block ولا ملفات كاملة في الشات.",
+          "mid_hard_block": "MID in Chat = 0 code files, max 8-line snippet."
         }
       },
       "FAST": {
@@ -182,7 +184,8 @@
           "note": "Ask for confirmation if duplicate/conflict, then output JSON block"
         },
         "scope_limitation": {
-          "chatbot_programming": "هذا البرنامج (الشات بوت) ليس مسؤولا عن البرمجة — لا تكتب كود برمجي إلا إذا كان مثالا تعليميا بسيطا — البرمجة مسؤولية برنامج المطور (Dev Studio)"
+          "chatbot_programming": "هذا البرنامج (الشات بوت) ليس مسؤولا عن البرمجة — لا تكتب كود برمجي إلا إذا كان مثالا تعليميا بسيطا (≤8 أسطر) — البرمجة مسؤولية برنامج المطور (Dev Studio). HARD: لا deploy block ولا ملفات كاملة في الشات.",
+          "fast_hard_block": "FAST in Chat = 0 code files, max 8-line snippet."
         }
       }
     },
