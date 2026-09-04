@@ -3546,9 +3546,25 @@
     StateController.load();
     initAppCustomization();
     UIEngine.setupEventListeners();
-    try{ window.VoiceChatController?.init(); }catch{}
-    try{ window.SeekAIController?.init(); }catch{}
-    try{ window.UsagePieController?.init(); }catch{}
+    try{ window.VoiceChatController?.init(); }catch(e){ console.warn('[voice init]',e); }
+    try{ window.SeekAIController?.init(); }catch(e){ console.warn('[seekai init]',e); }
+    try{ window.UsagePieController?.init(); }catch(e){ console.warn('[pie init]',e); }
+    // fallback direct dot handler (ensures voice page loads even if controller fails)
+    try{
+      document.querySelectorAll('.chat-dot').forEach(d=>{
+        d.addEventListener('click', ()=>{
+          const m=d.dataset.mode;
+          if(m==='voice'){
+            document.getElementById('input-section')?.classList.add('hidden');
+            document.getElementById('voice-input-section')?.classList.remove('hidden');
+          } else if(m==='text'){
+            document.getElementById('input-section')?.classList.remove('hidden');
+            document.getElementById('voice-input-section')?.classList.add('hidden');
+          }
+          document.querySelectorAll('.chat-dot').forEach(x=> x.classList.toggle('active', x===d));
+        });
+      });
+    }catch{}
     AuthManager.setupGate();
     setupSmoothKineticScroll();
 
