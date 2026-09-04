@@ -2041,6 +2041,16 @@
       state._lastSendStart = Date.now();
 
       let { textForPayload, currentAttachments } = this.preparePayload(userText);
+      // ── show user message instantly (fix 3-4s delay) ──
+      const _displayText = (userText.trim() || textForPayload).slice(0,1200);
+      const _earlyUserMsg = StateController.addMessage('user', _displayText, null, currentAttachments);
+      if(_earlyUserMsg) MessageRenderer.appendMessage(_earlyUserMsg);
+      // clear attachment UI now
+      state.attachments = [];
+      const _pcEarly = document.getElementById('attachment-preview-container');
+      if(_pcEarly){ _pcEarly.classList.add('hidden'); _pcEarly.innerHTML=''; }
+      UIEngine.updateSendBtnState();
+      MessageRenderer.scrollToBottom();
       // ── Bank/OTP protection: never store or sync sensitive ──
       const _sensitiveRe = /\b\d{6}\b|\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b|كلمة.*سر.*بنك|OTP|CVV|رمز.*تحقق/i;
       let _isSensitive = _sensitiveRe.test(textForPayload);
@@ -2048,14 +2058,16 @@
         try{ MessageRenderer.showToast('⚠️ تم اكتشاف بيانات حساسة — لن تُزامن للمستودع', 'error'); }catch{}
         textForPayload = textForPayload.replace(_sensitiveRe, '[REDACTED]');
       }
-      // Web Browse + RAG-lite enrichment
+      // Web Browse + RAG-lite enrichment (non-blocking for UI, but needed for AI context)
+      let enrichedPayload = textForPayload;
       try{
-        const urls=[...textForPayload.matchAll(/https?:\/\/[^\s"']+/g)].map(m=>m[0]).slice(0,2);
-        for(const u of urls){ try{ const r=await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,{signal:AbortSignal.timeout(5000)}); if(r.ok){ const t=await r.text(); textForPayload+=`\n\n--- محتوى الرابط ${u} ---\n${t.slice(0,3500)}\n---`; } }catch{} }
+        const urls=[...enrichedPayload.matchAll(/https?:\/\/[^\s"']+/g)].map(m=>m[0]).slice(0,1);
+        for(const u of urls){ try{ const r=await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,{signal:AbortSignal.timeout(2800)}); if(r.ok){ const t=await r.text(); enrichedPayload+=`\n\n--- محتوى الرابط ${u} ---\n${t.slice(0,2500)}\n---`; } }catch{} }
         const ragKeys=['index.html','style.css','app.js','dev.js','dev_style.css','config.js','github.js','instructions.json'];
-        const hit=ragKeys.filter(k=> textForPayload.toLowerCase().includes(k.toLowerCase()));
-        for(const f of hit.slice(0,2)){ try{ const r=await fetch(`./${f}?t=${Date.now()}`); if(r.ok){ const t=await r.text(); textForPayload+=`\n\n--- ملف ${f} (مقتطف) ---\n${t.slice(0,3500)}\n---`; } }catch{} }
+        const hit=ragKeys.filter(k=> enrichedPayload.toLowerCase().includes(k.toLowerCase()));
+        for(const f of hit.slice(0,1)){ try{ const r=await fetch(`./${f}?t=${Date.now()}`); if(r.ok){ const t=await r.text(); enrichedPayload+=`\n\n--- ملف ${f} (مقتطف) ---\n${t.slice(0,2000)}\n---`; } }catch{} }
       }catch{}
+      textForPayload = enrichedPayload;
 
       // ── Image intent: auto-generate (no picker) — priority = quality + cheapest ──
       if(window.ImageIntent && window.ImageIntent.isImageRequest(textForPayload)){
@@ -2074,17 +2086,12 @@
             explicitModel=full;
             const isOnlySwitch=/^(غير|بدل|استخدم).*(موديل|للصور)/i.test(textForPayload.trim()) && textForPayload.trim().length<80;
             if(isOnlySwitch){
-              state.attachments=[]; const pcE=$('attachment-preview-container'); if(pcE){ pcE.classList.add('hidden'); pcE.innerHTML=''; }
-              const uMsg=StateController.addMessage('user', userText.trim()||textForPayload, null, currentAttachments);
-              if(uMsg) MessageRenderer.appendMessage(uMsg);
+              // early message already shown
               state.sendInFlight=false; state.sendLock=false; state._lastSendStart=0; UIEngine.updateSendBtnState();
-              // treat as prompt too if contains image request
             }
           }
         }catch{}
-        state.attachments=[]; const pcI=$('attachment-preview-container'); if(pcI){ pcI.classList.add('hidden'); pcI.innerHTML=''; }
-        const uMsgI=StateController.addMessage('user', userText.trim()||textForPayload, null, currentAttachments);
-        if(uMsgI) MessageRenderer.appendMessage(uMsgI);
+        // early user message already shown — just reset flags
         state.sendInFlight=false; state.sendLock=false; state._lastSendStart=0; UIEngine.updateSendBtnState();
         const promptI=window.ImageIntent.extractPrompt(textForPayload);
         // priority queue: cheapest + quality first (flux/gpt-image-1 cheapest & good)
@@ -2096,12 +2103,6 @@
 
       // ── TTS delegation: text models → audio models ──
       if(window.TTSEngine && window.TTSEngine.isTTSRequest(textForPayload)){
-        // clear previews
-        state.attachments = [];
-        const pc = $('attachment-preview-container');
-        if(pc){ pc.classList.add('hidden'); pc.innerHTML=''; }
-        const userMsgTTS = StateController.addMessage('user', userText.trim() || textForPayload, null, currentAttachments);
-        if(userMsgTTS) MessageRenderer.appendMessage(userMsgTTS);
         state.sendInFlight = false; state.sendLock = false; state._lastSendStart = 0; UIEngine.updateSendBtnState();
         await window.TTSEngine.handleTTSRequest(textForPayload, conv);
         state._lastSendStart = 0;
@@ -2110,11 +2111,6 @@
 
       // ── SEEKAI direct (Other tab): priority, no fallback, no enabled check ──
       if(state.currentMode==='SEEKAI' && state.seekaiDirectModel){
-        state.attachments = [];
-        const pc2 = $('attachment-preview-container');
-        if(pc2){ pc2.classList.add('hidden'); pc2.innerHTML=''; }
-        const userMsgSeek = StateController.addMessage('user', userText.trim() || textForPayload, null, currentAttachments);
-        if(userMsgSeek) MessageRenderer.appendMessage(userMsgSeek);
         state.sendInFlight = false; state.sendLock = false; state._lastSendStart = 0; UIEngine.updateSendBtnState();
         // real thinking stages for Other models (tied to actual steps)
         const aiId2 = generateId();
@@ -2181,15 +2177,8 @@
         return;
       }
 
-      // Clear previews & state
-      state.attachments = [];
-      const previewContainer = $('attachment-preview-container');
-      if (previewContainer) {
-        previewContainer.classList.add('hidden');
-        previewContainer.innerHTML = '';
-      }
-
-      const userMsg = StateController.addMessage('user', userText.trim() || 'ملف مرفق', null, currentAttachments);
+      // early user message already shown — reuse it
+      const userMsg = _earlyUserMsg;
       if (!userMsg) {
         state.isStreaming = false;
         state.abortController = null;
@@ -2198,15 +2187,13 @@
         UIEngine.updateSendBtnState();
         throw new Error('تعذر إضافة رسالتك للمحادثة الحالية');
       }
-      MessageRenderer.appendMessage(userMsg);
 
+      const tier = state.currentMode || 'BALANCED';
       state.isStreaming = true;
       state.isThinking = true;
       state.abortController = new AbortController();
-      MessageRenderer.startProgressiveThinking(tier==='HIGH'?'Deep Reasoning':'Analyzing', textForPayload);
+      MessageRenderer.startProgressiveThinking(tier==='HIGH'?'Deep Reasoning':'Analyzing');
       UIEngine.updateSendBtnState();
-
-      const tier = state.currentMode || 'MID';
       debugCheckpoint('send-start', { tier, textLength: textForPayload.length });
       let systemPromptForCall;
       try {
