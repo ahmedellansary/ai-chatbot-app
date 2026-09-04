@@ -3644,3 +3644,14 @@ html, body {
 .claude-actions-bar{display:none !important}
 .claude-footer-note{display:none !important}
 @media(max-width:600px){.observer-bullet{padding:8px 10px;font-size:12.5px}}
+/* ─── Dual Chat Mode Dots (text • voice) — brown subtle pulse on voice box ─── */
+.chat-mode-dots{ display:flex; align-items:center; justify-content:center; gap:10px; padding:8px 0 6px; }
+.chat-dot{ width:7px; height:7px; border-radius:50%; background: rgba(255,255,255,0.22); border:1px solid rgba(255,255,255,0.12); cursor:pointer; transition: all .22s ease; padding:0; }
+.chat-dot.active{ width:22px; height:7px; border-radius:999px; background: var(--accent-color, #da7756); border-color: rgba(218,119,86,0.45); box-shadow: 0 0 8px rgba(218,119,86,0.25); }
+.chat-dot[data-mode="voice"].active{ background: #92400e; border-color: rgba(146,64,14,0.55); box-shadow: 0 0 8px rgba(146,64,14,0.30); }
+#voice-input-section.hidden, #input-section.hidden{ display:none !important; }
+.voice-container{ border-color: rgba(146,64,14,0.22) !important; }
+.voice-controls-top{ display:flex; align-items:center; gap:8px; padding:6px 2px 2px; flex-wrap:wrap; }
+.voice-ctrl-label{ font-size:11px; font-weight:700; color: var(--text-dim); letter-spacing:0.02em; }
+.tts-voice-select{ background: rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.12); color:#f3f4f6; border-radius:8px; padding:6px 10px; font-size:12px; font-weight:600; cursor:pointer; }
+.tts-voice-select option{ background:#1e1e24; color:#fff; }
