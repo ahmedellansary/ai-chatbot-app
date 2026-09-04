@@ -11,8 +11,8 @@
   <meta name="apple-mobile-web-app-title" content="X.v1">
 
   <title>X.v1</title>
-  <link rel="manifest" href="./manifest.json?v=330">
-  <link rel="stylesheet" href="./style.css?v=330">
+  <link rel="manifest" href="./manifest.json?v=331">
+  <link rel="stylesheet" href="./style.css?v=331">
   <link rel="icon" type="image/png" href="./icons/icon-192.png?v=295">
   <link rel="apple-touch-icon" href="./icons/icon-192.png?v=295">
   <link rel="apple-touch-icon" sizes="512x512" href="./icons/icon-512.png?v=295">
@@ -118,7 +118,7 @@
         <span>Settings</span>
       </button>
       <div id="app-version-badge" style="font-size:10.5px; color:var(--text-dim); font-family:var(--font-mono); text-align:center; padding:8px 0 2px; border-top:1px solid var(--border-subtle); margin-top:8px; letter-spacing:0.02em;">
-        <span id="app-version-text">v330</span> • <span id="app-last-update">جاري...</span>
+        <span id="app-version-text">v331</span> • <span id="app-last-update">جاري...</span>
       </div>
     </div>
   </aside>
@@ -136,7 +136,7 @@
       </button>
       <div id="chat-top-badge" class="repo-status-badge" style="position:absolute; left:50%; transform:translateX(-50%);">
         <span class="status-dot"></span>
-        <span class="repo-badge-text" id="chat-status-text" style="font-weight:700; letter-spacing:0.02em;">X (V330) —</span>
+        <span class="repo-badge-text" id="chat-status-text" style="font-weight:700; letter-spacing:0.02em;">X (V331) —</span>
       </div>
       <script>
         (function() {
@@ -351,31 +351,32 @@
       </div>
     </div>
 
-    <!-- SeekAI Box — all services from seekai.cc -->
+    <!-- SeekAI Box — نسخة طبق الأصل من العام (إطار خفيف + أيقونز تحت) -->
     <div id="seekai-input-section" class="hidden">
       <div class="input-container seekai-container">
-        <div class="voice-controls-top">
-          <label class="voice-ctrl-label">✨ SeekAI</label>
-          <select id="seekai-service-select" class="tts-voice-select" title="الخدمة" style="max-width:100px;">
-            <option value="chat">Chat</option>
-            <option value="image">Image</option>
-            <option value="video">Video</option>
-            <option value="audio">Audio</option>
-          </select>
-          <select id="seekai-model-select" class="tts-voice-select" title="الموديل" style="max-width:130px;"><option>جاري...</option></select>
-          <button class="audio-ctrl-btn" id="seekai-refresh-btn" title="تحديث">↻</button>
-        </div>
         <textarea id="seekai-input" class="chat-textarea" placeholder="اكتب طلبك لـ SeekAI (شات / صورة / فيديو / صوت)..." rows="1" autocomplete="off"></textarea>
         <div class="input-bottom-bar">
           <div class="input-bottom-left">
             <button class="claude-plus-btn" id="seekai-attach-btn" title="إرفاق" aria-label="Attach">
               <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
             </button>
+            <div style="position:relative;">
+              <select id="seekai-service-select" class="claude-model-pill" title="الخدمة" style="padding:6px 22px 6px 10px; font-size:12px; background: rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.10); color: var(--text-main);">
+                <option value="chat">Chat</option>
+                <option value="image">Image</option>
+                <option value="video">Video</option>
+                <option value="audio">Audio</option>
+              </select>
+            </div>
+            <div style="position:relative;">
+              <select id="seekai-model-select" class="claude-model-pill" title="الموديل" style="padding:6px 22px 6px 10px; font-size:12px; background: rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.10); color: var(--text-main); max-width:130px;"><option>جاري...</option></select>
+            </div>
+            <button class="claude-plus-btn" id="seekai-refresh-btn" title="تحديث" aria-label="Refresh">↻</button>
+          </div>
+          <div class="input-bottom-right">
             <button class="claude-voice-btn" id="seekai-mic-btn" title="تسجيل صوتي">
               <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="22"></line></svg>
             </button>
-          </div>
-          <div class="input-bottom-right">
             <button id="seekai-send-btn" class="claude-send-btn" aria-label="Send SeekAI" title="إرسال" disabled>
               <svg viewBox="0 0 24 24" width="17" height="17" stroke="currentColor" stroke-width="2.8" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
             </button>
@@ -584,11 +585,11 @@
 </div>
 
 <!-- Consolidated High-Performance Script Bundle -->
-<script src="./config.js?v=330"></script>
-<script src="./auth.js?v=330"></script>
-<script src="./models.js?v=330"></script>
-<script src="./github.js?v=330"></script>
-<script src="./instruction-manager.js?v=330"></script>
-<script src="./app.js?v=330"></script>
+<script src="./config.js?v=331"></script>
+<script src="./auth.js?v=331"></script>
+<script src="./models.js?v=331"></script>
+<script src="./github.js?v=331"></script>
+<script src="./instruction-manager.js?v=331"></script>
+<script src="./app.js?v=331"></script>
 </body>
 </html>
