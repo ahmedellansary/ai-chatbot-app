@@ -665,7 +665,6 @@ STRICT RULE: The local engine automatically merges your surgical patches directl
       DevUIEngine.updateSendBtn();
       DevUIEngine.setThinking(true);
       const isArDev = /[\u0600-\u06FF]/.test(userText);
-      DevUIEngine.showDevThinking(isArDev ? 'تحليل' : 'Analyzing');
       const _shouldObserve = !!state.isMultiAgentMode || this.isCodeChangeRequest(userText);
 
        const tier = 'HIGH';
@@ -1070,10 +1069,21 @@ STRICT RULE: The local engine automatically merges your surgical patches directl
           : (syntaxError ? `Syntax error: ${syntaxError} — deployment blocked.` : (patchApplyFailed ? 'Patch mismatch — deployment blocked.' : ''));
 
         const propId = generateId();
-        state.pendingModifications[propId] = { file, content: patchContent, message, isBlocked };
+        state.pendingModifications[propId] = {
+          file,
+          content: patchContent,
+          message,
+          isBlocked,
+          originalRequest: userText,
+          developerResponse: content
+        };
 
         const existingCard = msgRow.querySelector('.dev-proposal-box');
         if (existingCard) existingCard.remove();
+        const multiAgentBox = msgRow.querySelector('.multi-agent-box');
+        const pipelineSteps = multiAgentBox
+          ? Array.from(multiAgentBox.querySelectorAll('.agent-step-item')).map(step => step.outerHTML).join('')
+          : '';
 
         const card = document.createElement('div');
         card.id = `proposal-${propId}`;
@@ -1084,54 +1094,49 @@ STRICT RULE: The local engine automatically merges your surgical patches directl
             <span>${isBlocked ? (syntaxError ? 'Syntax Error' : 'Overwrite Blocked') : 'Ready'}: <code>${escapeHtml(file)}</code></span>
             ${wasSurgicallyMerged ? '<span class="dev-peer-badge ok" style="margin-inline-start:auto;">⚡ Surgical Patch Merged</span>' : ''}
             ${(!isBlocked && !syntaxError) ? '<span class="dev-peer-badge ok" style="margin-inline-start:auto;">✓ Syntax Validated</span>' : ''}
+            <button class="dev-btn-action cancel proposal-cancel-top" onclick="window._cancelProposal('${propId}')" title="Cancel" aria-label="Cancel">✕</button>
           </div>
-          ${isBlocked ? `<div class="circuit-breaker-banner">${escapeHtml(blockReason)}</div>` : ''}
-          <div class="dev-proposal-desc">📝 <strong>Change:</strong> ${escapeHtml(String(message).slice(0, 100))}${patchApplyFailed ? ' <span class="proposal-muted">Mismatch</span>' : ''}</div>
-          <div class="dev-proposal-tabs" role="tablist">
-            <button class="dev-proposal-tab active" onclick="window._switchProposalTab('${propId}','code',this)">Code</button>
-            <button class="dev-proposal-tab" onclick="window._switchProposalTab('${propId}','change',this)">Change</button>
-            <button class="dev-proposal-tab" onclick="window._switchProposalTab('${propId}','checks',this)">Checks <span class="proposal-error-count ${syntaxError || isCircuitBreakerTriggered || patchApplyFailed ? 'has-errors' : ''}">${syntaxError || isCircuitBreakerTriggered || patchApplyFailed ? '1' : '0'}</span></button>
+          ${isBlocked ? `<div class="proposal-blocked-note">${escapeHtml(blockReason)}</div>` : ''}
+          ${pipelineSteps ? `
+            <section class="proposal-pipeline-section">
+              <div class="proposal-section-label">👥 Pipeline</div>
+              <div class="proposal-pipeline-steps">${pipelineSteps}</div>
+            </section>
+          ` : ''}
+          <div class="dev-proposal-btns" aria-label="Proposal actions">
+            <button class="dev-btn-action preview" onclick="window._previewProposal('${propId}')" title="Live Preview">
+              <span>👁️</span><span>Preview</span>
+            </button>
+            ${isBlocked ? `
+              <button class="dev-btn-action retry-btn" onclick="window._sendReviewToDev('', this)" title="Send request, code, and audit guidance to the LLM">
+                <span>🔄</span><span>Send to LLM</span>
+              </button>
+            ` : `
+              <button class="dev-btn-action deploy" onclick="window._deployProposal('${propId}')" title="Deploy to GitHub">
+                <span>🚀</span><span>Deploy</span>
+              </button>
+            `}
+            <button class="dev-btn-action copy" onclick="window._copyPatchContent('${propId}')" title="Copy Full Code">
+              <span>📋</span><span>Copy</span>
+            </button>
           </div>
-          <div class="dev-proposal-panel active" data-panel="code">
+          <div class="dev-proposal-panel" data-panel="checks">
+            <ul class="proposal-check-list">
+              <li class="${syntaxError ? 'fail' : 'pass'}"><strong>Syntax?</strong> ${syntaxError ? 'No — ' + escapeHtml(syntaxError) : 'Yes — valid'}</li>
+              <li class="${isCircuitBreakerTriggered || patchApplyFailed ? 'fail' : 'pass'}"><strong>Integrity?</strong> ${isCircuitBreakerTriggered ? 'No — blind overwrite blocked' : (patchApplyFailed ? 'No — patch mismatch' : 'Yes — preserved')}</li>
+              <li class="pass"><strong>Deploy?</strong> Manual approval required</li>
+            </ul>
+          </div>
+          <div class="dev-proposal-panel" data-panel="code">
             <pre class="proposal-full-code"><code>${escapeHtml(patchContent)}</code></pre>
           </div>
           <div class="dev-proposal-panel" data-panel="change">
             <div class="proposal-change-summary">File: <code>${escapeHtml(file)}</code><br>${escapeHtml(message)}<br><span class="proposal-muted">Full file preserved for review before deployment.</span></div>
           </div>
-          <div class="dev-proposal-panel" data-panel="checks">
-            <ul class="proposal-check-list">
-              <li class="${syntaxError ? 'fail' : 'pass'}">${syntaxError ? 'Syntax error: ' + escapeHtml(syntaxError) : 'Syntax valid'}</li>
-              <li class="${isCircuitBreakerTriggered || patchApplyFailed ? 'fail' : 'pass'}">${isCircuitBreakerTriggered ? 'Blind overwrite blocked' : (patchApplyFailed ? 'Mismatch — no change applied' : 'Integrity passed')}</li>
-              <li class="pass">Manual deploy required</li>
-            </ul>
-          </div>
-          <div class="dev-proposal-btns">
-            <button class="dev-btn-action preview" onclick="window._previewProposal('${propId}')" title="Live Preview">
-              <span>👁️</span>
-              <span>Preview</span>
-            </button>
-            ${isBlocked ? `
-              <button class="dev-btn-action retry-btn" onclick="window._sendReviewToDev('${escapeHtml(blockReason)}', this)" title="طلب تصحيح من المطور">
-                <span>🔄</span>
-                <span>${syntaxError ? 'Fix Syntax' : 'Request Patch'}</span>
-              </button>
-            ` : `
-              <button class="dev-btn-action deploy" onclick="window._deployProposal('${propId}')" title="Deploy to GitHub">
-                <span>🚀</span>
-                <span>Deploy</span>
-              </button>
-            `}
-            <button class="dev-btn-action copy" onclick="window._copyPatchContent('${propId}')" title="Copy Full Code">
-              <span>📋</span>
-              <span>Copy</span>
-            </button>
-            <button class="dev-btn-action review-fix" onclick="window._switchProposalTab('${propId}','checks')" title="Review checks">
-              <span>🔍</span>
-              <span>Review</span>
-            </button>
-            <button class="dev-btn-action cancel" onclick="window._cancelProposal('${propId}')" title="Cancel">
-              <span>✕</span>
-            </button>
+          <div class="dev-proposal-tabs" role="tablist">
+            <button class="dev-proposal-tab active" onclick="window._switchProposalTab('${propId}','checks',this)">Checks <span class="proposal-error-count ${syntaxError || isCircuitBreakerTriggered || patchApplyFailed ? 'has-errors' : ''}">${syntaxError || isCircuitBreakerTriggered || patchApplyFailed ? '1' : '0'}</span></button>
+            <button class="dev-proposal-tab" onclick="window._switchProposalTab('${propId}','code',this)">Code</button>
+            <button class="dev-proposal-tab" onclick="window._switchProposalTab('${propId}','change',this)">Change</button>
           </div>
 
           <!-- Compatibility drawer for existing preview integrations -->
@@ -1144,6 +1149,7 @@ STRICT RULE: The local engine automatically merges your surgical patches directl
           </div>
         `;
         msgRow.appendChild(card);
+        multiAgentBox?.remove();
       } catch (e) {
         console.warn('[Proposal Parse]', e);
       }
@@ -1181,12 +1187,28 @@ STRICT RULE: The local engine automatically merges your surgical patches directl
 
       let proposalCard = null;
       const agentNames = ['Lead', 'Coder', 'Verifier', 'Security', 'Architecture'];
-      const renderUI = (bullets = [], statusText = '', isRunning = false, warnCount = 0, finalSuggestion = '') => {
+      const renderUI = (bullets = [], statusText = '', isRunning = false, warnCount = 0, finalSuggestion = '', reviewerResults = []) => {
         const statusBadgeCls = isRunning ? 'running' : (warnCount > 0 ? 'warn' : 'ok');
         const badgeLabel = isRunning 
           ? t('جاري التدقيق الخماسي...', '5-Agent Auditing...') 
           : (warnCount > 0 ? `⚠️ ${warnCount} ${t('ملاحظات / ثغرات', 'Issues Found')}` : t('✓ 0 أخطاء (معتمد)', '✓ 0 Issues (Clean)'));
 
+        const auditQuestions = isAr
+          ? ['هل الطلب مطابق؟', 'هل الملف الكامل محفوظ؟', 'هل توجد مشكلة أمنية؟', 'هل المعمارية والمعرفات صحيحة؟', 'هل الكود نظيف وجاهز؟']
+          : ['Request compliant?', 'Full file preserved?', 'Any security issue?', 'DOM architecture valid?', 'Production-ready code?'];
+        const answerRows = reviewerResults.length
+          ? reviewerResults.map((review, reviewerIndex) => {
+              const answers = review.lines.length ? review.lines : [t('لم تصل إجابة الوكيل بعد.', 'No reviewer answer received.')];
+              return `<li class="audit-reviewer-group"><div class="audit-reviewer-name" data-available="${review.available !== false}">${reviewerIndex + 1}. ${escapeHtml(review.name)}${review.available === false ? ' — unavailable' : ''}</div><ul>${auditQuestions.map((question, index) => {
+                const answer = answers[index] || t('لم تصل إجابة الوكيل بعد.', 'No reviewer answer received.');
+                return `<li class="${/تنبيه|ثغرة|غير مطابق|استبدال أعمى|استبدال|خطأ|وهمي|Warn|Fail|Error|Vulnerability|Non-compliant/i.test(answer) ? 'fail' : 'pass'}"><strong>${question}</strong> <span>${escapeHtml(answer.replace(/^[•\-\*\d\.\s]+/, ''))}</span></li>`;
+              }).join('')}</ul></li>`;
+            }).join('')
+          : auditQuestions.map((question, index) => {
+              const answer = bullets[index] || t('لم تصل إجابة الوكيل بعد.', 'No reviewer answer received.');
+              return `<li class="${/تنبيه|ثغرة|غير مطابق|استبدال أعمى|استبدال|خطأ|وهمي|Warn|Fail|Error|Vulnerability|Non-compliant/i.test(answer) ? 'fail' : 'pass'}"><strong>${question}</strong> <span>${escapeHtml(answer.replace(/^[•\-\*\d\.\s]+/, ''))}</span></li>`;
+            }).join('');
+        const issueSummary = bullets.filter(b => /تنبيه|ثغرة|غير مطابق|استبدال أعمى|استبدال|خطأ|وهمي|Warn|Fail|Error|Vulnerability|Non-compliant/i.test(b)).join(' ') || t('لا توجد مشكلة حرجة في نتائج الفحص.', 'No critical issue found in the audit.');
         const bulletsHtml = bullets.map(b => {
           const isWarn = /تنبيه|ثغرة|غير مطابق|استبدال أعمى|استبدال|خطأ|وهمي|Warn|Fail|Error|Vulnerability/i.test(b);
           return `<li class="peer-bullet ${isWarn ? 'warn' : 'ok'}"><span class="peer-bullet-dot"></span><span>${escapeHtml(b)}</span></li>`;
@@ -1194,7 +1216,7 @@ STRICT RULE: The local engine automatically merges your surgical patches directl
 
         const actionsHtml = (!isRunning && bullets.length) ? `
           <div class="peer-actions-bar">
-            <button class="peer-action-btn retry-btn" onclick="window._sendReviewToDev('${escapeHtml(bullets.join('\n')).replace(/'/g, "\\'")}', this)" title="${t('إرسال الثغرات للموديل فوراً لإصلاحها', 'Send all detected issues to LLM to fix immediately')}">
+            <button class="peer-action-btn retry-btn" onclick="window._sendReviewToDev('', this)" title="${t('إرسال الطلب والكود وملاحظات المراجعة للموديل', 'Send request, code, and all audit guidance to the LLM')}">
               <span>🚀</span>
               <span>Send to LLM</span>
             </button>
@@ -1207,24 +1229,49 @@ STRICT RULE: The local engine automatically merges your surgical patches directl
 
         proposalCard = proposalCard || row.querySelector('.dev-proposal-box');
         box.dataset.review = finalSuggestion || bullets.join('\n');
-        box.innerHTML = `
-          <div class="dev-peer-card ${box.classList.contains('collapsed') ? 'collapsed' : ''}">
-            <div class="dev-peer-header" onclick="this.closest('.dev-peer-card').classList.toggle('collapsed')">
+
+        const auditMarkup = `
+          <section class="proposal-audit-section" aria-label="${t('نتائج الفحص', 'Audit results')}">
+            <div class="proposal-audit-header">
               <div class="dev-peer-title">
                 <span class="dev-peer-icon">🛡️</span>
-                <span class="dev-peer-name">${t('تدقيق ومراجعة الكود (5-Agent Audit)', 'Code Audit (5-Agent Verification)')}</span>
+                <span class="dev-peer-name">${t('نتائج الفحص (5 مراجعين)', 'Audit Results (5 Reviewers)')}</span>
                 <span class="dev-peer-badge ${statusBadgeCls}">${badgeLabel}</span>
               </div>
               <span class="dev-peer-toggle">▾</span>
             </div>
-            <div class="dev-peer-body observer-details">
+            <div class="observer-details">
               <div class="observer-agent-strip">${agentNames.map((name, i) => `<span class="observer-agent-chip ${isRunning ? 'running' : 'done'}"><i>${i + 1}</i>${name}</span>`).join('')}</div>
-              ${bullets.length ? `<ul class="peer-bullets-list">${bulletsHtml}</ul>` : `<div class="peer-loading-text" style="font-size:12px; color:var(--text-dim); padding:6px 0;">${t('الوكلاء الـ 5 يفحصون الكود: المطابقة، سلامة الملف الكامل، الأمان، المعمارية، والشياكة...', '5 agents auditing code: Compliance, Full Integrity, Security, Architecture, & Elegance...')}</div>`}
+              ${isRunning ? `<div class="peer-loading-text">${t('الوكلاء الـ 5 يفحصون الكود...', '5 agents are auditing the code...')}</div>` : `<ul class="peer-bullets-list">${answerRows}</ul><div class="observer-brief"><strong>${t('Brief:', 'Brief:')}</strong> ${escapeHtml(issueSummary)}</div>`}
               ${actionsHtml}
             </div>
-          </div>
+          </section>
         `;
-        if (proposalCard) box.querySelector('.observer-details')?.appendChild(proposalCard);
+
+        if (proposalCard) {
+          let auditSection = proposalCard.querySelector('.proposal-audit-section');
+          if (!auditSection) {
+            proposalCard.insertAdjacentHTML('beforeend', auditMarkup);
+            auditSection = proposalCard.querySelector('.proposal-audit-section');
+          } else {
+            auditSection.outerHTML = auditMarkup;
+          }
+          proposalCard.dataset.auditReview = finalSuggestion || bullets.join('\n');
+          auditSection?.querySelector('.proposal-audit-header')?.addEventListener('click', () => {
+            auditSection.classList.toggle('collapsed');
+          });
+          box.innerHTML = '';
+          box.style.display = 'none';
+        } else {
+          box.innerHTML = `
+            <div class="dev-peer-card">
+              <div class="dev-peer-header">
+                <div class="dev-peer-title"><span class="dev-peer-icon">🛡️</span><span class="dev-peer-name">${t('نتائج الفحص', 'Audit Results')}</span><span class="dev-peer-badge ${statusBadgeCls}">${badgeLabel}</span></div>
+              </div>
+              <div class="dev-peer-body observer-details">${auditMarkup}</div>
+            </div>
+          `;
+        }
       };
 
       renderUI([], t('جاري فحص الكود بالوكلاء الـ 5...', 'Auditing with 5 agents...'), true, 0);
@@ -1275,33 +1322,87 @@ Reply in exactly 5 brief lines starting with • :
 
       let collectedBullets = [];
       let finalSummary = '';
+      let previousReview = '';
+      const reviewerResults = [];
+      const quotaByModel = new Map();
+      const failedModels = new Set();
+      const quotaHints = (() => {
+        try { return JSON.parse(localStorage.getItem('DEV_MODEL_QUOTA_HINTS') || '{}'); } catch { return {}; }
+      })();
+      const reviewerPool = Array.from(new Map([
+        ...reviewers,
+        ...(DEV_TIER_MODELS.HIGH || []),
+        ...DEV_AGENTS.filter(agent => agent.category === 'code')
+      ].map(agent => [agent.id, agent])).values());
+      const remainingQuota = (agent) => {
+        const value = quotaByModel.get(agent.id);
+        if (Number.isFinite(value)) return value;
+        const hint = Number(quotaHints[agent.id]);
+        return Number.isFinite(hint) ? hint : 0;
+      };
+      const rememberQuota = (agent, response) => {
+        const headers = response?.headers;
+        if (!headers?.get) return;
+        const remaining = Number(
+          headers.get('x-ratelimit-remaining-tokens') ||
+          headers.get('x-ratelimit-remaining-requests') ||
+          headers.get('x-ratelimit-remaining')
+        );
+        if (Number.isFinite(remaining)) quotaByModel.set(agent.id, remaining);
+      };
+      const pickFallbackReviewer = () => reviewerPool
+        .filter(agent => !failedModels.has(agent.id) && !reviewerResults.some(result => result.id === agent.id))
+        .sort((a, b) => remainingQuota(b) - remainingQuota(a))[0];
 
       for (let i = 0; i < reviewers.length; i++) {
-        const rev = reviewers[i];
-        try {
+        let rev = reviewers[i];
+        let completed = false;
+        while (!completed) {
+          try {
           const msgs = [
-            { role: 'system', content: isAr ? 'أنت هيئة تدقيق الكود البرمجي الصارمة، موجز وحاسم' : 'You are strict 5-agent code auditor' },
-            { role: 'user', content: reviewPrompt }
+            { role: 'system', content: isAr
+              ? `أنت المراجع رقم ${i + 1} من 5. راجع بعد المراجع السابق بالتتابع، ولا تتجاهل ملاحظاته. أضف فقط ملاحظاتك الدقيقة في خمسة أسطر قصيرة.`
+              : `You are reviewer ${i + 1} of 5 in a strict sequential audit. Review the previous reviewer output before adding your own precise findings. Return only five concise lines.` },
+            { role: 'user', content: `${reviewPrompt}\n\nPrevious reviewer output (must be checked and refined):\n${previousReview || 'None — you are the first reviewer.'}` }
           ];
           const ac = new AbortController();
           const tm = setTimeout(() => ac.abort(), 7500);
           const r = rev.provider === 'groq' ? await ModelEngine.callGroq(rev, msgs, ac.signal) : await ModelEngine.callOpenRouter(rev, msgs, ac.signal);
+          rememberQuota(rev, r);
           clearTimeout(tm);
           let out = '';
           for await (const ch of ModelEngine.readStream(r, ac.signal, rev)) out += ch;
           const cleanOut = out.trim();
           if (cleanOut) {
+            previousReview = cleanOut;
             const lines = cleanOut.split('\n').map(s => s.replace(/^[•\-\*]\s*/, '').trim()).filter(Boolean);
+            reviewerResults.push({ id: rev.id, name: rev.name, lines: lines.slice(0, 5), available: true });
             lines.forEach(l => {
               if (l && !collectedBullets.includes(l) && collectedBullets.length < 5) {
                 collectedBullets.push(l);
               }
             });
-            finalSummary = cleanOut;
-            break;
+            finalSummary = finalSummary ? `${finalSummary}\n${cleanOut}` : cleanOut;
+            completed = true;
           }
         } catch (e) {
           console.warn('[AuditReviewer]', rev.name, e.message);
+          failedModels.add(rev.id);
+          const failedCount = failedModels.size;
+          const fallback = failedCount >= 3 ? pickFallbackReviewer() : null;
+          if (fallback) {
+            rev = fallback;
+            continue;
+          }
+          reviewerResults.push({ id: rev.id, name: rev.name, available: false, lines: [
+            `1. Review unavailable: ${e.message || 'provider error'}`,
+            '2. Review unavailable: provider error',
+            '3. Review unavailable: provider error',
+            '4. Review unavailable: provider error',
+            '5. Review unavailable: provider error'
+          ]});
+          completed = true;
+        }
         }
       }
 
@@ -1316,7 +1417,7 @@ Reply in exactly 5 brief lines starting with • :
       }
 
       const warnCount = collectedBullets.filter(b => /تنبيه|ثغرة|غير مطابق|استبدال أعمى|استبدال|خطأ|وهمي|Warn|Fail|Error|Vulnerability/i.test(b)).length;
-      renderUI(collectedBullets, '', false, warnCount, finalSummary || collectedBullets.join('\n'));
+      renderUI(collectedBullets, '', false, warnCount, finalSummary || collectedBullets.join('\n'), reviewerResults);
     }
   };
   try { window.DevObserverEngine = DevObserverEngine; } catch(e) {}
@@ -1365,9 +1466,22 @@ Reply in exactly 5 brief lines starting with • :
     try {
       const input = $('chat-input') || $('user-input');
       if (!input) return;
-      const cleanNotes = String(notes || '').trim();
+      const card = btn?.closest('.dev-proposal-box');
+      const propId = card?.id?.replace(/^proposal-/, '');
+      const proposal = propId ? state.pendingModifications[propId] : null;
+      const auditNotes = String(card?.dataset?.auditReview || notes || '').trim();
+      const cleanNotes = [
+        'Original user request:',
+        proposal?.originalRequest || 'Use the current request.',
+        '',
+        'Code/lines to modify:',
+        proposal?.content || 'Use the current proposed code and preserve unrelated code.',
+        '',
+        'Strict 5-reviewer audit guidance:',
+        auditNotes || 'Re-check compliance, integrity, security, DOM architecture, and production quality.'
+      ].join('\n');
       if (!cleanNotes) return;
-      input.value = `طبق التعديل البرمجي المطلوب مع معالجة وتطبيق جميع ملاحظات التدقيق التالية بدقة:\n${cleanNotes}`;
+      input.value = `Apply the requested code change using the exact code context and all reviewer guidance below. Preserve unrelated code, fix every flagged issue, and do not deploy:\n\n${cleanNotes}`;
       if (window.DevUIEngine) DevUIEngine.updateSendBtn?.();
       const sendBtn = $('send-btn');
       if (sendBtn) sendBtn.click();
@@ -1855,7 +1969,9 @@ Reply in exactly 5 brief lines starting with • :
           if (!flow) return;
           const item = document.createElement('div');
           item.className = 'thinking-flow-item';
-          item.classList.add('reached'); item.innerHTML = `<span class="flow-dot"></span><span class="flow-text">${this.escapeHtml(s.text)}</span>`;
+          item.classList.add('reached');
+          item.setAttribute('dir', 'ltr');
+          item.innerHTML = `<span class="flow-icon" aria-hidden="true">${this.escapeHtml(s.icon || '•')}</span><span class="flow-text">${this.escapeHtml(s.text)}</span><span class="thinking-dots"><i></i><i></i><i></i></span>`;
           flow.appendChild(item);
           const ca = $('chat-area'); if (ca) ca.scrollTop = ca.scrollHeight;
         }, s.delay);
@@ -1916,23 +2032,21 @@ Reply in exactly 5 brief lines starting with • :
       row.setAttribute('dir', hasAr ? 'rtl' : 'ltr');
       row.dataset.id = msg.id;
 
-      let modelBadgeHtml = '';
-      if (msg.role === 'ai') {
-        const modelName = msg.model || 'AI Developer';
-        const matchedAgent = DEV_AGENTS.find(a => a.name === modelName);
-        const icon = matchedAgent?.icon || '🧠';
-        modelBadgeHtml = `<div class="msg-model-tag"><span>${icon}</span> <span class="model-tag-name">${this.escapeHtml(modelName)}</span></div>`;
-      }
+      const modelBadgeHtml = '';
 
       const contentHtml = msg.role === 'ai' ? this.parseMarkdown(msg.content) : this.escapeHtml(msg.content);
+      const speakerHtml = msg.role === 'user'
+        ? '<span class="message-speaker user-speaker" title="User" aria-label="User">👤</span>'
+        : '<span class="message-speaker ai-speaker" title="Developer assistant" aria-label="Developer assistant">🛠️</span>';
       if (msg.role === 'user') {
         row.innerHTML = `
-          <div class="msg-content" style="position:relative;padding-inline-end:36px">${contentHtml}<button class="user-copy-inside" onclick="navigator.clipboard.writeText(this.closest('.message-row').querySelector('.msg-content').innerText); window.DevUIEngine.showToast('Copied','success')" title="نسخ"><svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button></div>
+          <div class="message-line">${speakerHtml}<div class="msg-content">${contentHtml}</div></div>
+          <div class="message-copy-bar"><button class="user-copy-outside" onclick="navigator.clipboard.writeText(this.closest('.message-row').querySelector('.msg-content').innerText); window.DevUIEngine.showToast('Copied','success')" title="Copy message" aria-label="Copy message"><svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button></div>
           ${modelBadgeHtml}
         `;
       } else {
         row.innerHTML = `
-          <div class="msg-content">${contentHtml}</div>
+          <div class="message-line">${speakerHtml}<div class="msg-content">${contentHtml}</div></div>
           ${modelBadgeHtml}
           <div class="claude-actions-bar" style="display:flex;gap:8px;margin-top:6px">
             <button class="claude-action-btn" onclick="navigator.clipboard.writeText(this.closest('.message-row').querySelector('.msg-content').innerText); window.DevUIEngine.showToast('Copied','success')" title="نسخ"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button>
@@ -1952,17 +2066,12 @@ Reply in exactly 5 brief lines starting with • :
       const container = $('chat-container');
       if (!container) return;
       const row = document.createElement('div');
-      row.className = 'message-row ai is-rtl';
-      row.setAttribute('dir', 'rtl');
+      row.className = 'message-row ai is-ltr';
+      row.setAttribute('dir', 'ltr');
       row.dataset.id = msgObj.id;
 
-      const modelName = msgObj.model || 'جاري التحليل...';
-      const matchedAgent = DEV_AGENTS.find(a => a.name === modelName);
-      const icon = matchedAgent?.icon || '🧠';
-
       row.innerHTML = `
-        <div class="msg-content"><span style="color:var(--text-dim);">جاري التحليل وتجهيز التعديل...</span></div>
-        <div class="msg-model-tag"><span>${icon}</span> <span class="model-tag-name">${this.escapeHtml(modelName)}</span></div>
+        <div class="message-line"><span class="message-speaker ai-speaker" title="Developer assistant" aria-label="Developer assistant">🛠️</span><div class="msg-content"><span style="color:var(--text-dim);">Preparing response...</span></div></div>
       `;
       container.appendChild(row);
       this.scrollToBottom();
@@ -2035,9 +2144,10 @@ Reply in exactly 5 brief lines starting with • :
         
         const steps = rawLines.length > 0 ? rawLines.slice(0, 5) : ['Diagnosing Root Cause', 'Inspecting Live Files', 'Synthesizing Patch'];
         
+        const stepIcons = ['🧠', '📂', '📋', '✍️', '🔍'];
         const tabsHtml = steps.map((s, idx) => `
           <div class="dev-thinking-tab reached" style="animation-delay: ${idx * 0.1}s">
-            <span class="flow-dot"></span>
+            <span class="flow-icon" aria-hidden="true">${stepIcons[idx] || '•'}</span>
             <span class="tab-label">${this.escapeHtml(s)}</span>
           </div>
         `).join('');
@@ -3319,16 +3429,33 @@ Reply in exactly 5 brief lines starting with • :
     window._setAppFontSize(savedSize);
   }
 
+  function initScrollbarReveal() {
+    const scrollTimers = new WeakMap();
+    document.addEventListener('scroll', event => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      target.classList.add('is-scrolling');
+      const existingTimer = scrollTimers.get(target);
+      if (existingTimer) clearTimeout(existingTimer);
+      scrollTimers.set(target, setTimeout(() => {
+        target.classList.remove('is-scrolling');
+        scrollTimers.delete(target);
+      }, 700));
+    }, true);
+  }
+
   // Auto-init on DOM ready
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
       lockViewportHeight();
       initAppCustomization();
+      initScrollbarReveal();
       DevUIEngine.init();
     });
   } else {
     lockViewportHeight();
     initAppCustomization();
+    initScrollbarReveal();
     DevUIEngine.init();
   }
 
