@@ -1982,10 +1982,10 @@ html, body {
 .img-picker-title{flex:1;font-size:12.5px;font-weight:700;color:var(--text-main)}
 .img-picker-arrow{font-size:11px;color:var(--text-dim);transition:transform 0.15s}
 .img-picker-badge{font-size:10px;font-weight:700;background:var(--bg-pill);color:var(--text-dim);padding:2px 7px;border-radius:999px;border:1px solid var(--border-subtle)}
-.img-picker-body{padding:10px 11px 11px;display:flex;flex-direction:column;gap:10px;max-height:220px;overflow:auto}
+.img-picker-body{padding:10px 11px 11px;display:flex;flex-direction:column;gap:10px;max-height:320px;overflow:auto}
 .img-picker-card.collapsed .img-picker-body{display:none}
 .img-picker-card.collapsed .img-picker-header{border-bottom:none}
-.img-picker-prompt{font-size:11.5px;color:var(--text-muted);background:var(--bg-input);border:1px solid var(--border-subtle);border-radius:9px;padding:7px 10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.img-picker-prompt{font-size:12px;color:var(--text-main);background:var(--bg-input);border:1px solid var(--border-subtle);border-radius:9px;padding:9px 11px;white-space:normal;word-break:break-word;line-height:1.55;min-height:36px;max-height:none;overflow:visible}
 .img-picker-models{display:flex;flex-wrap:wrap;gap:6px}
 .img-picker-chip{padding:6px 11px;border-radius:999px;border:1px solid var(--border-subtle);background:var(--bg-pill);color:var(--text-muted);font-size:12px;font-weight:600;cursor:pointer;transition:all 0.15s;max-width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .img-picker-chip:hover{border-color:var(--border-focus);background:var(--bg-card-hover);color:var(--text-main)}
@@ -1999,7 +1999,7 @@ html, body {
 .img-picker-btn.primary:hover{background:var(--accent-color-dark);transform:translateY(-1px)}
 .img-picker-btn.ghost{background:transparent;border-color:var(--border-subtle);color:var(--text-muted)}
 .img-picker-btn.ghost:hover{background:var(--bg-card-hover);color:var(--text-main)}
-@media (max-width: 600px){.img-picker-card{max-width:100%}.img-picker-body{max-height:180px}}
+@media (max-width: 600px){.img-picker-card{max-width:calc(100vw - 24px);margin:0 auto}.img-picker-body{max-height:none;padding:12px;gap:12px}.img-picker-prompt{font-size:13px;padding:10px 12px;min-height:40px}.img-picker-chip{padding:8px 13px;font-size:12.5px}}
 
 /* ─── Mobile Flexible Responsive Design (< 768px) ─── */
 @media (max-width: 768px) {
