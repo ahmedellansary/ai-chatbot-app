@@ -1237,8 +1237,10 @@
       if(save) try{ localStorage.setItem('xv1_chat_layer', layer); }catch{}
       try{ localStorage.setItem('xv1_chat_layer', layer); }catch{}
       document.querySelectorAll('.chat-dot').forEach(d=> d.classList.toggle('active', d.dataset.mode===this.current));
-      document.getElementById('input-section')?.classList.toggle('hidden', this.current!=='text');
-      document.getElementById('voice-input-section')?.classList.toggle('hidden', this.current!=='voice');
+      const inpSec=document.getElementById('input-section');
+      const voiceSec=document.getElementById('voice-input-section');
+      if(inpSec){ inpSec.classList.toggle('hidden', this.current!=='text'); inpSec.style.display = this.current==='text'?'block':'none'; }
+      if(voiceSec){ voiceSec.classList.toggle('hidden', this.current!=='voice'); voiceSec.style.display = this.current==='voice'?'block':'none'; if(this.current==='voice'){ voiceSec.style.visibility='visible'; voiceSec.style.opacity='1'; } }
       // switch history/layer persistence
       try{
         const list = state.conversations.filter(c=> (c.layer||'general')===layer);
@@ -3554,12 +3556,14 @@
       document.querySelectorAll('.chat-dot').forEach(d=>{
         d.addEventListener('click', ()=>{
           const m=d.dataset.mode;
+          const inp=document.getElementById('input-section');
+          const voice=document.getElementById('voice-input-section');
           if(m==='voice'){
-            document.getElementById('input-section')?.classList.add('hidden');
-            document.getElementById('voice-input-section')?.classList.remove('hidden');
+            if(inp){ inp.classList.add('hidden'); inp.style.display='none'; }
+            if(voice){ voice.classList.remove('hidden'); voice.style.display='block'; voice.style.visibility='visible'; voice.style.opacity='1'; }
           } else if(m==='text'){
-            document.getElementById('input-section')?.classList.remove('hidden');
-            document.getElementById('voice-input-section')?.classList.add('hidden');
+            if(inp){ inp.classList.remove('hidden'); inp.style.display='block'; }
+            if(voice){ voice.classList.add('hidden'); voice.style.display='none'; }
           }
           document.querySelectorAll('.chat-dot').forEach(x=> x.classList.toggle('active', x===d));
         });
