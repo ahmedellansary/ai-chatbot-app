@@ -1083,14 +1083,36 @@
         try{ localStorage.setItem('tts_speed', s); }catch{}
       });
       try{ const savedS = localStorage.getItem('tts_speed'); if(savedS){ vSpeed.textContent=savedS+'x'; vSpeed.dataset.speed=savedS; const idx=speeds.indexOf(parseFloat(savedS)); if(idx>=0) speedIdx=idx; } }catch{}
+      const vPreview = document.getElementById('tts-preview-btn');
+      const doVoicePreview = async ()=>{
+        if(!vModel || !vVoice) return;
+        const accent = vAccent?.value || 'auto';
+        const isAr = accent.startsWith('ar') || /ar/.test(vVoice.value);
+        const sample = isAr ? 'مرحبا، هذه معاينة نبرة صوتي' : 'Hello, this is a voice preview';
+        if(vPreview) vPreview.textContent = '⏳';
+        try{
+          const url = await window.TTSEngine?.synthesizeWithCloud(sample);
+          if(url){
+            const a = new Audio(url);
+            a.onended = ()=>{ if(vPreview) vPreview.textContent='▶️'; setTimeout(()=>URL.revokeObjectURL(url),1500); };
+            a.onerror = ()=>{ if(vPreview) vPreview.textContent='▶️'; window.TTSEngine?.speakLocal(sample); };
+            await a.play();
+            return;
+          }
+          window.TTSEngine?.speakLocal(sample);
+        }catch{ window.TTSEngine?.speakLocal(sample); }
+        if(vPreview) vPreview.textContent='▶️';
+      };
+      vPreview?.addEventListener('click', doVoicePreview);
       vModel?.addEventListener('change', ()=>{
         try{ localStorage.setItem('tts_model', vModel.value); }catch{}
         refreshVoices(vModel.value);
         try{ localStorage.removeItem('tts_voice'); }catch{}
         MessageRenderer.showToast(`🎙️ ${vModel.selectedOptions[0]?.textContent} — تم تحديث الأصوات`,'info');
+        setTimeout(doVoicePreview, 500);
       });
-      vVoice?.addEventListener('change', ()=>{ try{ localStorage.setItem('tts_voice', vVoice.value); }catch{} });
-      vAccent?.addEventListener('change', ()=>{ try{ localStorage.setItem('tts_accent', vAccent.value); }catch{} });
+      vVoice?.addEventListener('change', ()=>{ try{ localStorage.setItem('tts_voice', vVoice.value); }catch{}; doVoicePreview(); });
+      vAccent?.addEventListener('change', ()=>{ try{ localStorage.setItem('tts_accent', vAccent.value); }catch{}; doVoicePreview(); });
       try{
         const m=localStorage.getItem('tts_model'); if(m && vModel) vModel.value=m;
         refreshVoices(vModel?.value || 'fishaudio/fish-speech-1.5:free');
