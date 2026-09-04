@@ -263,7 +263,9 @@
         const r=await fetch(`${GITHUB_API}/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${this.path}?ref=${GITHUB_BRANCH}&t=${Date.now()}`,{headers:ConfigVault.getGitHubHeaders()});
         if(!r.ok) return;
         const j=await r.json();
-        const txt=atob(j.content.replace(/\s/g,''));
+        const txt = (window.GitHubService?.base64ToUtf8)
+          ? window.GitHubService.base64ToUtf8(j.content)
+          : (function(b){ const bin=atob(b.replace(/\s/g,'')); const u=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i); return new TextDecoder().decode(u); })(j.content);
         const remote=JSON.parse(txt);
         if(!Array.isArray(remote)) return;
         // merge by id, keep newest by updatedAt/createdAt
@@ -2538,21 +2540,40 @@
         { icon: '✨', title: t('تحسين الجودة', 'Quality enhancement'), status: t('انتظار', 'Waiting'), summary: t('بانتظار الاقتراح...', 'Awaiting suggestion...') }
       ];
 
-      const renderObserver = (finalReview = '') => {
+      const renderObserver = (finalReview = '', activeIdx = 0) => {
         // Floating bullets — no numbers — COMMITTED header with colored numbers, icon toggle, Apply only
           const getCls=b=>{ if(b.includes('التناقض:')) return b.includes('نعم')?'warn':'ok'; if(b.includes('الالتزام:')||b.includes('المصادر:')) return (b.includes('نعم')||b.includes('موثوقة')||b.includes('سليم'))?'ok':'warn'; return b.includes('لا')||b.includes('تحتاج')?'warn':'ok'; };
           const buildBullets = (txt)=> {
             const lines = String(txt||'').split(/\n/).map(s=>s.trim()).filter(Boolean);
-            const bullets = lines.map(l=> l.replace(/^[��?]\s*/,'').replace(/^\d+[\.\)\-]\s*/,'').trim()).filter(Boolean).slice(0,5);
+            const bullets = lines.map(l=> l.replace(/^[?]\s*/,'').replace(/^\d+[\.\)\-]\s*/,'').trim()).filter(Boolean).slice(0,5);
             if(!bullets.length) return `<div style="font-size:12px;color:var(--text-dim)">${MessageRenderer.escapeHtml(String(txt||'').slice(0,140))}</div>`;
             const main=bullets.slice(0,-1), last=bullets.slice(-1)[0];
             const mainHtml=main.length? `<ul class="observer-bullets">${main.map(b=>`<li class="observer-bullet ${getCls(b)}"><span class="observer-bullet-text">${MessageRenderer.escapeHtml(b)}</span></li>`).join('')}</ul>` : '';
             const box=(last && !(last.includes('لا يوجد') || /No improvement/i.test(last)))? `<div class="suggest-box"><div class="suggest-box-body">${MessageRenderer.escapeHtml(last)}</div><div class="suggest-box-actions"><button class="observer-apply-btn" onclick="window._applyObserverSuggestion(this.closest('.observer-box').dataset.review||'', this)">⚡ Apply</button><button class="llm-end-btn" onclick="window._sendToLLM(this)">⚡ Send to LLM</button><button class="llm-send-apply-btn" onclick="window._sendAndApply(this)">⚡ Send & Apply</button></div></div>` : '';
-            // inject handlers via delegated replacement after
             return mainHtml+box;
           };
+
+        const chainNames = ['Qwen', 'GPT-20B', 'North', 'GPT-120B', 'Inkling'];
+        const isRunning = activeIdx < 5;
+        const pipelineTrackHtml = `
+          <div class="audit-pulse-track">
+            ${chainNames.map((name, i) => {
+              const isCompleted = !isRunning || i < activeIdx;
+              const isActive = isRunning && i === activeIdx;
+              const nodeClass = isCompleted ? 'completed' : (isActive ? 'active' : 'pending');
+              return `
+                <div class="audit-pulse-node ${nodeClass}" title="${name}">
+                  <span class="audit-pulse-dot"></span>
+                  <span class="audit-pulse-label">${i + 1}. ${name}</span>
+                </div>
+                ${i < chainNames.length - 1 ? `<div class="audit-pulse-connector ${isCompleted ? 'completed' : ''}"></div>` : ''}
+              `;
+            }).join('')}
+          </div>
+        `;
+
         const okC = (txt)=> (String(txt).match(/نعم|yes|✓|مُلتزم|Compliant/gi)||[]).length;
-        const reviewHtml = finalReview ? buildBullets(finalReview) : `<div style="font-size:12px; color:var(--text-dim); padding:6px 0;">${t('جاري المراجعة...','Reviewing...')}</div>`;
+        const reviewHtml = finalReview ? buildBullets(finalReview) : `<div style="font-size:12px; color:var(--text-dim); padding:6px 0;">${t('جاري التدقيق الخماسي...','5-Agent reviewing...')}</div>`;
         const okN = finalReview ? okC(finalReview) : 0;
         const warnN = finalReview ? (String(finalReview).split(/\n/).filter(Boolean).length - okN) : 0;
         const applyBtn = '';
