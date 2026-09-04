@@ -75,9 +75,11 @@
   // ─────────────────────────────────────────────────────────────────
   // 3. STATE & PERSISTENCE CONTROLLER (StateController)
   // ─────────────────────────────────────────────────────────────────
+  const normalizeMode = (m)=>{ const v=String(m||'').toUpperCase(); if(v==='BALANCED'||v==='BALANCE'||v==='BALANCE2') return 'BALANCED'; if(v==='MID') return 'BALANCED'; if(v==='HARD') return 'HIGH'; if(v==='AUTO') return 'BALANCED'; return (v==='HIGH'||v==='FAST')?v:'BALANCED'; };
+  window.normalizeMode = normalizeMode;
   const state = {
     currentLayer: (function(){ try{ const v=localStorage.getItem('xv1_chat_layer'); return (v==='voice')? v : 'general'; }catch{ return 'general'; }})(),
-    currentMode: (function(){ try{ const saved = localStorage.getItem('xv1_current_mode'); if (saved === 'BALANCE2') return 'HIGH'; if (saved === 'HARD') return 'HIGH'; if (saved === 'AUTO') return 'MID'; return (saved === 'HIGH' ? 'HIGH' : (saved || 'MID')); }catch{ return 'MID'; }})(),
+    currentMode: (function(){ try{ return normalizeMode(localStorage.getItem('xv1_current_mode')||'BALANCED'); }catch{ return 'BALANCED'; }})(),
     seekaiDirectModel: (function(){ try{ return localStorage.getItem('xv1_seekai_direct') || null; }catch{ return null; }})(),
     currentModel: null,
     devModelKey: null,
@@ -246,6 +248,75 @@
   };
 
   try { window.StateController = StateController; } catch(e) {}
+
+  // ─────────────────────────────────────────────────────────────────
+  // 3.5 HISTORY SYNC — Mobile ↔ Laptop ↔ Repo (GitHub) — Balanced rename
+  // ─────────────────────────────────────────────────────────────────
+  const HistorySync = {
+    path: 'history/sync.json',
+    _pushTimer: null,
+    _lastPush: 0,
+    async pullAndMerge(){
+      try{
+        const token=(window.ConfigVault?.getGitHubToken?.()||'');
+        if(!token || token.length<10) return;
+        const r=await fetch(`${GITHUB_API}/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${this.path}?ref=${GITHUB_BRANCH}&t=${Date.now()}`,{headers:ConfigVault.getGitHubHeaders()});
+        if(!r.ok) return;
+        const j=await r.json();
+        const txt=atob(j.content.replace(/\s/g,''));
+        const remote=JSON.parse(txt);
+        if(!Array.isArray(remote)) return;
+        // merge by id, keep newest by updatedAt/createdAt
+        const localMap=new Map(state.conversations.map(c=>[c.id,c]));
+        let added=0;
+        for(const rc of remote){
+          const local=localMap.get(rc.id);
+          if(!local){ state.conversations.push(rc); added++; }
+          else {
+            const rTime=new Date(rc.updatedAt||rc.createdAt||0).getTime();
+            const lTime=new Date(local.updatedAt||local.createdAt||0).getTime();
+            if(rTime>lTime) Object.assign(local, rc);
+          }
+        }
+        if(added>0){
+          state.conversations.sort((a,b)=> new Date(b.createdAt)-new Date(a.createdAt));
+          try{ localStorage.setItem('conversations', JSON.stringify(state.conversations)); }catch{}
+          try{ UIEngine.renderConversationsList(); }catch{}
+          console.log('[HistorySync] pulled +'+added);
+        }
+      }catch(e){ console.warn('[HistorySync pull]', e.message); }
+    },
+    pushDebounced(){
+      if(this._pushTimer) clearTimeout(this._pushTimer);
+      this._pushTimer=setTimeout(()=> this.push(), 2500);
+    },
+    async push(){
+      try{
+        if(Date.now()-this._lastPush < 5000) return;
+        this._lastPush=Date.now();
+        const token=(window.ConfigVault?.getGitHubToken?.()||'');
+        if(!token || token.length<10) return;
+        // avoid huge payload >800KB
+        const payload=JSON.stringify(state.conversations.slice(0,120));
+        if(payload.length>850000){ console.warn('[HistorySync] skip too large'); return; }
+        await GitHubService.uploadFile(this.path, payload, `🔄 History sync ${new Date().toISOString().slice(0,16)}`);
+        console.log('[HistorySync] pushed', state.conversations.length);
+      }catch(e){ console.warn('[HistorySync push]', e.message); }
+    }
+  };
+  window.HistorySync=HistorySync;
+  // hook save/load
+  const _origSave=StateController.save.bind(StateController);
+  StateController.save=function(){ _origSave(); try{ HistorySync.pushDebounced(); }catch{} };
+  const _origLoad=StateController.load.bind(StateController);
+  StateController.load=function(){
+    _origLoad();
+    // async pull after local load
+    setTimeout(()=> HistorySync.pullAndMerge(), 900);
+    // periodic pull every 45s
+    setInterval(()=> HistorySync.pullAndMerge(), 45000);
+    window.addEventListener('online', ()=> HistorySync.pullAndMerge());
+  };
 
   // ─────────────────────────────────────────────────────────────────
   // 4. MODEL ENGINE — Shared tier-isolated router (models.js)
@@ -2900,7 +2971,7 @@
           const short = state.seekaiDirectModel.split('/').pop().slice(0,14);
           if (titleText) titleText.textContent = short;
         } else {
-          if (titleText) titleText.textContent = state.currentMode === 'AUTO' ? 'Auto' : state.currentMode === 'MID' ? 'Balanced' : state.currentMode;
+          if (titleText) titleText.textContent = state.currentMode === 'AUTO' ? 'Auto' : state.currentMode === 'BALANCED' ? 'Balanced' : state.currentMode;
         }
         if (dot) dot.style.background = state.currentMode==='SEEKAI' ? '#7c3aed' : '#10b981';
         if (indicator) {
