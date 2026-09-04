@@ -78,6 +78,7 @@
   const state = {
     currentLayer: (function(){ try{ const v=localStorage.getItem('xv1_chat_layer'); return (v==='voice'||v==='seekai')? v : 'general'; }catch{ return 'general'; }})(),
     currentMode: (function(){ try{ const saved = localStorage.getItem('xv1_current_mode'); if (saved === 'BALANCE2') return 'HIGH'; if (saved === 'HARD') return 'HIGH'; return (saved === 'HIGH' ? 'HIGH' : (saved || 'MID')); }catch{ return 'MID'; }})(),
+    seekaiDirectModel: (function(){ try{ return localStorage.getItem('xv1_seekai_direct') || null; }catch{ return null; }})(),
     currentModel: null,
     devModelKey: null,
     modelCatalog: [],
@@ -2406,21 +2407,28 @@
           $('attach-btn')?.addEventListener('click', () => $('file-upload-input')?.click());
         }
       } else {
-        if (titleText) titleText.textContent = state.currentMode === 'MID' ? 'Balanced' : state.currentMode;
-        if (dot) dot.style.background = '#10b981';
+        if(state.currentMode==='SEEKAI' && state.seekaiDirectModel){
+          const short = state.seekaiDirectModel.split('/').pop().slice(0,14);
+          if (titleText) titleText.textContent = short;
+        } else {
+          if (titleText) titleText.textContent = state.currentMode === 'AUTO' ? 'Auto' : state.currentMode === 'MID' ? 'Balanced' : state.currentMode;
+        }
+        if (dot) dot.style.background = state.currentMode==='SEEKAI' ? '#7c3aed' : '#10b981';
         if (indicator) {
           indicator.innerHTML = `
             <button class="attach-btn" id="attach-btn" title="إرفاق ملفات أو صور" aria-label="إرفاق">
               ${this.ATTACH_ICON_SVG}
             </button>
-            <span class="mode-tag">الشات الطبيعي</span>
+            <span class="mode-tag">${state.currentMode==='SEEKAI' ? (state.seekaiDirectModel?.split('/').pop()||'SeekAI') : 'الشات الطبيعي'}</span>
           `;
           $('attach-btn')?.addEventListener('click', () => $('file-upload-input')?.click());
         }
       }
 
       $$('.dropdown-opt').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.mode === state.currentMode);
+        const isSeek = btn.dataset.seekaiModel && btn.dataset.seekaiModel===state.seekaiDirectModel && state.currentMode==='SEEKAI';
+        const isMode = btn.dataset.mode && btn.dataset.mode===state.currentMode && !state.seekaiDirectModel;
+        btn.classList.toggle('active', !!(isSeek || isMode));
       });
     },
 
@@ -2490,16 +2498,25 @@
         const optBtn = e.target.closest('.dropdown-opt');
         if (optBtn) {
           e.preventDefault();
-          state.currentMode = optBtn.dataset.mode || 'MID';
-          try{ localStorage.setItem('xv1_current_mode', state.currentMode); }catch{}
+          if(optBtn.dataset.seekaiModel){
+            state.seekaiDirectModel = optBtn.dataset.seekaiModel;
+            state.currentMode = 'SEEKAI';
+            try{ localStorage.setItem('xv1_seekai_direct', state.seekaiDirectModel); localStorage.setItem('xv1_current_mode','SEEKAI'); }catch{}
+          } else if(optBtn.dataset.mode){
+            state.currentMode = optBtn.dataset.mode;
+            state.seekaiDirectModel = null;
+            try{ localStorage.setItem('xv1_current_mode', state.currentMode); localStorage.removeItem('xv1_seekai_direct'); }catch{}
+          }
           $('model-dropdown-menu')?.classList.remove('show');
           this.updateHeaderUI();
           const conv = StateController.getActiveConv();
           if (conv) {
             conv.mode = state.currentMode;
+            if(state.seekaiDirectModel) conv.seekaiModel = state.seekaiDirectModel;
             StateController.save();
           }
-          MessageRenderer.showToast(`Switched to ${state.currentMode} mode`, 'info');
+          const name = optBtn.dataset.seekaiModel || state.currentMode;
+          MessageRenderer.showToast(`Switched to ${name}`, 'info');
           return;
         }
 
