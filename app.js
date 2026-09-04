@@ -541,6 +541,19 @@
         return `<div class="roundtable-persona synthesizer"><div class="roundtable-badge"><span>🎯</span> <span>المنسق التنفيذي (Synthesizer)</span></div><div class="roundtable-body">${content.trim()}</div></div>`;
       });
 
+      // ── TTS/Audio cards: [audio:src|desc|tag] + [tts:text] (local speechSynthesis fallback)
+      html = html.replace(/\[audio:(https?:\/\/[^\s|\]]+|blob:[^\s|\]]+|data:[^\s|\]]+)(?:\|([^|\]]+))?(?:\|([^\]]+))?\]/gi, (m, src, desc, tag) => {
+        const tagTitle = (tag || 'TTS Audio').trim();
+        const descText = (desc || '🔊 ملف صوتي جاهز').trim();
+        const cleanSrc = src.trim();
+        return `\n\n<div class="modern-audio-card" data-src="${cleanSrc}">\n  <div class="audio-card-header"><div class="audio-tag-badge"><span class="audio-dot"></span><span>${this.escapeHtml(tagTitle)}</span></div></div>\n  <div class="audio-card-desc">${this.escapeHtml(descText)}</div>\n  <div class="audio-progress-row"><span class="audio-time current-time">0:00</span><div class="audio-progress-bar-wrap" onclick="window._seekAudio(this, event)"><div class="audio-progress-fill"></div></div><span class="audio-time total-time">--:--</span></div>\n  <div class="audio-controls-row"><button type="button" class="audio-ctrl-btn speed-btn" onclick="window._changeAudioSpeed(this)" title="Speed">1x</button><button type="button" class="audio-ctrl-btn" onclick="window._skipAudio(this, -15)" title="-15s">↺15</button><button type="button" class="audio-play-btn" onclick="window._togglePlayAudio(this)" title="Play/Pause"><svg class="play-icon" viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"></polygon></svg><svg class="pause-icon" style="display:none;" viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"></rect><rect x="14" y="4" width="4" height="16" rx="1"></rect></svg></button><button type="button" class="audio-ctrl-btn" onclick="window._skipAudio(this, 15)" title="+15s">↻15</button><button type="button" class="audio-ctrl-btn volume-btn" onclick="window._toggleMuteAudio(this)" title="Mute">🔊</button><button type="button" class="audio-ctrl-btn download-btn" onclick="window._downloadAudio(this)" title="تحميل">⬇</button></div>\n  <audio class="hidden-audio" src="${cleanSrc}" preload="metadata"></audio>\n</div>\n\n`;
+      });
+      html = html.replace(/\[tts:([^\]]+)\]/gi, (m, ttsText) => {
+        const clean = this.escapeHtml(ttsText.trim().slice(0, 400));
+        const encoded = encodeURIComponent(ttsText.trim());
+        return `\n\n<div class="modern-audio-card tts-card" data-tts-text="${encoded}" data-src="">\n  <div class="audio-card-header"><div class="audio-tag-badge"><span class="audio-dot"></span><span>🔊 TTS</span></div></div>\n  <div class="audio-card-desc">${clean}</div>\n  <div class="audio-controls-row"><button type="button" class="audio-play-btn" onclick="window._playTTS(this)" title="تشغيل الصوت"><svg class="play-icon" viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"></polygon></svg><svg class="pause-icon" style="display:none;" viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"></rect><rect x="14" y="4" width="4" height="16" rx="1"></rect></svg> تشغيل</button><button type="button" class="audio-ctrl-btn" onclick="window._downloadTTS(this)" title="تحميل كـ WAV">⬇ تحميل</button></div>\n</div>\n\n`;
+      });
+
       html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
       html = html.replace(/^### (.+)$/gm, '\n\n<h3>$1</h3>\n\n');
       html = html.replace(/^## (.+)$/gm, '\n\n<h2>$1</h2>\n\n');
@@ -844,6 +857,131 @@
   });
 
   // ─────────────────────────────────────────────────────────────────
+  // 6.5 TTS ORCHESTRATOR — Text→Speech delegation (Browser + Cloud)
+  // ─────────────────────────────────────────────────────────────────
+  const TTSEngine = {
+    ttsRegex: /(حوّل|حول|تحويل|حوللي|حول لي|اقرأ|انطق|سمعني|حوّل النص|حول النص|text to speech|tts|voice over|generate (audio|voice|speech)|speak this|read aloud)/i,
+    isTTSRequest(text){
+      if(!text) return false;
+      const t = String(text).trim();
+      // must contain TTS intent + some content to synthesize
+      if(!this.ttsRegex.test(t)) return false;
+      // avoid false positives for very short generic
+      if(t.length < 8) return false;
+      return true;
+    },
+    extractText(userText){
+      let t = String(userText||'').trim();
+      // quoted text priority: "..." or '...' or «...»
+      const qMatch = t.match(/["«»“”'‘]([^"«»“”'‘]{3,})["«»“”'‘]/);
+      if(qMatch) return qMatch[1].trim();
+      // after colon : or ـ or =
+      const colonIdx = t.search(/[:：]/);
+      if(colonIdx !== -1){
+        const after = t.slice(colonIdx+1).trim();
+        if(after.length >= 3) return after.slice(0, 900);
+      }
+      // strip trigger words
+      const stripped = t.replace(/^(حوّل|حول|تحويل|اقرأ|انطق|سمعني|حول النص الى صوت|حول النص لصوت|حول هذا النص الى صوت|حول هذا النص لصوت|حول لي النص الى صوت|text to speech|tts)[:\s-]*/i,'').trim();
+      if(stripped.length >= 3) return stripped.slice(0, 900);
+      return t.slice(0, 900);
+    },
+    async synthesizeWithCloud(text){
+      // Try OpenRouter audio/speech if key available — model openai/tts-1
+      try{
+        const key = (window.ConfigVault && window.ConfigVault.getOpenRouterKey && window.ConfigVault.getOpenRouterKey()) || '';
+        if(!key || !String(key).startsWith('sk-or')) return null;
+        const ctrl = new AbortController();
+        const tm = setTimeout(()=> ctrl.abort(), 12000);
+        const r = await fetch('https://openrouter.ai/api/v1/audio/speech',{
+          method:'POST',
+          headers:{ 'Authorization':`Bearer ${key}`,'Content-Type':'application/json','HTTP-Referer':window.location.origin,'X-Title':'X.v1 TTS' },
+          body: JSON.stringify({ model:'openai/tts-1', input: text.slice(0, 900), voice:'alloy' }),
+          signal: ctrl.signal
+        });
+        clearTimeout(tm);
+        if(!r.ok) return null;
+        const blob = await r.blob();
+        if(!blob || blob.size < 1000) return null;
+        return URL.createObjectURL(blob);
+      }catch{ return null; }
+    },
+    speakLocal(text){
+      try{
+        window.speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(text);
+        const isAr = /[\u0600-\u06FF]/.test(text);
+        u.lang = isAr ? 'ar-EG' : 'en-US';
+        u.rate = 1; u.pitch = 1;
+        window.speechSynthesis.speak(u);
+        return true;
+      }catch{ return false; }
+    },
+    async handleTTSRequest(userText, conv){
+      const textToSpeak = this.extractText(userText);
+      if(!textToSpeak || textToSpeak.length < 2){
+        const errMsg = { id: generateId(), role:'ai', content:'⚠️ لم أجد نصًا لتحويله لصوت — اكتب مثل: `حول النص "مرحبا كيف حالك" الى صوت`', timestamp:new Date().toISOString(), isError:true };
+        conv.messages.push(errMsg); MessageRenderer.appendMessage(errMsg); StateController.save(); return;
+      }
+      // create placeholder AI message with TTS card immediately
+      const ttsCard = `[tts:${textToSpeak}]`;
+      const aiMsg = { id: generateId(), role:'ai', content:`تم استلام طلب تحويل النص لصوت — جارٍ التوليد عبر نماذج الصوت...\n\n${ttsCard}\n\n> النص: "${textToSpeak.slice(0,180)}"`, timestamp:new Date().toISOString(), model:'TTS Orchestrator' };
+      conv.messages.push(aiMsg);
+      MessageRenderer.appendMessage(aiMsg);
+      StateController.save();
+      // try cloud in background and upgrade card to [audio:blob]
+      try{
+        const cloudUrl = await this.synthesizeWithCloud(textToSpeak);
+        if(cloudUrl){
+          aiMsg.content = `✅ تم توليد الصوت بنجاح عبر نماذج الصوت (Cloud TTS):\n\n[audio:${cloudUrl}|${textToSpeak.slice(0,60)}|TTS Cloud]\n\n> النص: "${textToSpeak.slice(0,180)}"`;
+          MessageRenderer.appendMessage(aiMsg);
+          StateController.save();
+          MessageRenderer.showToast('🔊 تم توليد الملف الصوتي — جاهز للتشغيل والتحميل','success');
+        } else {
+          MessageRenderer.showToast('🔊 جاهز — اضغط تشغيل للاستماع (محلي)','info');
+        }
+      }catch(e){ console.warn('[TTS]',e); }
+    }
+  };
+  window.TTSEngine = TTSEngine;
+  window._playTTS = function(btn){
+    try{
+      const card = btn.closest('.tts-card');
+      const encoded = card?.dataset?.ttsText || '';
+      const text = decodeURIComponent(encoded);
+      if(!text) return;
+      const playIcon = btn.querySelector('.play-icon'), pauseIcon = btn.querySelector('.pause-icon');
+      if(window.speechSynthesis.speaking){
+        window.speechSynthesis.cancel();
+        if(playIcon) playIcon.style.display='block';
+        if(pauseIcon) pauseIcon.style.display='none';
+        return;
+      }
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      const isAr = /[\u0600-\u06FF]/.test(text);
+      u.lang = isAr ? 'ar-EG' : 'en-US';
+      u.onstart = ()=>{ if(playIcon) playIcon.style.display='none'; if(pauseIcon) pauseIcon.style.display='block'; };
+      u.onend = ()=>{ if(playIcon) playIcon.style.display='block'; if(pauseIcon) pauseIcon.style.display='none'; };
+      u.onerror = ()=>{ if(playIcon) playIcon.style.display='block'; if(pauseIcon) pauseIcon.style.display='none'; };
+      window.speechSynthesis.speak(u);
+      MessageRenderer.showToast('🔊 جاري التشغيل...','info');
+    }catch(e){ console.warn(e); }
+  };
+  window._downloadTTS = function(btn){
+    try{
+      const card = btn.closest('.tts-card');
+      const text = decodeURIComponent(card?.dataset?.ttsText||'');
+      if(!text) return;
+      // No blob available locally — offer text download as fallback + hint for cloud
+      const blob = new Blob([text], {type:'text/plain;charset=utf-8'});
+      const url = URL.createObjectURL(blob);
+      const a=document.createElement('a'); a.href=url; a.download=`tts_${Date.now()}.txt`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),2000);
+      MessageRenderer.showToast('ℹ️ الصوت المحلي لا يولّد MP3 — تم تحميل النص. فعّل Cloud TTS (OpenRouter key) للحصول على MP3','info');
+    }catch(e){ console.warn(e); }
+  };
+
+  // ─────────────────────────────────────────────────────────────────
   // 7. CHAT CONTROLLER & STREAM ORCHESTRATOR — Extracted to modules/chat-engine.js
   // ─────────────────────────────────────────────────────────────────
   const ChatEngine = window.ChatEngine || {
@@ -919,6 +1057,19 @@
         const hit=ragKeys.filter(k=> textForPayload.toLowerCase().includes(k.toLowerCase()));
         for(const f of hit.slice(0,2)){ try{ const r=await fetch(`./${f}?t=${Date.now()}`); if(r.ok){ const t=await r.text(); textForPayload+=`\n\n--- ملف ${f} (مقتطف) ---\n${t.slice(0,3500)}\n---`; } }catch{} }
       }catch{}
+
+      // ── TTS delegation: text models → audio models ──
+      if(window.TTSEngine && window.TTSEngine.isTTSRequest(textForPayload)){
+        // clear previews
+        state.attachments = [];
+        const pc = $('attachment-preview-container');
+        if(pc){ pc.classList.add('hidden'); pc.innerHTML=''; }
+        const userMsgTTS = StateController.addMessage('user', userText.trim() || textForPayload, null, currentAttachments);
+        if(userMsgTTS) MessageRenderer.appendMessage(userMsgTTS);
+        state.sendInFlight = false; state.sendLock = false; UIEngine.updateSendBtnState();
+        await window.TTSEngine.handleTTSRequest(textForPayload, conv);
+        return;
+      }
 
       // Clear previews & state
       state.attachments = [];
