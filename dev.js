@@ -1228,6 +1228,19 @@ STRICT RULE: The local engine automatically merges your surgical patches directl
   // ─────────────────────────────────────────────────────────────────
   // 7b. DEV OBSERVER — 5-Agent Code Audit & Verification Card
   // ─────────────────────────────────────────────────────────────────
+  const isRealAuditDefect = (text) => {
+    if (!text) return false;
+    const s = String(text).trim();
+    if (/Review unavailable|provider error|timeout|rate limit|quota/i.test(s)) return false;
+    // Negations of problems are positive approvals
+    if (/لا\s*توجد\s*(ثغرات|أخطاء|مشاكل|تعليقات)|خالٍ?\s*من\s*(الثغرات|الأخطاء)|بدون\s*(ثغرات|أخطاء)|سليم\s*ومتماسك|مطابق\s*وسليم|آمن\s*ومحمي|جاهز\s*للإنتاج|متوافق\s*ودقيق|no\s*(vulnerabilit|error|bug|issue)|0\s*(errors|issues)|clean|secure|intact/i.test(s)) {
+      if (!/غير\s*مطابق|يوجد\s*خلل|ثغرة\s*(حرجة|أمنية|واضحة)|تنبيه:\s*(خلل|كسر)|استبدال\s*أعمى/i.test(s)) {
+        return false;
+      }
+    }
+    return /غير\s*مطابق|ثغرة\s*(حرجة|أمنية|واضحة)|تنبيه:\s*(خلل|كسر|نقص)|استبدال\s*أعمى|Critical|Vulnerability\s*found|SyntaxError/i.test(s);
+  };
+
   const DevObserverEngine = window.DevObserverEngine || {
     async observe(userText, aiResponse, tier, aiMsgId, conv) {
       const isAr = /[\u0600-\u06FF]/.test((userText || '') + ' ' + (aiResponse || '').slice(0, 200));
@@ -1273,7 +1286,8 @@ STRICT RULE: The local engine automatically merges your surgical patches directl
             ${agentNames.map((name, i) => {
               const isCompleted = !isRunning || i < currentAgentIndex;
               const isActive = isRunning && i === currentAgentIndex;
-              const hasError = reviewerResults[i] && reviewerResults[i].lines && reviewerResults[i].lines.some(l => /تنبيه|ثغرة|غير مطابق|Warn|Fail|Error|Vulnerability/i.test(l));
+              const isOverallApproved = !isRunning && (warnCount === 0);
+              const hasError = !isOverallApproved && reviewerResults[i] && reviewerResults[i].lines && reviewerResults[i].lines.some(isRealAuditDefect);
               const nodeClass = isCompleted ? (hasError ? 'failed' : 'completed') : (isActive ? 'active' : 'pending');
               return `
                 <div class="audit-pulse-node ${nodeClass}" title="${name}">
@@ -1288,8 +1302,8 @@ STRICT RULE: The local engine automatically merges your surgical patches directl
 
         // Simplified clean bullets list (only genuine issues or concise status)
         const simplifiedBullets = bullets.map(b => {
-          const isWarn = /تنبيه|ثغرة|غير مطابق|استبدال أعمى|استبدال|خطأ|وهمي|Warn|Fail|Error|Vulnerability/i.test(b);
-          return `<li class="peer-bullet ${isWarn ? 'warn' : 'ok'}"><span class="peer-bullet-dot"></span><span>${escapeHtml(b.replace(/^[•\-\*\d\.\s]+/, ''))}</span></li>`;
+          const isWarn = isRealAuditDefect(b);
+          return `<li class="peer-bullet ${isWarn ? 'warn' : 'ok'}" dir="rtl"><span class="peer-bullet-dot"></span><span class="peer-bullet-text">${escapeHtml(b.replace(/^[•\-\*\d\.\s]+/, ''))}</span></li>`;
         }).join('');
 
         const auditMarkup = `
@@ -1511,7 +1525,7 @@ Reply strictly in 5 concise lines starting with • :
         ];
       }
 
-      const warnCount = collectedBullets.filter(b => /تنبيه|ثغرة|غير مطابق|استبدال أعمى|استبدال|خطأ|وهمي|Warn|Fail|Error|Vulnerability/i.test(b)).length;
+      const warnCount = collectedBullets.filter(isRealAuditDefect).length;
       renderUI(collectedBullets, '', false, warnCount, finalSummary || collectedBullets.join('\n'), reviewerResults, 5);
 
       // Persist audit results in the active conversation message for seamless persistence across page reloads
@@ -2199,7 +2213,8 @@ Reply strictly in 5 concise lines starting with • :
             const pipelineTrackHtml = `
               <div class="audit-pulse-track">
                 ${agentNames.map((name, i) => {
-                  const hasError = reviewerResults[i] && reviewerResults[i].lines && reviewerResults[i].lines.some(l => /تنبيه|ثغرة|غير مطابق|Warn|Fail|Error|Vulnerability/i.test(l));
+                  const isOverallApproved = (warnCount === 0);
+                  const hasError = !isOverallApproved && reviewerResults[i] && reviewerResults[i].lines && reviewerResults[i].lines.some(isRealAuditDefect);
                   const nodeClass = hasError ? 'failed' : 'completed';
                   return `
                     <div class="audit-pulse-node ${nodeClass}" title="${name}">
@@ -2213,8 +2228,8 @@ Reply strictly in 5 concise lines starting with • :
             `;
 
             const simplifiedBullets = bullets.map(b => {
-              const isWarn = /تنبيه|ثغرة|غير مطابق|استبدال أعمى|استبدال|خطأ|وهمي|Warn|Fail|Error|Vulnerability/i.test(b);
-              return `<li class="peer-bullet ${isWarn ? 'warn' : 'ok'}"><span class="peer-bullet-dot"></span><span>${escapeHtml(b.replace(/^[•\-\*\d\.\s]+/, ''))}</span></li>`;
+              const isWarn = isRealAuditDefect(b);
+              return `<li class="peer-bullet ${isWarn ? 'warn' : 'ok'}" dir="rtl"><span class="peer-bullet-dot"></span><span class="peer-bullet-text">${escapeHtml(b.replace(/^[•\-\*\d\.\s]+/, ''))}</span></li>`;
             }).join('');
 
             const auditMarkup = `
