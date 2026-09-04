@@ -3359,19 +3359,19 @@ Reply strictly in 5 concise lines starting with • :
           if (JSON.stringify(mergedNotes) !== JSON.stringify(remoteData.notes)) {
             await this.pushToRemote(mergedData);
           }
-          this.setSyncStatus('synced', 'متزامن مع المستودع');
-          if (showToast && window.DevUIEngine) window.DevUIEngine.showToast('✅ تمت مزامنة الملاحظات مع المستودع بنجاح', 'success');
+          this.setSyncStatus('synced', 'Synced with Repo');
+          if (showToast && window.DevUIEngine) window.DevUIEngine.showToast('✅ Notes synced with GitHub repository', 'success');
         } else {
           if (localData.notes.length > 0) {
             await this.pushToRemote(localData);
           }
-          this.setSyncStatus('synced', 'متزامن مع المستودع');
-          if (showToast && window.DevUIEngine) window.DevUIEngine.showToast('✅ تم حفظ الملاحظات في المستودع', 'success');
+          this.setSyncStatus('synced', 'Synced with Repo');
+          if (showToast && window.DevUIEngine) window.DevUIEngine.showToast('✅ Notes saved to GitHub repository', 'success');
         }
       } catch (e) {
         console.warn('[DevNotes] sync error:', e);
-        this.setSyncStatus('local', 'وضع محلي (أوفلاين)');
-        if (showToast && window.DevUIEngine) window.DevUIEngine.showToast('تعذرت المزامنة مع المستودع، تم الحفظ محلياً: ' + e.message, 'warning');
+        this.setSyncStatus('local', 'Offline (Local Mode)');
+        if (showToast && window.DevUIEngine) window.DevUIEngine.showToast('Repo sync unavailable, saved locally: ' + e.message, 'warning');
       } finally {
         this.isSyncing = false;
       }
@@ -3394,27 +3394,28 @@ Reply strictly in 5 concise lines starting with • :
         listEl.innerHTML = `
           <div class="dev-notes-empty-state">
             <div class="empty-icon">📝</div>
-            <p><strong>لا توجد ملاحظات ${kw ? 'تطابق البحث' : 'حتى الآن'}</strong></p>
-            <p style="margin-top:4px; font-size:11.5px; opacity:0.8;">${kw ? 'جرّب كلمة بحث أخرى.' : 'اضغط على "+ ملاحظة جديدة" لتدوين أي فكرة أو مهمة ومزامنتها فوراً بين أجهزتك.'}</p>
+            <p><strong>No notes found${kw ? ' matching search' : ' yet'}</strong></p>
+            <p style="margin-top:4px; font-size:11.5px; opacity:0.8;">${kw ? 'Try searching with another keyword.' : 'Click "+ New Note" to write ideas, tasks, or code snippets synced across all your devices.'}</p>
           </div>
         `;
         return;
       }
 
       const tagNames = {
-        idea: '💡 فكرة',
-        code: '💻 كود',
-        todo: '📋 مهمة',
-        bug: '🐛 ثغرة',
-        note: '📌 عام'
+        idea: '💡 Idea',
+        code: '💻 Code',
+        todo: '📋 To-Do',
+        bug: '🐛 Bug',
+        note: '📌 General'
       };
 
       listEl.innerHTML = filtered.map(note => {
         const tagCls = note.tag || 'note';
-        const tagLabel = tagNames[tagCls] || '📌 عام';
-        const dateStr = note.updated_at ? new Date(note.updated_at).toLocaleString('ar-EG', { dateStyle: 'short', timeStyle: 'short' }) : '';
-        const safeTitle = (note.title || 'ملاحظة بدون عنوان').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const tagLabel = tagNames[tagCls] || '📌 General';
+        const dateStr = note.updated_at ? new Date(note.updated_at).toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short' }) : '';
+        const safeTitle = (note.title || 'Untitled Note').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         const safeContent = (note.content || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const isLong = (note.content || '').length > 130 || (note.content || '').split('\n').length > 3;
 
         return `
           <div class="dev-note-item-card" data-note-id="${note.id}">
@@ -3425,16 +3426,17 @@ Reply strictly in 5 concise lines starting with • :
               </div>
               <span class="note-card-time">${dateStr}</span>
             </div>
-            <div class="note-card-body">${safeContent}</div>
+            <div class="note-card-body" id="note-body-${note.id}" onclick="window._toggleNoteCardExpand('${note.id}')">${safeContent}</div>
+            ${isLong ? `<button type="button" class="note-expand-btn" id="expand-btn-${note.id}" onclick="window._toggleNoteCardExpand('${note.id}')">Show More ▾</button>` : ''}
             <div class="note-card-actions">
-              <button type="button" class="note-action-btn" onclick="window._copyDevNote('${note.id}')" title="نسخ نص الملاحظة">
-                <span>📋</span><span>نسخ</span>
+              <button type="button" class="note-action-btn copy-btn" onclick="window._copyDevNote('${note.id}', this)" title="Copy Full Text">
+                <span>📋</span><span>Copy Full</span>
               </button>
-              <button type="button" class="note-action-btn" onclick="window._editDevNote('${note.id}')" title="تعديل الملاحظة">
-                <span>✏️</span><span>تعديل</span>
+              <button type="button" class="note-action-btn" onclick="window._editDevNote('${note.id}')" title="Edit Note">
+                <span>✏️</span><span>Edit</span>
               </button>
-              <button type="button" class="note-action-btn delete" onclick="window._deleteDevNote('${note.id}')" title="حذف الملاحظة">
-                <span>🗑️</span><span>حذف</span>
+              <button type="button" class="note-action-btn delete" onclick="window._deleteDevNote('${note.id}')" title="Delete Note">
+                <span>🗑️</span><span>Delete</span>
               </button>
             </div>
           </div>
@@ -3466,13 +3468,13 @@ Reply strictly in 5 concise lines starting with • :
     if (show) {
       wrap.classList.remove('hidden');
       if (editNote) {
-        $('note-editor-title-label').textContent = '✏️ تعديل الملاحظة';
+        $('note-editor-title-label').textContent = '✏️ Edit Note';
         $('editing-note-id').value = editNote.id;
         $('note-input-title').value = editNote.title || '';
         $('note-input-tag').value = editNote.tag || 'note';
         $('note-input-body').value = editNote.content || '';
       } else {
-        $('note-editor-title-label').textContent = '➕ إضافة ملاحظة جديدة';
+        $('note-editor-title-label').textContent = '➕ Add New Note';
         $('editing-note-id').value = '';
         $('note-input-title').value = '';
         $('note-input-tag').value = 'idea';
@@ -3487,11 +3489,36 @@ Reply strictly in 5 concise lines starting with • :
     }
   };
 
+  window._toggleNoteCardExpand = function(id) {
+    const bodyEl = document.getElementById(`note-body-${id}`);
+    const btnEl = document.getElementById(`expand-btn-${id}`);
+    if (!bodyEl) return;
+    const isExpanded = bodyEl.classList.toggle('expanded');
+    if (btnEl) {
+      btnEl.textContent = isExpanded ? 'Show Less ▴' : 'Show More ▾';
+    }
+  };
+
+  window._copyEditorNoteText = function() {
+    const title = $('note-input-title')?.value.trim() || '';
+    const body = $('note-input-body')?.value.trim() || '';
+    const text = (title ? `[${title}]\n` : '') + body;
+    if (!text) {
+      if (window.DevUIEngine) window.DevUIEngine.showToast('No text in editor to copy', 'warning');
+      return;
+    }
+    navigator.clipboard.writeText(text).then(() => {
+      if (window.DevUIEngine) window.DevUIEngine.showToast('📋 Full note text copied from editor!', 'success');
+    }).catch(err => {
+      if (window.DevUIEngine) window.DevUIEngine.showToast('Copy failed: ' + err.message, 'error');
+    });
+  };
+
   window._saveDevNote = async function() {
     const bodyInput = $('note-input-body');
     const content = bodyInput ? bodyInput.value.trim() : '';
     if (!content) {
-      if (window.DevUIEngine) window.DevUIEngine.showToast('يرجى كتابة نص الملاحظة', 'warning');
+      if (window.DevUIEngine) window.DevUIEngine.showToast('Please enter note content', 'warning');
       return;
     }
     const editId = $('editing-note-id')?.value;
@@ -3522,7 +3549,7 @@ Reply strictly in 5 concise lines starting with • :
     DevNotesEngine.saveLocalData(data);
     DevNotesEngine.renderList();
     window._toggleNewNoteForm(false);
-    if (window.DevUIEngine) window.DevUIEngine.showToast('💾 تم حفظ الملاحظة وجارٍ المزامنة...', 'success');
+    if (window.DevUIEngine) window.DevUIEngine.showToast('💾 Note saved! Syncing with repo...', 'success');
     await DevNotesEngine.syncWithRemote(false);
   };
 
@@ -3535,25 +3562,34 @@ Reply strictly in 5 concise lines starting with • :
   };
 
   window._deleteDevNote = async function(id) {
-    if (!confirm('هل أنت متأكد من حذف هذه الملاحظة؟')) return;
+    if (!confirm('Are you sure you want to delete this note?')) return;
     const data = DevNotesEngine.getLocalData();
     data.notes = data.notes.filter(n => n.id !== id);
     DevNotesEngine.saveLocalData(data);
     DevNotesEngine.renderList();
-    if (window.DevUIEngine) window.DevUIEngine.showToast('🗑️ تم حذف الملاحظة وجارٍ التحديث في المستودع...', 'info');
+    if (window.DevUIEngine) window.DevUIEngine.showToast('🗑️ Note deleted! Updating repo...', 'info');
     await DevNotesEngine.pushToRemote(data).catch(()=>{});
-    DevNotesEngine.setSyncStatus('synced', 'متزامن مع المستودع');
+    DevNotesEngine.setSyncStatus('synced', 'Synced with Repo');
   };
 
-  window._copyDevNote = function(id) {
+  window._copyDevNote = function(id, btn = null) {
     const data = DevNotesEngine.getLocalData();
     const note = data.notes.find(n => n.id === id);
     if (!note) return;
     const text = (note.title ? `[${note.title}]\n` : '') + (note.content || '');
     navigator.clipboard.writeText(text).then(() => {
-      if (window.DevUIEngine) window.DevUIEngine.showToast('📋 تم نسخ نص الملاحظة!', 'success');
+      if (btn) {
+        btn.classList.add('copied');
+        const origHtml = btn.innerHTML;
+        btn.innerHTML = '<span>✓</span><span>Copied!</span>';
+        setTimeout(() => {
+          btn.classList.remove('copied');
+          btn.innerHTML = origHtml;
+        }, 1800);
+      }
+      if (window.DevUIEngine) window.DevUIEngine.showToast('📋 Full note copied to clipboard!', 'success');
     }).catch(err => {
-      if (window.DevUIEngine) window.DevUIEngine.showToast('فشل النسخ: ' + err.message, 'error');
+      if (window.DevUIEngine) window.DevUIEngine.showToast('Copy failed: ' + err.message, 'error');
     });
   };
 
