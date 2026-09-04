@@ -2504,10 +2504,10 @@
       steps[1].status = t('نشط', 'Active');
       renderObserver();
 
-      // Build review prompt — if no improvement, don't suggest
+      // Build review prompt — if no improvement, don't suggest — now includes scope & TTS checks
       const reviewPrompt = isAr
-        ? `أنت مراقب جودة ذكي ومختصر من مستوى Balanced. راجع الرد:\n\nسؤال: """${userText.slice(0, 800)}"""\nرد (${tier}): """${aiResponse.slice(0, 2500)}"""\n\nأجب بهذا الشكل فقط (بدون مقدمات، نقاط عائمة •):\n• الالتزام: إذا نعم فاكتب "نعم" فقط بدون سبب، إذا لا فاكتب "لا — السبب بجملة واحدة"\n• التناقض: إذا لا يوجد تناقض فاكتب "لا" فقط، إذا يوجد فاكتب "نعم — السبب بجملة واحدة"\n• المصادر (لو قصة حقيقية): إذا موثوقة فاكتب "موثوقة" فقط، إذا تحتاج تحقق فاذكر السبب\n• تحسين عام: إذا لا يوجد تحسين حقيقي فاكتب "لا يوجد تحسين مطلوب" فقط بدون اقتراح، وإلا جملة واحدة عامة تنفع لأي سؤال — ممنوع ربطها بهذا السؤال\n`
-        : `You are concise reviewer. User: """${userText.slice(0, 800)}""" Response (${tier}): """${aiResponse.slice(0, 2500)}""" Reply as bullets • : 1. Compliance: if yes "yes" only else "no — reason" 2. Contradiction: if none "no" only else "yes — reason" 3. Sources: "reliable" only else reason 4. GENERAL improvement: if none write "No improvement needed" only, else one general sentence`;
+        ? `أنت مراقب جودة ذكي ومختصر من مستوى Balanced. راجع الرد:\n\nسؤال: """${userText.slice(0, 800)}"""\nرد (${tier}): """${aiResponse.slice(0, 2500)}"""\n\nأجب بهذا الشكل فقط (بدون مقدمات، نقاط عائمة •):\n• الالتزام: يشمل 3 فحوص: (أ) عدم تسريب تعليمات (ب) الشات لا يكتب ملف مشروع كامل/ deploy block — يجب أن يحول للـDev Studio (ج) طلب TTS يجب أن يخرج [tts:النص] لا كود Python — إذا نعم لكل الفحوص اكتب "نعم" فقط، إذا لا اكتب "لا — السبب بجملة"\n• التناقض: إذا لا يوجد تناقض فاكتب "لا" فقط، إذا يوجد فاكتب "نعم — السبب بجملة واحدة"\n• المصادر (لو قصة حقيقية): إذا موثوقة فاكتب "موثوقة" فقط، إذا تحتاج تحقق فاذكر السبب\n• تحسين عام: إذا لا يوجد تحسين حقيقي فاكتب "لا يوجد تحسين مطلوب" فقط بدون اقتراح، وإلا جملة واحدة عامة تنفع لأي سؤال — ممنوع ربطها بهذا السؤال\n`
+        : `You are concise reviewer. User: """${userText.slice(0, 800)}""" Response (${tier}): """${aiResponse.slice(0, 2500)}""" Reply as bullets • : 1. Compliance (leak + chat must not write full project file/deploy + TTS must be [tts:] not Python): if yes "yes" else "no — reason" 2. Contradiction: if none "no" else "yes — reason" 3. Sources: "reliable" else reason 4. GENERAL improvement: if none "No improvement needed" else one general sentence`;
 
       const reviewMessages = [
         { role: 'system', content: isAr ? 'أنت مراقب جودة محترف ومختصر.' : 'You are a concise quality reviewer.' },
