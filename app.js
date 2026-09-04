@@ -76,7 +76,7 @@
   // 3. STATE & PERSISTENCE CONTROLLER (StateController)
   // ─────────────────────────────────────────────────────────────────
   const state = {
-    currentLayer: (function(){ try{ const v=localStorage.getItem('xv1_chat_layer'); return (v==='voice'||v==='seekai')? v : 'general'; }catch{ return 'general'; }})(),
+    currentLayer: (function(){ try{ const v=localStorage.getItem('xv1_chat_layer'); return (v==='voice')? v : 'general'; }catch{ return 'general'; }})(),
     currentMode: (function(){ try{ const saved = localStorage.getItem('xv1_current_mode'); if (saved === 'BALANCE2') return 'HIGH'; if (saved === 'HARD') return 'HIGH'; if (saved === 'AUTO') return 'MID'; return (saved === 'HIGH' ? 'HIGH' : (saved || 'MID')); }catch{ return 'MID'; }})(),
     seekaiDirectModel: (function(){ try{ return localStorage.getItem('xv1_seekai_direct') || null; }catch{ return null; }})(),
     currentModel: null,
@@ -1217,30 +1217,28 @@
       });
       // voice mic reuse main recognition
       vMic?.addEventListener('click', ()=> document.getElementById('mic-btn')?.click());
-      // swipe on chat area to switch (3-way cycle)
+      // swipe on chat area to switch (2-way: general ↔ voice)
       let sx=0;
       const area = document.getElementById('chat-area');
       area?.addEventListener('touchstart', e=> sx=e.touches[0].clientX, {passive:true});
       area?.addEventListener('touchend', e=>{
         const dx = e.changedTouches[0].clientX - sx;
         if(Math.abs(dx)>70){
-          const order=['text','voice','seekai'];
-          const idx=order.indexOf(this.current);
-          if(dx<0){ this.apply(order[(idx+1)%3], true); } else { this.apply(order[(idx+2)%3], true); }
+          if(dx<0 && this.current==='text') this.apply('voice', true);
+          else if(dx>0 && this.current==='voice') this.apply('text', true);
         }
       }, {passive:true});
     },
     apply(mode, save){
-      const order=['text','voice','seekai'];
+      const order=['text','voice'];
       this.current = order.includes(mode)? mode : 'text';
-      const layer = this.current==='text'?'general': this.current;
+      const layer = this.current==='text'?'general':'voice';
       state.currentLayer = layer;
       if(save) try{ localStorage.setItem('xv1_chat_layer', layer); }catch{}
       try{ localStorage.setItem('xv1_chat_layer', layer); }catch{}
       document.querySelectorAll('.chat-dot').forEach(d=> d.classList.toggle('active', d.dataset.mode===this.current));
       document.getElementById('input-section')?.classList.toggle('hidden', this.current!=='text');
       document.getElementById('voice-input-section')?.classList.toggle('hidden', this.current!=='voice');
-      document.getElementById('seekai-input-section')?.classList.toggle('hidden', this.current!=='seekai');
       // switch history/layer persistence
       try{
         const list = state.conversations.filter(c=> (c.layer||'general')===layer);
@@ -1384,15 +1382,25 @@
   // ── Usage Pie Controller — tiny pie next to refresh, popup on click ──
   const UsagePieController = {
     getCurrentModelId(){
-      const mode = window.VoiceChatController?.current || 'text';
-      if(mode==='voice'){
-        return document.getElementById('tts-model-select')?.value || 'fishaudio/fish-speech-1.5:free';
-      }
-      if(mode==='seekai'){
-        return document.getElementById('seekai-model-select')?.value || 'claude-opus-5';
-      }
-      // main chat — first enabled model of current tier
+      // Always show last chat model's consumption (as requested) — not current dot's model
       try{
+        // try last AI message in general layer
+        const convs = (window.state?.conversations||[]).filter(c=> (c.layer||'general')==='general');
+        for(let i=0;i<convs.length;i++){
+          const msgs = convs[i].messages || [];
+          for(let j=msgs.length-1;j>=0;j--){
+            if(msgs[j].role==='ai' && msgs[j].model){
+              // map model name to id if needed
+              const name = msgs[j].model;
+              // try to find id by name
+              const all = Object.values(window.MODELS||{}).flat();
+              const found = all.find(m=> m.name===name || m.id===name);
+              if(found) return found.id;
+              return name;
+            }
+          }
+        }
+        // fallback to current tier's first model
         const tier = (window.state?.currentMode || 'MID');
         const list = window.MODELS?.[tier] || window.MODELS?.MID || [];
         const enabled = list.filter(m=> window.isModelEnabled? window.isModelEnabled(m.id): true);
