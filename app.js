@@ -749,7 +749,19 @@
         const ok = bullets.filter(b=>/نعم|yes|✓|مُلتزم|Compliant/i.test(b)).length;
         const warn = bullets.length - ok;
         const getCls=b=>{ if(b.includes('التناقض:')) return b.includes('نعم')?'warn':'ok'; if(b.includes('الالتزام:')||b.includes('المصادر:')) return (b.includes('نعم')||b.includes('موثوقة')||b.includes('سليم'))?'ok':'warn'; return b.includes('لا')||b.includes('تحتاج')?'warn':'ok'; }; const mainBul=bullets.slice(0,-1), sBul=bullets.slice(-1)[0]; const mainHtml=mainBul.length? `<ul class="observer-bullets">${mainBul.map(b=>`<li class="observer-bullet ${getCls(b)}"><span class="observer-bullet-text">${this.escapeHtml(b)}</span></li>`).join('')}</ul>` : ''; const sugBox=(sBul && !(sBul.includes('لا يوجد') || /No improvement/i.test(sBul)))? `<div class="suggest-box"><div class="suggest-box-body">${this.escapeHtml(sBul)}</div><div class="actions-header" onclick="this.closest('.suggest-box')?.classList.toggle('collapsed')"><span>⚡</span><span>ACTIONS</span><span class="agent-committed-nums"><span class="agent-num ok">0</span><span class="agent-num warn">3</span></span><span class="agent-toggle-icon">▾</span></div><div class="suggest-box-actions"><button class="observer-apply-btn" onclick="window._applyObserverSuggestion(this.closest('.observer-box').dataset.review||'', this)">⚡ Apply</button><button class="llm-end-btn" onclick="window._sendToLLM(this)">⚡ Send to LLM</button><button class="llm-send-apply-btn" onclick="window._sendAndApply(this)">⚡ Send & Apply</button></div></div>` : ''; const bulletsHtml=(mainHtml+sugBox) || `<div style="font-size:12px;color:var(--text-dim)">${this.escapeHtml(String(msg.observerReview).slice(0,140))}</div>`;
-        observerHtml = `<div class="observer-box" data-review="${this.escapeHtml(msg.observerReview).slice(0,300)}"><div class="agent-committed-header" onclick="this.closest('.observer-box')?.classList.toggle('collapsed')"><span>👁️</span><span class="agent-committed-label">COMMITTED</span><span class="agent-committed-nums"><span class="agent-num ok">${ok}</span><span class="agent-num warn">${warn}</span></span><span class="agent-toggle-icon">▾</span></div><div class="observer-details">${bulletsHtml}</div></div>`;
+        const chainNames = ['Qwen', 'GPT-20B', 'North', 'GPT-120B', 'Inkling'];
+        const pipelineTrackHtml = `
+          <div class="audit-pulse-track">
+            ${chainNames.map((name, i) => `
+              <div class="audit-pulse-node completed" title="${name}">
+                <span class="audit-pulse-dot"></span>
+                <span class="audit-pulse-label">${i + 1}. ${name}</span>
+              </div>
+              ${i < chainNames.length - 1 ? '<div class="audit-pulse-connector completed"></div>' : ''}
+            `).join('')}
+          </div>
+        `;
+        observerHtml = `<div class="observer-box" data-review="${this.escapeHtml(msg.observerReview).slice(0,300)}"><div class="agent-committed-header" onclick="this.closest('.observer-box')?.classList.toggle('collapsed')"><span>👁️</span><span class="agent-committed-label">COMMITTED</span><span class="agent-committed-nums"><span class="agent-num ok">${ok}</span><span class="agent-num warn">${warn}</span></span><span class="agent-toggle-icon">▾</span></div><div class="observer-details">${pipelineTrackHtml}${bulletsHtml}</div></div>`;
       }
 
       if (msg.role === 'user') {
@@ -825,49 +837,50 @@
       this.scrollToBottom();
     },
 
-    startProgressiveThinking(initialWord = 'Analyzing') {
+    startProgressiveThinking(initialWord = 'Analyzing', queryText = '') {
       this.hideTyping();
       this.showTyping(initialWord);
       const isAr = false;
       const tier = (window.state && window.state.currentMode) || 'MID';
-      // ── Dynamic thinking depth: 1-6 stages based on question complexity ──
-      const rawInput = (document.getElementById('user-input')?.value || initialWord || '').trim();
+      // Read queryText directly or fallback to last user message in conversation
+      const lastUserMsg = window.state?.conversations?.find(c=>c.id===window.state.activeConvId)?.messages?.slice().reverse().find(m=>m.role==='user');
+      const rawInput = (queryText || lastUserMsg?.content || document.getElementById('user-input')?.value || initialWord || '').trim();
       const convLen = (window.state?.conversations?.find(c=>c.id===window.state.activeConvId)?.messages?.length || 0);
-      const isTrivial = /^(السلام عليكم|مرحبا|هلا|اهلا|انت (كويس|عامل ايه)|كيف حالك|ترجم( كلمة)?$|ضيف تشكيل|عدل الجملة)/i.test(rawInput) || rawInput.length < 18;
+      const isTrivial = /^(السلام عليكم|مرحبا|هلا|اهلا|انت (كويس|عامل ايه)|كيف حالك|ترجم( كلمة)?$|ضيف تشكيل|عدل الجملة)/i.test(rawInput);
       const isSimple = rawInput.length < 40 && !/(حلل|قارن|صمم|خطة|استراتيجي|ناقش|اشرح بالتفصيل|SWOT|مصفوفة|تقرير)/i.test(rawInput);
       const isComplex = /(حلل|قارن|صمم|استراتيجي|خطة|تقرير|مصفوفة|اشرح بالتفصيل|CNN|نظرية الألعاب|LTV|SWOT|Freemium|Network Effects|مستقبل العمل)/i.test(rawInput) || rawInput.length > 120 || convLen > 12;
       let depth;
-      if(isTrivial) depth = 1;
-      else if(isSimple) depth = tier==='HIGH'?2: tier==='FAST'?1:2;
-      else if(isComplex) depth = tier==='HIGH'?6: tier==='MID'?4:2;
-      else depth = tier==='HIGH'?4: tier==='MID'?3:2;
-      // cap by tier
-      if(tier==='FAST') depth = Math.min(depth,2);
-      if(tier==='MID') depth = Math.min(depth,4);
+      if (tier === 'HIGH') {
+        depth = isTrivial ? 3 : (isSimple ? 4 : 6);
+      } else if (tier === 'FAST') {
+        depth = 2;
+      } else {
+        depth = isTrivial ? 2 : (isSimple ? 3 : 4);
+      }
       const allHigh = [
-        { icon: '🧠', text: 'Intent', delay: 500 },
-        { icon: '📂', text: 'Gather context', delay: 1100 },
-        { icon: '📋', text: 'Plan structure', delay: 1800 },
-        { icon: '✍️', text: 'Draft', delay: 2500 },
-        { icon: '🔍', text: 'Self-critique', delay: 3200 },
-        { icon: '✨', text: 'Refine', delay: 4000 }
+        { icon: '🧠', text: 'Intent Understanding', delay: 0 },
+        { icon: '📂', text: 'Gather Context & Directives', delay: 400 },
+        { icon: '📋', text: 'Cognitive Architecture & Plan', delay: 900 },
+        { icon: '✍️', text: 'Synthesizing Deep Analysis', delay: 1500 },
+        { icon: '🔍', text: 'Epistemic Self-Critique', delay: 2200 },
+        { icon: '✨', text: 'Refinement & Polish', delay: 3000 }
       ];
       const allMid = [
-        { icon: '🧠', text: 'Understanding', delay: 500 },
-        { icon: '🔍', text: 'Analyzing', delay: 1200 },
-        { icon: '✨', text: 'Composing', delay: 2000 },
-        { icon: '📌', text: 'Polish', delay: 2600 }
+        { icon: '🧠', text: 'Understanding', delay: 0 },
+        { icon: '🔍', text: 'Analyzing context', delay: 600 },
+        { icon: '✨', text: 'Composing response', delay: 1300 },
+        { icon: '📌', text: 'Refining quality', delay: 2000 }
       ];
       const allFast = [
-        { icon: '🧠', text: 'Understanding', delay: 400 },
-        { icon: '✨', text: 'Composing', delay: 900 }
+        { icon: '🧠', text: 'Understanding', delay: 0 },
+        { icon: '✨', text: 'Composing', delay: 500 }
       ];
       let flowStages = tier==='HIGH' ? allHigh.slice(0,depth) : tier==='FAST' ? allFast.slice(0,depth) : allMid.slice(0,depth);
-      if(flowStages.length===0) flowStages=[{ icon: '🧠', text: 'Understanding', delay: 400 }];
+      if(flowStages.length===0) flowStages=[{ icon: '🧠', text: 'Understanding', delay: 0 }];
       const wordStagesAll = [
-        { word: 'Analyzing', delay: 0 },
-        { word: 'Composing', delay: 900 },
-        { word: 'Refining', delay: 1900 }
+        { word: tier==='HIGH'?'Deep Reasoning':'Analyzing', delay: 0 },
+        { word: 'Composing', delay: 800 },
+        { word: 'Refining', delay: 1700 }
       ];
       const wordStages = wordStagesAll.slice(0, Math.min(depth, 3));
       this._thinkingTimers = [];
@@ -875,7 +888,7 @@
         const timer = setTimeout(() => { this.setThinkingStage(stage.word); }, stage.delay);
         this._thinkingTimers.push(timer);
       });
-      // Ensure flow container alignment matches thinking language (strong model = English → LTR)
+      // Ensure flow container alignment matches thinking language
       const flowEl = document.getElementById('thinking-flow');
       if (flowEl) { flowEl.setAttribute('dir', isAr ? 'rtl' : 'ltr'); flowEl.style.textAlign = isAr ? 'right' : 'left'; }
       flowStages.forEach(s => {
@@ -883,9 +896,8 @@
           const flow = document.getElementById('thinking-flow');
           if (!flow) return;
           const item = document.createElement('div');
-          item.className = 'thinking-flow-item';
-          // Only left bullet, no right icon — LTR for English thinking
-          item.classList.add('reached'); item.innerHTML = `<span class="flow-dot"></span><span class="flow-text">${this.escapeHtml(s.text)}</span>`;
+          item.className = 'thinking-flow-item reached';
+          item.innerHTML = `<span class="flow-dot"></span><span class="flow-text">${this.escapeHtml(s.text)}</span>`;
           flow.appendChild(item);
           this.scrollToBottom();
         }, s.delay);
@@ -2155,7 +2167,7 @@
       state.isStreaming = true;
       state.isThinking = true;
       state.abortController = new AbortController();
-      MessageRenderer.startProgressiveThinking('Analyzing');
+      MessageRenderer.startProgressiveThinking(tier==='HIGH'?'Deep Reasoning':'Analyzing', textForPayload);
       UIEngine.updateSendBtnState();
 
       const tier = state.currentMode || 'MID';
@@ -2582,10 +2594,11 @@
         box.style.cssText = 'margin-top:10px; padding:0; border:none; background:transparent;';
         if(finalReview) box.dataset.review = finalReview;
         box.innerHTML = `
-          <div class="agent-committed-header" onclick="this.closest('.multi-agent-box').classList.toggle('collapsed')">
+          <div class="agent-committed-header" onclick="this.closest('.observer-box')?.classList.toggle('collapsed')">
             <span>👁️</span><span class="agent-committed-label">COMMITTED</span><span class="agent-committed-nums"><span class="agent-num ok">${okN}</span><span class="agent-num warn">${Math.max(0,warnN)}</span></span><span class="agent-toggle-icon">▾</span>
           </div>
           <div class="observer-details">
+            ${pipelineTrackHtml}
             ${reviewHtml}
             ${applyBtn}
           </div>
@@ -2641,6 +2654,7 @@
         let accumulated='';
         for(let i=0;i<chain.length;i++){
           const agent=chain[i];
+          renderObserver(accumulated, i);
           const isLast=i===chain.length-1;
           const prev = accumulated ? "\n\nprev:\n"+accumulated.slice(0,1500) : '';
           const q1 = isAr ? "مراجع "+(i+1)+"/5 ("+agent.name+")"+prev+" سؤال: "+userText.slice(0,600)+" رد: "+aiResponse.slice(0,2000) : "Reviewer "+(i+1)+"/5 ("+agent.name+")"+prev+" Q: "+userText.slice(0,600)+" A: "+aiResponse.slice(0,2000);
@@ -2652,9 +2666,7 @@
           try{ out=await callAgent(agent, msgs, ac.signal); }catch(e){ clearTimeout(tm); if(/quota|credit/i.test(e.message||'')) throw e; continue; }
           clearTimeout(tm);
           accumulated += (accumulated? "\n":'') + "["+agent.name+"]: "+out.trim().slice(0,400);
-          if(i===0){ steps[1].status=t('✓ تم','✓ Done'); steps[1].summary=t('المراجع 1 — تم','R1 done'); steps[2].status=t('نشط','Active'); renderObserver(accumulated.slice(0,400)); }
-          else if(i===1){ steps[2].status=t('✓ تم','✓ Done'); steps[3].status=t('نشط','Active'); renderObserver(accumulated.slice(0,600)); }
-          else if(i===2){ steps[3].status=t('✓ تم','✓ Done'); steps[4].status=t('نشط','Active'); renderObserver(accumulated.slice(0,800)); }
+          renderObserver(accumulated, i + 1);
           if(isLast) reviewText=out;
         }
         if(!reviewText) reviewText=accumulated;
@@ -2669,7 +2681,7 @@
           const msg = conv.messages.find(m=> m.id===aiMsgId);
           if(msg){ msg.observerReview = reviewText; msg.observerBrief = concise; msg.observerSteps = steps; if(window.StateController) window.StateController.save(); }
         } catch {}
-        renderObserver(reviewText);
+        renderObserver(reviewText, 5);
         // Ensure no glow/motion remains
         try{ document.querySelectorAll('.input-container.thinking').forEach(el=> el.classList.remove('thinking')); }catch{}
         try{ document.querySelectorAll('.flow-dot').forEach(d=> d.style.animation='none'); }catch{}
