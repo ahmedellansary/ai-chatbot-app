@@ -384,7 +384,13 @@
           resolvedContent += `\n\n═══════════════════════════════════════════════════════════════\n📁 AVAILABLE_INSTRUCTION_FOLDERS (for smart editing — JSON strict):\n${JSON.stringify(folders, null, 2)}\n═══════════════════════════════════════════════════════════════\nUse this list to decide: if keywords/domain match existing file → append there; else create new folder. Always check duplicate/conflict before outputting JSON block.`;
         } catch {}
       }
+      if (!resolvedContent.includes('DUAL & SELF-DEVELOPMENT STEWARDSHIP')) {
+        resolvedContent += '\n\n═══════════════════════════════════════════════════════════════\n🏛️ DUAL & SELF-DEVELOPMENT STEWARDSHIP (مسؤولية تطوير المنظومة وتطوير الذات):\nأنت لست مسؤولاً فقط عن تطوير الشات بوت (index.html, app.js, style.css)، بل أنت المهندس المسؤول عن تطوير وتحسين برنامج المطور نفسه (dev.html, dev.js, dev_style.css, dev-manifest.json) ومنصة العمليات (ops.html, ops.js). عندما يطلب المستخدم أي تعديل أو ميزة تخص برنامج المطور، تدرك أنك تعدل تطبيقك الذاتي وتنفذ التعديل فوراً على ملفات dev.* مع deploy block.\n═══════════════════════════════════════════════════════════════';
+      }
       resolvedContent += '\n\n═══════════════════════════════════════════════════════════════\n⚡ CONCISE RESPONSE PROTOCOL (مختصر ومفيد):\nالردود دائماً مختصرة ومباشرة وفي صلب الموضوع. تشخيص دقيق في 1-2 جملة ثم تنفيذ الكود والتعديل المطلوب فوراً بدون حشو أو مقدمات.\n═══════════════════════════════════════════════════════════════';
+      if (!resolvedContent.includes('5-AGENT UNIFIED AUDIT')) {
+        resolvedContent += '\n\n═══════════════════════════════════════════════════════════════\n🛡️ 5-AGENT UNIFIED AUDIT COMPLIANCE (هيئة التدقيق الخماسي):\nكودك يخضع لمراجعة فورية من 5 وكلاء تدقيق (Lead Architect, Coder, Verifier, Security, Architecture). المراجعون يفحصون الكود والتطبيق كاملاً بدقة للتأكد من سلامة التطبيق بالكامل بنسبة 100% وليس فقط السطور المعدلة، ويردون بـ 5 أسطر محددة وموجزة بنفس الهدف المباشر. احرص دائماً على أن يكون الكود والتطبيق متكاملاً وسليماً 100% ولا يكسر أي وظيفة.\n═══════════════════════════════════════════════════════════════';
+      }
       return resolvedContent;
     },
 
@@ -1276,41 +1282,60 @@ STRICT RULE: The local engine automatically merges your surgical patches directl
 
       renderUI([], t('جاري فحص الكود بالوكلاء الـ 5...', 'Auditing with 5 agents...'), true, 0);
 
+      // Extract full code context from deploy block or response for complete-file auditing
+      let codeToAudit = aiResponse;
+      try {
+        const deployMatch = aiResponse.match(/```json\s*(\{[\s\S]*?"file"[\s\S]*?\})\s*```/);
+        if (deployMatch) {
+          const parsed = JSON.parse(deployMatch[1]);
+          codeToAudit = `[Target File: ${parsed.file || 'active'}]\n[Commit: ${parsed.message || ''}]\n[Full Code Implementation]:\n${parsed.content || ''}`;
+        } else {
+          const codeBlocks = [...aiResponse.matchAll(/```(?:html|javascript|js|css)?\s*([\s\S]*?)```/g)];
+          if (codeBlocks.length) {
+            codeToAudit = codeBlocks.map((m, idx) => `[Code Block ${idx + 1}]:\n${m[1]}`).join('\n\n');
+          }
+        }
+      } catch (e) {}
+
       const reviewPrompt = isAr
-        ? `أنت هيئة تدقيق الكود البرمجي (5-Agent Software Quality Audit) في بيئة X.v1 Dev Studio.
-قيم الرد والكود المقترح أعلاه بدقة متناهية عبر 5 محاور هندسية صارمة:
-1. مطابقة الطلب (Compliance): هل الكود يلبي طلب المستخدم الأصلي بدقة؟ (مطابق / غير مطابق: السبب)
-2. سلامة الملف الكامل (Anti-Blind-Overwrite): هل الكود يحتفظ بالملف الأصلي بالكامل (~3100 سطر)، أم قام الموديل باستبدال كارثي بكود قصير وهمي (mock)؟ (سليم ومحفوظ / تنبيه: استبدال أعمى بكود قصير)
-3. الأمان والثغرات (Security & XSS): هل تم فحص أحجام الصور والأنواع وتطهير المدخلات لتجنب XSS و Memory Leaks؟ (سليم ومحمي / ثغرة: اذكرها)
-4. معمارية الـ DOM (Architecture & DOM): هل يستخدم المعرفات الحقيقية في dev.html و dev.js ولم يخترع عناصر وهمية؟ (سليم ومطابق / تنبيه: معرفات وهمية)
-5. الشياكة والأداء (Elegance & UX): هل الكود نظيف وجاهز للإنتاج بدون محاكاة تجريبية (no mock)؟ (سليم / ملاحظة: اذكرها)
+        ? `أنت عضو في هيئة التدقيق الخماسي الموحد (5-Agent Unified Code Quality Audit) في X.v1 Dev Studio.
+مهمتك الصارمة: فحص ومراجعة الكود والتطبيق كاملاً وليس فقط السطور المعدلة، للتحقق من أن التطبيق تم فيه بشكل سليم بنسبة 100% وبكامل وظائفه ولا يسبب أي كسر لمعمارية النظام.
+أجب باختصار شديد ومباشر لتحقيق نفس الهدف دون أي مقدمات، عبر 5 أسطر محددة تبدأ بـ • :
 
-طلب المستخدم: """${userText.slice(0, 500)}"""
-رد وكود المطور: """${aiResponse.slice(0, 2500)}"""
+1. مطابقة التطبيق الشامل (Full Implementation Compliance): هل تم تطبيق الميزة/التعديل المطلوب بشكل سليم ومكتمل داخل الكود بالكامل دون نقص؟ (مطابق وسليم / غير مطابق: السبب بكلمات معدودة)
+2. سلامة المعمارية والتطبيق الكامل (Full Architecture & Integrity): هل يحتفظ الملف بكامل هيكله ووظائفه الحيوية، وهل التعديل منسجم مع كامل دوال الملف دون كسر أو استبدال أعمى؟ (سليم ومتماسك / تنبيه: خلل بالتكامل أو نقص)
+3. الأمان وتدفق البيانات (Security & Resource Safety): هل الكود آمن تماماً عبر كامل المسار من XSS، وتطهير المدخلات، وتفادي تسريب الذاكرة (Event Leaks)؟ (آمن ومحمي / ثغرة: اذكرها باختصار)
+4. توافق الـ DOM والعناصر الحقيقية (DOM & State Sync): هل يستخدم الكود المعرفات الحقيقية لملفات dev/app بدون اختراع عناصر وهمية وبما يضمن عمل الواجهة بنجاح؟ (متوافق ودقيق / تنبيه: عدم تطابق)
+5. الجاهزية للإنتاج والأداء (Production-Ready Elegance): هل الكود جاهز للتشغيل والإنتاج الفعلي بنسبة 100% وخالٍ من الأكواد التجريبية أو التعليقات الزائفة؟ (جاهز للإنتاج / ملاحظة تحسين)
 
-أجب بإيجاز صارم في 5 أسطر فقط تبدأ بـ • :
-• 1. مطابقة الطلب: (مطابق / غير مطابق: بجملة واحدة)
-• 2. سلامة الملف الكامل: (سليم ومحفوظ / تنبيه: اذكر إذا كان كود قصير وهمي)
-• 3. الأمان والثغرات: (سليم ومحمي / ثغرة: اذكرها بجملة واحدة)
-• 4. معمارية الـ DOM: (سليم / تنبيه: اذكر المعرفات الخاطئة)
-• 5. الشياكة والأداء: (ممتاز / ملاحظة تحسين)`
-        : `You are the 5-Agent Code Quality Audit in X.v1 Dev Studio.
-Audit the proposed code across 5 strict technical dimensions:
-1. Request Compliance: Does it fulfill user request accurately? (Compliant / Non-compliant: reason)
-2. Anti-Blind-Overwrite: Does it preserve the full file (~3100 lines) or dangerously truncate into short mock code? (Safe / Warning: blind overwrite detected)
-3. Security & XSS: Validates MIME types, file size bounds, sanitizes input? (Safe / Vulnerability: reason)
-4. Architecture & DOM: Uses genuine dev.html IDs, no hallucinated elements or missing files? (Safe / Warning)
-5. Elegance & Performance: Production quality, no mock/simulation logic? (Excellent / Note)
+طلب المستخدم: """${userText.slice(0, 600)}"""
+كود وتطبيق المطور الكامل: """${codeToAudit.slice(0, 5000)}"""
 
-User Request: """${userText.slice(0, 500)}"""
-Dev Code: """${aiResponse.slice(0, 2500)}"""
+أجب بإيجاز صارم في 5 أسطر فقط تبدأ بـ • (سطر لكل محور بنفس الهدف المباشر):
+• 1. مطابقة التطبيق: (مطابق وسليم / غير مطابق: السبب باختصار)
+• 2. سلامة الملف والتكامل: (سليم ومتماسك / تنبيه: السبب باختصار)
+• 3. الأمان وتدفق البيانات: (آمن ومحمي / ثغرة: باختصار)
+• 4. توافق الـ DOM: (متوافق ودقيق / تنبيه: باختصار)
+• 5. الجاهزية للإنتاج: (جاهز وموثوق / ملاحظة: باختصار)`
+        : `You are a member of the 5-Agent Unified Code Quality Audit in X.v1 Dev Studio.
+Your core mission: Audit the FULL application and codebase integrity, NOT just isolated modified lines. Verify that the implementation functions properly throughout the entire code context.
+Respond with extreme conciseness and zero fluff, sharing the same goal across 5 lines starting with • :
 
-Reply in exactly 5 brief lines starting with • :
+1. Full Implementation Compliance: Is the user request fully implemented end-to-end throughout the code? (Compliant & Complete / Non-compliant: brief reason)
+2. Full-File & System Integrity: Does the file preserve its complete architecture and harmonize with all surrounding functions without blind truncation? (Sound & Intact / Warning: integrity flaw)
+3. Security & Resource Safety: Is the full execution path safe from XSS, memory/listener leaks, and uncaught rejections? (Secure / Vulnerability: brief note)
+4. DOM & State Synchronization: Uses genuine repository IDs and valid lifecycle events across the UI? (Accurate & Synced / Warning)
+5. Production Readiness & Elegance: 100% runnable, high-performance production code with zero mock logic? (Production Ready / Improvement note)
+
+User Request: """${userText.slice(0, 600)}"""
+Proposed Code & Full Implementation: """${codeToAudit.slice(0, 5000)}"""
+
+Reply strictly in 5 concise lines starting with • :
 • 1. Compliance: (Compliant / Non-compliant)
-• 2. Full Integrity: (Safe / Warning)
-• 3. Security: (Safe / Vulnerability)
-• 4. DOM Architecture: (Safe / Warning)
-• 5. Elegance: (Clean / Improvement)`;
+• 2. Full Integrity: (Intact & Harmonized / Warning)
+• 3. Security: (Secure / Vulnerability)
+• 4. DOM & State: (Accurate & Synced / Warning)
+• 5. Production: (Production Ready / Note)`;
 
       const reviewers = [
         { id: 'openai/gpt-oss-120b', provider: 'groq', name: 'GPT 120B Lead Architect' },
@@ -1361,8 +1386,8 @@ Reply in exactly 5 brief lines starting with • :
           try {
           const msgs = [
             { role: 'system', content: isAr
-              ? `أنت المراجع رقم ${i + 1} من 5. راجع بعد المراجع السابق بالتتابع، ولا تتجاهل ملاحظاته. أضف فقط ملاحظاتك الدقيقة في خمسة أسطر قصيرة.`
-              : `You are reviewer ${i + 1} of 5 in a strict sequential audit. Review the previous reviewer output before adding your own precise findings. Return only five concise lines.` },
+              ? `أنت المراجع رقم ${i + 1} من 5 في هيئة التدقيق الخماسي الموحدة. مهمتك الصارمة فحص الكود والتطبيق كاملاً وليس فقط السطور المعدلة للتأكد من أن التطبيق تم فيه بشكل سليم بنسبة 100%. أجب باختصار شديد ومباشر لتحقيق نفس الهدف دون أي مقدمات، عبر 5 أسطر محددة تبدأ بـ • (سطر لكل نقطة وبلا حشو).`
+              : `You are reviewer ${i + 1} of 5 in the unified audit. Your strict mission: Audit the full code and entire application context, NOT just modified lines, to ensure complete and sound implementation. Respond with extreme conciseness and zero fluff, sharing the same goal across 5 lines starting with •.` },
             { role: 'user', content: `${reviewPrompt}\n\nPrevious reviewer output (must be checked and refined):\n${previousReview || 'None — you are the first reviewer.'}` }
           ];
           const ac = new AbortController();
