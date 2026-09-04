@@ -11,8 +11,8 @@
   <meta name="apple-mobile-web-app-title" content="X.v1">
 
   <title>X.v1</title>
-  <link rel="manifest" href="./manifest.json?v=323">
-  <link rel="stylesheet" href="./style.css?v=323">
+  <link rel="manifest" href="./manifest.json?v=324">
+  <link rel="stylesheet" href="./style.css?v=324">
   <link rel="icon" type="image/png" href="./icons/icon-192.png?v=295">
   <link rel="apple-touch-icon" href="./icons/icon-192.png?v=295">
   <link rel="apple-touch-icon" sizes="512x512" href="./icons/icon-512.png?v=295">
@@ -118,7 +118,7 @@
         <span>Settings</span>
       </button>
       <div id="app-version-badge" style="font-size:10.5px; color:var(--text-dim); font-family:var(--font-mono); text-align:center; padding:8px 0 2px; border-top:1px solid var(--border-subtle); margin-top:8px; letter-spacing:0.02em;">
-        <span id="app-version-text">v323</span> • <span id="app-last-update">جاري...</span>
+        <span id="app-version-text">v324</span> • <span id="app-last-update">جاري...</span>
       </div>
     </div>
   </aside>
@@ -136,7 +136,7 @@
       </button>
       <div id="chat-top-badge" class="repo-status-badge" style="position:absolute; left:50%; transform:translateX(-50%);">
         <span class="status-dot"></span>
-        <span class="repo-badge-text" id="chat-status-text" style="font-weight:700; letter-spacing:0.02em;">X (V323) —</span>
+        <span class="repo-badge-text" id="chat-status-text" style="font-weight:700; letter-spacing:0.02em;">X (V324) —</span>
       </div>
       <script>
         (function() {
@@ -303,7 +303,7 @@
     <!-- Voice Chat Box — hidden until dot 2 touch -->
     <div id="voice-input-section" class="hidden">
       <div class="input-container voice-container">
-        <!-- Voice Controls Top — Model selector (short names) + speed -->
+        <!-- Voice Controls Top — Model + dynamic voices + accent + speed -->
         <div class="voice-controls-top">
           <label class="voice-ctrl-label">🎙️</label>
           <select id="tts-model-select" class="tts-voice-select" title="اختيار الموديل">
@@ -311,11 +311,13 @@
             <option value="openai/tts-1-hd">GPT HD</option>
             <option value="openai/tts-1">GPT</option>
           </select>
-          <select id="tts-voice-select" class="tts-voice-select" title="الصوت" style="max-width:90px;">
-            <option value="alloy">Alloy</option>
-            <option value="echo">Echo</option>
-            <option value="nova">Nova</option>
-            <option value="shimmer">Shimmer</option>
+          <select id="tts-voice-select" class="tts-voice-select" title="الصوت" style="max-width:92px;"></select>
+          <select id="tts-accent-select" class="tts-voice-select" title="اللهجة" style="max-width:92px;">
+            <option value="auto">Auto</option>
+            <option value="ar-EG">مصري</option>
+            <option value="ar-SA">خليجي</option>
+            <option value="ar-LB">لبناني</option>
+            <option value="en-US">English</option>
           </select>
           <button class="audio-ctrl-btn speed-btn" id="tts-speed-btn" title="السرعة">1x</button>
         </div>
@@ -538,11 +540,11 @@
 </div>
 
 <!-- Consolidated High-Performance Script Bundle -->
-<script src="./config.js?v=323"></script>
-<script src="./auth.js?v=323"></script>
-<script src="./models.js?v=323"></script>
-<script src="./github.js?v=323"></script>
-<script src="./instruction-manager.js?v=323"></script>
-<script src="./app.js?v=323"></script>
+<script src="./config.js?v=324"></script>
+<script src="./auth.js?v=324"></script>
+<script src="./models.js?v=324"></script>
+<script src="./github.js?v=324"></script>
+<script src="./instruction-manager.js?v=324"></script>
+<script src="./app.js?v=324"></script>
 </body>
 </html>
