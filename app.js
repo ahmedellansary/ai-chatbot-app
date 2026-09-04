@@ -1990,6 +1990,172 @@
   window.UsagePieController = UsagePieController;
 
   // ─────────────────────────────────────────────────────────────────
+  // 6b. CLIENT-SIDE DOCUMENT RAG ENGINE (Smart Chunking & Semantic Search)
+  // ─────────────────────────────────────────────────────────────────
+  const DocumentRAGEngine = window.DocumentRAGEngine || {
+    dbName: 'xv1_rag_vault',
+    storeName: 'documents',
+    _db: null,
+
+    async initDB() {
+      if (this._db) return this._db;
+      return new Promise((resolve) => {
+        try {
+          if (typeof indexedDB === 'undefined') return resolve(null);
+          const req = indexedDB.open(this.dbName, 1);
+          req.onupgradeneeded = (e) => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains(this.storeName)) {
+              db.createObjectStore(this.storeName, { keyPath: 'name' });
+            }
+          };
+          req.onsuccess = (e) => {
+            this._db = e.target.result;
+            resolve(this._db);
+          };
+          req.onerror = () => resolve(null);
+        } catch(e) {
+          resolve(null);
+        }
+      });
+    },
+
+    async saveDoc(name, text, chunks) {
+      try {
+        const db = await this.initDB();
+        if (db) {
+          const tx = db.transaction(this.storeName, 'readwrite');
+          const store = tx.objectStore(this.storeName);
+          store.put({ name, text: text.slice(0, 100000), chunks, savedAt: Date.now() });
+        }
+      } catch(e) {}
+      try {
+        sessionStorage.setItem('doc_' + name, JSON.stringify(chunks.slice(0, 40)));
+      } catch(e) {}
+    },
+
+    chunkText(text, chunkSize = 500, overlap = 70) {
+      if (!text || text.length <= chunkSize) return [text];
+      const chunks = [];
+      let i = 0;
+      while (i < text.length) {
+        let end = Math.min(i + chunkSize, text.length);
+        if (end < text.length) {
+          const nextBreak = text.lastIndexOf('\n', end);
+          if (nextBreak > i + 150) end = nextBreak;
+          else {
+            const nextDot = text.lastIndexOf('. ', end);
+            if (nextDot > i + 150) end = nextDot + 1;
+          }
+        }
+        const chunk = text.slice(i, end).trim();
+        if (chunk) chunks.push(chunk);
+        i = end - overlap;
+        if (i >= text.length - overlap) break;
+      }
+      return chunks;
+    },
+
+    searchRelevantChunks(query, chunks, maxChunks = 4) {
+      if (!chunks || !chunks.length) return [];
+      if (chunks.length <= maxChunks) return chunks;
+
+      const cleanQ = (query || '').toLowerCase().replace(/[^\w\u0600-\u06FF\s]/g, ' ');
+      const qTokens = cleanQ.split(/\s+/).filter(t => t.length > 2);
+      if (!qTokens.length) return chunks.slice(0, maxChunks);
+
+      const scored = chunks.map((chunk, idx) => {
+        const lower = chunk.toLowerCase();
+        let score = 0;
+        for (const token of qTokens) {
+          const regex = new RegExp(token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+          const matches = (lower.match(regex) || []).length;
+          if (matches > 0) {
+            score += matches * (1 + Math.min(token.length, 8) / 4);
+          }
+        }
+        return { chunk, score, idx };
+      });
+
+      scored.sort((a, b) => b.score - a.score);
+      const top = scored.slice(0, maxChunks).filter(s => s.score > 0);
+      return top.length ? top.map(t => t.chunk) : chunks.slice(0, maxChunks);
+    }
+  };
+  try { window.DocumentRAGEngine = DocumentRAGEngine; } catch(e) {}
+
+  // ─────────────────────────────────────────────────────────────────
+  // 6c. LIVE REAL-TIME WEB SEARCH ENGINE
+  // ─────────────────────────────────────────────────────────────────
+  const WebSearchEngine = window.WebSearchEngine || {
+    isWebSearchIntent(query) {
+      const q = (query || '').toLowerCase().trim();
+      if (!q) return false;
+      const searchKeywords = [
+        'ابحث عن', 'ابحث في النت', 'بحث في الويب', 'آخر أخبار', 'اخبار اليوم', 'سعر', 'من هو', 'أين يقع',
+        'search', 'latest news', 'what is the price', 'who is', 'today', '2025', '2026', 'current status',
+        'طقس', 'weather', 'نتيجة مباراة', 'موقع', 'حدث'
+      ];
+      return searchKeywords.some(kw => q.includes(kw));
+    },
+
+    cleanSearchQuery(query) {
+      return (query || '')
+        .replace(/^(ابحث عن|ابحث في النت عن|ابحث في الويب عن|search for|google|search)\s+/i, '')
+        .replace(/[؟?؟!]/g, '')
+        .slice(0, 120)
+        .trim();
+    },
+
+    async search(query) {
+      const clean = this.cleanSearchQuery(query);
+      if (!clean) return null;
+
+      try {
+        const ddgUrl = `https://api.duckduckgo.com/?q=${encodeURIComponent(clean)}&format=json&no_html=1&skip_disambig=1`;
+        const res = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(ddgUrl)}`, {
+          signal: AbortSignal.timeout(3600)
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const results = [];
+          if (data.AbstractText) {
+            results.push({ title: data.Heading || clean, snippet: data.AbstractText, url: data.AbstractURL || 'DuckDuckGo' });
+          }
+          if (Array.isArray(data.RelatedTopics)) {
+            data.RelatedTopics.slice(0, 3).forEach(topic => {
+              if (topic.Text && topic.FirstURL) {
+                results.push({ title: topic.Text.split(' - ')[0] || clean, snippet: topic.Text, url: topic.FirstURL });
+              }
+            });
+          }
+          if (results.length > 0) return results;
+        }
+      } catch (e) {}
+
+      try {
+        const isAr = /[\u0600-\u06FF]/.test(clean);
+        const lang = isAr ? 'ar' : 'en';
+        const wikiUrl = `https://${lang}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(clean.replace(/\s+/g, '_'))}`;
+        const wikiRes = await fetch(wikiUrl, { signal: AbortSignal.timeout(2800) });
+        if (wikiRes.ok) {
+          const wData = await wikiRes.json();
+          if (wData.extract) {
+            return [{
+              title: wData.title || clean,
+              snippet: wData.extract,
+              url: wData.content_urls?.desktop?.page || `https://${lang}.wikipedia.org`
+            }];
+          }
+        }
+      } catch (e) {}
+
+      return null;
+    }
+  };
+  try { window.WebSearchEngine = WebSearchEngine; } catch(e) {}
+
+  // ─────────────────────────────────────────────────────────────────
   // 7. CHAT CONTROLLER & STREAM ORCHESTRATOR — Extracted to modules/chat-engine.js
   // ─────────────────────────────────────────────────────────────────
   const ChatEngine = window.ChatEngine || {
@@ -1999,7 +2165,16 @@
 
       const attachedTexts = currentAttachments.filter(a => !a.type.startsWith('image/'));
       if (attachedTexts.length > 0) {
-        const fileContexts = attachedTexts.map(f => `--- محتوى الملف المرفق: ${f.name} ---\n${f.textContent || ''}\n--- نهاية الملف ---`).join('\n\n');
+        const fileContexts = attachedTexts.map(f => {
+          const raw = f.textContent || '';
+          if (raw.length <= 1500) {
+            return `--- محتوى الملف المرفق: ${f.name} ---\n${raw}\n--- نهاية الملف ---`;
+          }
+          const chunks = DocumentRAGEngine.chunkText(raw);
+          DocumentRAGEngine.saveDoc(f.name, raw, chunks);
+          const relevant = DocumentRAGEngine.searchRelevantChunks(userText, chunks, 4);
+          return `--- مقتطفات دلالية مطابقة من المستند المرفق: ${f.name} (${chunks.length} مقطع مفهرس محلياً) ---\n${relevant.join('\n\n---\n\n')}\n--- نهاية المقتطفات المفهرسة ---`;
+        }).join('\n\n');
         textForPayload = textForPayload ? `${textForPayload}\n\n${fileContexts}` : fileContexts;
       }
 
@@ -2018,24 +2193,27 @@
     },
 
     generateBriefing(conv, tier) {
-      if (!conv || !Array.isArray(conv.messages) || conv.messages.length <= 8) return '';
+      if (!conv || !Array.isArray(conv.messages) || conv.messages.length <= 6) return '';
       const cfg = this.getAdaptiveConfig(tier);
-      const firstUser = (conv.messages.find(m => m.role === 'user')?.content || '').slice(0, 250).replace(/\n/g, ' ').trim();
-      const lang = /[\u0600-\u06FF]/.test(firstUser) ? 'العربية' : 'English';
-      const turns = conv.messages.length;
       const title = conv.title || 'محادثة';
-      if (tier === 'HIGH') {
-        // HIGH: briefing for whole session + last summaries (up to 3200 chars) + last 18 lines will be sent verbatim via apiMessages
-        const recentAi = conv.messages.filter(m => m.role === 'ai').slice(-5).map(m => (m.content || '').slice(0, 220).replace(/\n/g, ' ').trim()).filter(Boolean).join(' | ');
-        const recentUser = conv.messages.filter(m => m.role === 'user').slice(-5).map(m => (m.content || '').slice(0, 180).replace(/\n/g, ' ').trim()).filter(Boolean).join(' | ');
-        let briefing = `📋 بريفنج المحادثة الكاملة (${title}):\n- الهدف الأساسي: ${firstUser.slice(0, 250)}\n- اللغة والنبرة: ${lang}\n- عدد التبادلات: ${turns}\n- آخر رسائل المستخدم: ${recentUser.slice(0, 500)}\n- آخر خلاصات AI: ${recentAi.slice(0, 600)}\n- ملاحظة: آخر 18 رسالة التالية مرسلة حرفيا كسياق كامل`;
-        if (briefing.length > cfg.maxBriefingChars) briefing = briefing.slice(0, cfg.maxBriefingChars) + '...';
-        return briefing;
+
+      const allMsgs = conv.messages.filter(m => m.content && (m.role === 'user' || m.role === 'ai'));
+      if (allMsgs.length <= cfg.recentCount) return '';
+
+      const olderMsgs = allMsgs.slice(0, allMsgs.length - cfg.recentCount);
+      const userGoals = olderMsgs.filter(m => m.role === 'user').map(m => m.content.slice(0, 140).replace(/\n/g, ' ').trim()).slice(-4);
+      const aiDecisions = olderMsgs.filter(m => m.role === 'ai').map(m => m.content.slice(0, 150).replace(/\n/g, ' ').trim()).slice(-4);
+
+      let memoryDigest = `🧠 [الذاكرة التراكمية للمحادثة (${title})]:\n` +
+        `- عدد التبادلات السابقة المؤرشفة: ${olderMsgs.length}\n` +
+        `- مسار طلبات المستخدم السابقة: ${userGoals.join(' ➔ ')}\n` +
+        `- القرارات والحلول التي اعتمدت سابقاً: ${aiDecisions.join(' | ')}\n` +
+        `[توجيه]: التزم بهذا السياق التراكمي بدقة. آخر ${cfg.recentCount} رسائل التالية هي النص الحرفي المباشر.`;
+
+      if (memoryDigest.length > cfg.maxBriefingChars) {
+        memoryDigest = memoryDigest.slice(0, cfg.maxBriefingChars) + '...';
       }
-      const recentAi = conv.messages.filter(m => m.role === 'ai').slice(-3).map(m => (m.content || '').slice(0, 180).replace(/\n/g, ' ').trim()).filter(Boolean).join(' | ');
-      let briefing = `📋 بريفنج المحادثة (${title}):\n- الهدف الأساسي: ${firstUser.slice(0, 180)}\n- اللغة والنبرة: ${lang}\n- عدد التبادلات: ${turns}\n- آخر خلاصات: ${recentAi.slice(0, 350)}`;
-      if (briefing.length > cfg.maxBriefingChars) briefing = briefing.slice(0, cfg.maxBriefingChars) + '...';
-      return briefing;
+      return memoryDigest;
     },
 
     async buildSystemPrompt(userText = '', attachments = [], conv = null, tier = 'MID') {
@@ -2092,9 +2270,19 @@
         try{ MessageRenderer.showToast('⚠️ تم اكتشاف بيانات حساسة — لن تُزامن للمستودع', 'error'); }catch{}
         textForPayload = textForPayload.replace(_sensitiveRe, '[REDACTED]');
       }
-      // Web Browse + RAG-lite enrichment (non-blocking for UI, but needed for AI context)
+      // Web Browse + Live Search + RAG-lite enrichment (non-blocking for UI, but needed for AI context)
       let enrichedPayload = textForPayload;
-      try{
+      try {
+        if (WebSearchEngine && WebSearchEngine.isWebSearchIntent(textForPayload)) {
+          MessageRenderer.setThinkingStage('🌐 البحث في الويب...');
+          const searchResults = await WebSearchEngine.search(textForPayload);
+          if (searchResults && searchResults.length > 0) {
+            const formatted = searchResults.map((r, i) => `${i + 1}. [${r.title}]: ${r.snippet} (المصدر: ${r.url})`).join('\n\n');
+            enrichedPayload += `\n\n[🌐 نتائج البحث الحي من الويب]:\n${formatted}\n--- استخدم هذه النتائج الحديثة لتقديم إجابة دقيقة ومحدثة مع ذكر المصادر عند اللزوم ---\n`;
+          }
+        }
+      } catch(e) {}
+      try {
         const urls=[...enrichedPayload.matchAll(/https?:\/\/[^\s"']+/g)].map(m=>m[0]).slice(0,1);
         for(const u of urls){ try{ const r=await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,{signal:AbortSignal.timeout(2800)}); if(r.ok){ const t=await r.text(); enrichedPayload+=`\n\n--- محتوى الرابط ${u} ---\n${t.slice(0,2500)}\n---`; } }catch{} }
         const ragKeys=['index.html','style.css','app.js','dev.js','dev_style.css','config.js','github.js','instructions.json'];
