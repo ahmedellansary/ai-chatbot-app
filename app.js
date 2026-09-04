@@ -744,40 +744,60 @@
 
       let multiAgentHtml = '';
       if (msg.multiAgentSteps && Array.isArray(msg.multiAgentSteps)) {
-        const stepsHtml = msg.multiAgentSteps.map(s => `
-          <div class="agent-step-item">
-            <div class="agent-step-header">
-              <span class="agent-step-name">${s.icon} ${this.escapeHtml(s.title)}</span>
-              <span class="agent-step-badge">${this.escapeHtml(s.status)}</span>
-            </div>
-            <div class="agent-step-body">${this.escapeHtml(s.summary || '')}</div>
-          </div>
-        `).join('');
         const okCount = msg.multiAgentSteps.filter(s=>/✓|مكتمل|معتمد|Done|Approved/i.test(s.status)).length;
         const warnCount = msg.multiAgentSteps.length - okCount;
+        const statusBadgeCls = warnCount > 0 ? 'warn' : 'ok';
+        const badgeLabel = warnCount > 0 ? `⚠️ ${warnCount} ملاحظات` : `✓ معتمد (0 أخطاء)`;
+        const pipelineTrackHtml = `
+          <div class="audit-pulse-track">
+            ${msg.multiAgentSteps.map((s, i) => {
+              const isCompleted = s.status.includes('✓') || s.status.includes('Done') || s.status.includes('معتمد');
+              const isWarn = s.status.includes('تجاوز') || s.hasError;
+              const nodeClass = isCompleted ? (isWarn ? 'failed' : 'completed') : 'completed';
+              return `
+                <div class="audit-pulse-node ${nodeClass}" title="${this.escapeHtml(s.title)}">
+                  <span class="audit-pulse-dot"></span>
+                  <span class="audit-pulse-label">${i + 1}. ${this.escapeHtml(s.shortName || s.title.split(' ')[0])}</span>
+                </div>
+                ${i < msg.multiAgentSteps.length - 1 ? '<div class="audit-pulse-connector completed"></div>' : ''}
+              `;
+            }).join('')}
+          </div>
+        `;
+        const bulletsHtml = msg.multiAgentSteps.filter(s => s.summary).map(s => {
+          const isWarn = s.status.includes('تجاوز') || s.hasError;
+          return `<li class="peer-bullet ${isWarn ? 'warn' : 'ok'}" dir="rtl"><span class="peer-bullet-dot"></span><span class="peer-bullet-text"><strong>${this.escapeHtml(s.title.split('(')[0].trim())}:</strong> ${this.escapeHtml(s.summary)}</span></li>`;
+        }).join('');
         multiAgentHtml = `
-          <div class="multi-agent-box" id="box-${msg.id}">
-            <div class="agent-committed-header" onclick="window._toggleThinkingBox('${msg.id}')">
-              <span style="color:var(--accent-color)">👥</span>
-              <span class="agent-committed-label">COMMITTED</span>
-              <span class="agent-committed-nums"><span class="agent-num ok">${okCount}</span><span class="agent-num warn">${warnCount}</span></span>
-              <span class="agent-toggle-icon" id="indicator-${msg.id}">▾</span>
+          <div class="multi-agent-box proposal-audit-section" id="box-${msg.id}">
+            <div class="proposal-audit-header" onclick="this.closest('.multi-agent-box')?.classList.toggle('collapsed')">
+              <div class="dev-peer-title">
+                <span class="dev-peer-icon">👥</span>
+                <span class="dev-peer-name">تشاور الوكلاء (${msg.multiAgentSteps.length} وكلاء)</span>
+                <span class="dev-peer-badge ${statusBadgeCls}">${badgeLabel}</span>
+              </div>
+              <span class="dev-peer-toggle">▾</span>
             </div>
-            <div class="multi-agent-content">
-              ${stepsHtml}
+            <div class="observer-details dev-peer-body">
+              ${pipelineTrackHtml}
+              <ul class="peer-bullets-list">${bulletsHtml}</ul>
             </div>
           </div>
         `;
       }
 
-      // Observer persistence — floating bullets + COMMITTED header, no numbers text, icon toggle
+      // Observer persistence — Dev parity horizontal pulse track + peer card
       let observerHtml = '';
       if (msg.observerReview) {
         const lines = String(msg.observerReview).split(/\n/).map(s=>s.trim()).filter(Boolean);
-        const bullets = lines.map(l=> l.replace(/^[��?]\s*/,'').replace(/^\d+[\.\)\-]\s*/,'').trim()).filter(Boolean).slice(0,5);
+        const bullets = lines.map(l=> l.replace(/^[?•\-*]\s*/,'').replace(/^\d+[\.\)\-]\s*/,'').trim()).filter(Boolean).slice(0,5);
         const ok = bullets.filter(b=>/نعم|yes|✓|مُلتزم|Compliant/i.test(b)).length;
         const warn = bullets.length - ok;
-        const getCls=b=>{ if(b.includes('التناقض:')) return b.includes('نعم')?'warn':'ok'; if(b.includes('الالتزام:')||b.includes('المصادر:')) return (b.includes('نعم')||b.includes('موثوقة')||b.includes('سليم'))?'ok':'warn'; return b.includes('لا')||b.includes('تحتاج')?'warn':'ok'; }; const mainBul=bullets.slice(0,-1), sBul=bullets.slice(-1)[0]; const mainHtml=mainBul.length? `<ul class="observer-bullets">${mainBul.map(b=>`<li class="observer-bullet ${getCls(b)}"><span class="observer-bullet-text">${this.escapeHtml(b)}</span></li>`).join('')}</ul>` : ''; const sugBox=(sBul && !(sBul.includes('لا يوجد') || /No improvement/i.test(sBul)))? `<div class="suggest-box"><div class="suggest-box-body">${this.escapeHtml(sBul)}</div><div class="actions-header" onclick="this.closest('.suggest-box')?.classList.toggle('collapsed')"><span>⚡</span><span>ACTIONS</span><span class="agent-committed-nums"><span class="agent-num ok">0</span><span class="agent-num warn">3</span></span><span class="agent-toggle-icon">▾</span></div><div class="suggest-box-actions"><button class="observer-apply-btn" onclick="window._applyObserverSuggestion(this.closest('.observer-box').dataset.review||'', this)">⚡ Apply</button><button class="llm-end-btn" onclick="window._sendToLLM(this)">⚡ Send to LLM</button><button class="llm-send-apply-btn" onclick="window._sendAndApply(this)">⚡ Send & Apply</button></div></div>` : ''; const bulletsHtml=(mainHtml+sugBox) || `<div style="font-size:12px;color:var(--text-dim)">${this.escapeHtml(String(msg.observerReview).slice(0,140))}</div>`;
+        const getCls=b=>{ if(b.includes('التناقض:')) return b.includes('نعم')?'warn':'ok'; if(b.includes('الالتزام:')||b.includes('المصادر:')) return (b.includes('نعم')||b.includes('موثوقة')||b.includes('سليم'))?'ok':'warn'; return b.includes('لا')||b.includes('تحتاج')?'warn':'ok'; };
+        const mainBul=bullets.slice(0,-1), sBul=bullets.slice(-1)[0];
+        const mainHtml=mainBul.length? `<ul class="peer-bullets-list">${mainBul.map(b=>`<li class="peer-bullet ${getCls(b)}" dir="rtl"><span class="peer-bullet-dot"></span><span class="peer-bullet-text">${this.escapeHtml(b)}</span></li>`).join('')}</ul>` : '';
+        const sugBox=(sBul && !(sBul.includes('لا يوجد') || /No improvement/i.test(sBul)))? `<div class="suggest-box"><div class="suggest-box-body">${this.escapeHtml(sBul)}</div><div class="peer-actions-bar"><button class="peer-action-btn apply-btn" onclick="window._applyObserverSuggestion(this.closest('.observer-box')?.dataset?.review||'', this)">⚡ Apply</button><button class="peer-action-btn retry-btn" onclick="window._sendToLLM(this)">🚀 Send to LLM</button><button class="peer-action-btn apply-btn" onclick="window._sendAndApply(this)">⚡ Send & Apply</button></div></div>` : '';
+        const bulletsHtml=(mainHtml+sugBox) || `<div style="font-size:12px;color:var(--text-dim)">${this.escapeHtml(String(msg.observerReview).slice(0,140))}</div>`;
         const chainNames = ['Qwen', 'GPT-20B', 'North', 'GPT-120B', 'Inkling'];
         const pipelineTrackHtml = `
           <div class="audit-pulse-track">
@@ -790,7 +810,21 @@
             `).join('')}
           </div>
         `;
-        observerHtml = `<div class="observer-box" data-review="${this.escapeHtml(msg.observerReview).slice(0,300)}"><div class="agent-committed-header" onclick="this.closest('.observer-box')?.classList.toggle('collapsed')"><span>👁️</span><span class="agent-committed-label">COMMITTED</span><span class="agent-committed-nums"><span class="agent-num ok">${ok}</span><span class="agent-num warn">${warn}</span></span><span class="agent-toggle-icon">▾</span></div><div class="observer-details">${pipelineTrackHtml}${bulletsHtml}</div></div>`;
+        const statusBadgeCls = warn > 0 ? 'warn' : 'ok';
+        const badgeLabel = warn > 0 ? `⚠️ ${warn} ملاحظات` : `✓ معتمد (0 أخطاء)`;
+        observerHtml = `
+          <div class="observer-box proposal-audit-section" data-review="${this.escapeHtml(msg.observerReview).slice(0,300)}">
+            <div class="proposal-audit-header" onclick="this.closest('.observer-box')?.classList.toggle('collapsed')">
+              <div class="dev-peer-title">
+                <span class="dev-peer-icon">🛡️</span>
+                <span class="dev-peer-name">فحص الجودة والمطابقة (5 مراجعين)</span>
+                <span class="dev-peer-badge ${statusBadgeCls}">${badgeLabel}</span>
+              </div>
+              <span class="dev-peer-toggle">▾</span>
+            </div>
+            <div class="observer-details dev-peer-body">${pipelineTrackHtml}${bulletsHtml}</div>
+          </div>
+        `;
       }
 
       if (msg.role === 'user') {
@@ -2130,13 +2164,15 @@
               return jj.choices?.[0]?.message?.content||'';
             };
             MessageRenderer.startProgressiveThinking('Understanding');
-            MessageRenderer.setThinkingStage('Analyst: '+ 'kimi-k3');
+            MessageRenderer.setThinkingStage('Analyst: kimi-k3');
             await new Promise(r=>setTimeout(r,300));
             const a1=await seekFetch('kimi-k3', [{role:'user', content: textForPayload+'\n[Analyst: provide concise draft]'}]);
+            MessageRenderer.setThinkingStage('Auditor: Preferences & Rules');
+            const aAud=await seekFetch('kimi-k3', [{role:'user', content: `طلب المستخدم: ${textForPayload}\nمسودة المحلل:\n${a1}\n[مدقق التفضيلات والتعليمات]: لخص التفضيلات الشخصية وسياق الشات وطابق المسودة مع تعليمات المجال ولغة الحوار/الأسلوب واذكر التقييم بدقة.`}]);
             MessageRenderer.setThinkingStage('Reviewer: deepseek-v4-pro');
-            const a2=await seekFetch('deepseek-v4-pro', [{role:'user', content: `User: ${textForPayload}\nDraft: ${a1}\n[Reviewer: critique in 2 bullets]`}]);
+            const a2=await seekFetch('deepseek-v4-pro', [{role:'user', content: `User: ${textForPayload}\nDraft: ${a1}\nAuditor: ${aAud}\n[Reviewer: critique in 2 bullets]`}]);
             MessageRenderer.setThinkingStage('Synthesizer: '+state.seekaiDirectModel);
-            const final=await seekFetch(state.seekaiDirectModel, [{role:'user', content: `${textForPayload}\n\nAnalyst: ${a1}\nReviewer: ${a2}\n[Synthesizer: final polished answer]`}]);
+            const final=await seekFetch(state.seekaiDirectModel, [{role:'user', content: `${textForPayload}\n\nAnalyst: ${a1}\nAuditor: ${aAud}\nReviewer: ${a2}\n[Synthesizer: final polished answer adhering to preferences and instructions]`}]);
             let contentF=String(final||'').replace(/https?:\/\/seekai\.cc[^\s]*/gi,'').trim();
             MessageRenderer.hideTyping(); state.isThinking=false;
             aiMsg2.content=contentF; MessageRenderer.appendMessage(aiMsg2); StateController.save();
@@ -2439,29 +2475,61 @@
         const row = getOrCreateRow();
         if (!row) return;
 
-        const stepsHtml = steps.map(s => `
-          <div class="agent-step-item">
-            <div class="agent-step-header">
-              <span class="agent-step-name">${s.icon} ${MessageRenderer.escapeHtml(s.title)}</span>
-              <span class="agent-step-badge">${MessageRenderer.escapeHtml(s.status)}</span>
-            </div>
-            <div class="agent-step-body">${MessageRenderer.escapeHtml(s.summary || 'جاري التحليل...')}</div>
-          </div>
-        `).join('');
+        const isDone = !isThinking && steps.every(s => s.status.includes('✓') || s.status.includes('معتمد') || s.status.includes('تجاوز'));
+        const okC = steps.filter(s => /✓|مكتمل|معتمد|Done|Approved/i.test(s.status)).length;
+        const warnC = steps.filter(s => s.status.includes('تجاوز') || s.hasError).length;
+        const statusBadgeCls = isDone ? (warnC > 0 ? 'warn' : 'ok') : 'running';
+        const badgeLabel = isDone ? (warnC > 0 ? `⚠️ ${warnC} ملاحظات` : '✓ معتمد (0 أخطاء)') : '⏳ جاري التشاور...';
 
-        const okC = steps.filter(s=>/✓|مكتمل|معتمد|Done|Approved/i.test(s.status)).length;
-        const warnC = steps.length - okC;
+        const pipelineTrackHtml = `
+          <div class="audit-pulse-track">
+            ${steps.map((s, i) => {
+              const isCompleted = s.status.includes('✓') || s.status.includes('Done') || s.status.includes('معتمد');
+              const isActive = s.status.includes('نشط') || s.status.includes('Active');
+              const isWarn = s.status.includes('تجاوز') || s.hasError;
+              const nodeClass = isCompleted ? (isWarn ? 'failed' : 'completed') : (isActive ? 'active' : 'pending');
+              return `
+                <div class="audit-pulse-node ${nodeClass}" title="${MessageRenderer.escapeHtml(s.title)}">
+                  <span class="audit-pulse-dot"></span>
+                  <span class="audit-pulse-label">${i + 1}. ${MessageRenderer.escapeHtml(s.shortName || s.title.split(' ')[0])}</span>
+                </div>
+                ${i < steps.length - 1 ? `<div class="audit-pulse-connector ${isCompleted ? 'completed' : ''}"></div>` : ''}
+              `;
+            }).join('')}
+          </div>
+        `;
+
+        const bulletsHtml = steps.filter(s => s.summary && s.status !== 'في الانتظار').map(s => {
+          const isWarn = s.status.includes('تجاوز') || s.hasError;
+          return `
+            <li class="peer-bullet ${isWarn ? 'warn' : 'ok'}" dir="rtl">
+              <span class="peer-bullet-dot"></span>
+              <span class="peer-bullet-text"><strong>${MessageRenderer.escapeHtml(s.title.split('(')[0].trim())}:</strong> ${MessageRenderer.escapeHtml(s.summary)}</span>
+            </li>
+          `;
+        }).join('');
+
         const boxHtml = `
-          <div class="multi-agent-box" id="box-${aiMsgId}">
-            <div class="agent-committed-header" onclick="window._toggleThinkingBox('${aiMsgId}'); this.classList.toggle('collapsed')">
-              <span style="color:var(--accent-color)">👥</span>
-              <span class="agent-committed-label">COMMITTED</span>
-              <span class="agent-committed-nums"><span class="agent-num ok">${okC}</span><span class="agent-num warn">${warnC}</span></span>
-              <span class="agent-toggle-icon" id="indicator-${aiMsgId}">▾</span>
+          <div class="multi-agent-box proposal-audit-section" id="box-${aiMsgId}">
+            <div class="proposal-audit-header" onclick="this.closest('.multi-agent-box')?.classList.toggle('collapsed')">
+              <div class="dev-peer-title">
+                <span class="dev-peer-icon">👥</span>
+                <span class="dev-peer-name">تشاور الوكلاء (${steps.length} وكلاء)</span>
+                <span class="dev-peer-badge ${statusBadgeCls}">${badgeLabel}</span>
+              </div>
+              <span class="dev-peer-toggle">▾</span>
             </div>
-            <div class="multi-agent-content">
-              ${stepsHtml}
-              <div style="display:flex;gap:8px;margin-top:8px"><button class="llm-end-btn" onclick="window._endToLLM(this)">⚡ Send to LLM</button></div>
+            <div class="observer-details dev-peer-body">
+              ${pipelineTrackHtml}
+              <ul class="peer-bullets-list">
+                ${bulletsHtml || `<li class="peer-bullet ok" dir="rtl"><span class="peer-bullet-dot"></span><span class="peer-bullet-text">جاري بدء مراحل التشاور والتدقيق...</span></li>`}
+              </ul>
+              ${isDone ? `
+                <div class="peer-actions-bar">
+                  <button class="peer-action-btn retry-btn" onclick="window._sendToLLM(this)"><span>🚀</span><span>Send to LLM</span></button>
+                  <button class="peer-action-btn apply-btn" onclick="window._applyObserverSuggestion(this.closest('.multi-agent-box')?.dataset?.review||'', this)"><span>⚡</span><span>Apply</span></button>
+                </div>
+              ` : ''}
             </div>
           </div>
         `;
@@ -2478,9 +2546,10 @@
       };
 
       const steps = [
-        { id: 1, icon: '💡', title: 'المحلل الاستراتيجي (Strategic Analyst)', status: 'نشط الآن', summary: 'جاري دراسة المسألة واقتراح التحليل الأولي...' },
-        { id: 2, icon: '🔍', title: 'الناقد المنطقي (Critical Reviewer)', status: 'في الانتظار', summary: 'بانتظار مسودة المحلل للتدقيق والفحص...' },
-        { id: 3, icon: '👑', title: 'المقرر النهائي (Chief Synthesizer)', status: 'في الانتظار', summary: 'بانتظار التقرير النهائي للصياغة المعتمدة...' }
+        { id: 1, icon: '💡', title: 'المحلل الاستراتيجي (Strategic Analyst)', shortName: 'المحلل', status: 'نشط الآن', summary: 'جاري دراسة المسألة واقتراح التحليل والمسودة الأولية...' },
+        { id: 2, icon: '🎯', title: 'مدقق التفضيلات والتعليمات (Preferences & Domain Auditor)', shortName: 'التفضيلات', status: 'في الانتظار', summary: 'بانتظار المسودة لمطابقتها مع التفضيلات وسياق التعليمات...' },
+        { id: 3, icon: '🔍', title: 'الناقد المنطقي (Critical Reviewer)', shortName: 'الناقد', status: 'في الانتظار', summary: 'بانتظار فحص المسودة وتدقيق الثغرات...' },
+        { id: 4, icon: '👑', title: 'المقرر النهائي (Chief Synthesizer)', shortName: 'المقرر', status: 'في الانتظار', summary: 'بانتظار التقارير للصياغة المعتمدة...' }
       ];
 
       renderLiveUI(steps, '', true);
@@ -2488,7 +2557,7 @@
       // --- STAGE 1: Strategic Analyst ---
       const stage1Messages = [
         ...apiMessages.slice(0, -1),
-        { role: 'user', content: `${textForPayload}\n\n[DIRECTIVE TO STRATEGIC ANALYST]: Provide a sharp, structured, and comprehensive initial analysis/solution. Be concise and logical.` }
+        { role: 'user', content: `${textForPayload}\n\n[DIRECTIVE TO STRATEGIC ANALYST]: Provide a sharp, structured, and comprehensive initial draft/solution. Be concise, clear, and logical.` }
       ];
 
       let stage1Output = '';
@@ -2497,20 +2566,72 @@
         for await (const { chunk } of stream1) {
           stage1Output += chunk;
         }
-        steps[0].status = '✓ اكتمل';
-        steps[0].summary = stage1Output.slice(0, 180).trim() + (stage1Output.length > 180 ? '...' : '');
+        steps[0].status = '✓ مسودة أولية';
+        steps[0].summary = stage1Output.slice(0, 160).trim() + (stage1Output.length > 160 ? '...' : '');
         steps[1].status = 'نشط الآن';
-        steps[1].summary = 'جاري مراجعة تحليل المسودة واكتشاف أي ثغرات أو تحسينات...';
+        steps[1].summary = 'جاري مراجعة التفضيلات وسياق الشات والتعليمات التخصصية...';
         renderLiveUI(steps, '', true);
       } catch (e) {
         steps[0].status = 'تجاوز';
+        steps[0].hasError = true;
         stage1Output = 'تحليل أولي للطلب.';
       }
 
-      // --- STAGE 2: Critical Reviewer ---
+      // --- STAGE 2: Preferences & Domain Instructions Auditor ---
+      // Extract user history to discover personal preferences & domain context
+      const userHistoryMessages = (conv && conv.messages ? conv.messages : [])
+        .filter(m => m.role === 'user')
+        .slice(-6)
+        .map(m => m.content);
+      const userContextDigest = userHistoryMessages.length
+        ? userHistoryMessages.map((m, idx) => `[رسالة المستخدم السابقة ${idx + 1}]: ${m.slice(0, 300)}`).join('\n')
+        : `[طلب المستخدم الحالي]: ${userText.slice(0, 500)}`;
+
+      // Fetch active instructions & matching rules
+      let domainInstructions = '';
+      try {
+        if (window.InstructionManager && typeof window.InstructionManager.load === 'function') {
+          const files = await window.InstructionManager.load();
+          const active = files.filter(f => f.enabled);
+          const lowerUser = userText.toLowerCase();
+          const matched = active.filter(f => {
+            if (f.isCore) return true;
+            if (f.keywords && f.keywords.some(k => lowerUser.includes(k.toLowerCase()))) return true;
+            if (lowerUser.includes('قصة') || lowerUser.includes('سيناريو') || lowerUser.includes('اسكريبت') || lowerUser.includes('script') || lowerUser.includes('story')) {
+              if ((f.name + ' ' + (f.desc||'')).match(/قصص|سيناريو|اسكريبت|story|script|creative/i)) return true;
+            }
+            return false;
+          });
+          domainInstructions = matched.slice(0, 3).map(f => {
+            let c = f.content;
+            if (f.tiers && f.tiers.MID) c = JSON.stringify(f.tiers.MID);
+            return `[قاعدة: ${f.name}]: ${typeof c === 'string' ? c.slice(0, 600) : JSON.stringify(c).slice(0, 600)}`;
+          }).join('\n');
+        }
+      } catch (e) {}
+
       const stage2Messages = [
         ...apiMessages.slice(0, -1),
-        { role: 'user', content: `User Request: "${textForPayload}"\n\nAgent 1 Proposal:\n"${stage1Output}"\n\n[DIRECTIVE TO CRITICAL REVIEWER]: Critique and review Agent 1's proposal. Point out any missed points, logic flaws, edge cases, or optimizations concisely in 2-3 bullet points.` }
+        {
+          role: 'user',
+          content: `طلب المستخدم الحالي: """${textForPayload}"""
+
+[سياق رسائل المستخدم وتفضيلاته السابقة]:
+${userContextDigest}
+
+[التعليمات والقواعد التخصصية النشطة]:
+${domainInstructions || 'قواعد الفصاحة والأسلوب ومطابقة المطلوب بدون حشو أو هلوسة.'}
+
+[مسودة المحلل الأولي (Agent 1 Draft)]:
+"""${stage1Output}"""
+
+[المطلوب منك كمدقق للتفضيلات والتعليمات]:
+1. لخص وصنف التفضيلات الشخصية وسياق المستخدم من رسائله (مثال: أسلوب قصصي/سيناريو/كود/نبرة جادة).
+2. افحص المسودة وطابقها مع التفضيلات وقواعد المجال (أسلوب الحوار، اللغة، الحبكة، خلوها من الأخطاء).
+3. هل توجد أخطاء لغوية أو أسلوبية أو انحراف عن تعليمات المجال وسياق المستخدم؟
+4. إذا وُجدت ملاحظات: لخصها بدقة في سطرين محددين مع التصحيح.
+5. إذا كانت المسودة مطابقة وممتازة: اكتب "✓ المسودة متطابقة تماماً مع التفضيلات والتعليمات التخصصية".`
+        }
       ];
 
       let stage2Output = '';
@@ -2519,31 +2640,81 @@
         for await (const { chunk } of stream2) {
           stage2Output += chunk;
         }
-        steps[1].status = '✓ اكتمل';
-        steps[1].summary = stage2Output.slice(0, 180).trim() + (stage2Output.length > 180 ? '...' : '');
+        steps[1].status = '✓ تم التدقيق';
+        steps[1].summary = stage2Output.slice(0, 160).trim() + (stage2Output.length > 160 ? '...' : '');
         steps[2].status = 'نشط الآن';
-        steps[2].summary = 'جاري دمج أفضل النقاط واعتماد الإجابة النهائية الأصح...';
+        steps[2].summary = 'جاري النقد المنطقي وفحص الثغرات المحتملة...';
         renderLiveUI(steps, '', true);
       } catch (e) {
         steps[1].status = 'تجاوز';
-        stage2Output = 'تمت مراجعة المسودة واعتماد النقاط الرئيسية.';
+        steps[1].hasError = true;
+        stage2Output = 'تم فحص التفضيلات والتعليمات.';
       }
 
-      // --- STAGE 3: Final Synthesis ---
+      // --- STAGE 3: Critical Reviewer ---
       const stage3Messages = [
         ...apiMessages.slice(0, -1),
-        { role: 'user', content: `${textForPayload}\n\n[CONTEXT: Multi-Agent Consensus Collaboration]\nAgent 1 Draft:\n${stage1Output}\n\nAgent 2 Review & Critique:\n${stage2Output}\n\n[DIRECTIVE TO CHIEF SYNTHESIZER]: Deliver the finalized, highest quality, polished, and fully validated response to the user. Do not talk about the agents; directly provide the definitive answer formatted in clean Markdown.` }
+        {
+          role: 'user',
+          content: `طلب المستخدم: "${textForPayload}"
+
+مسودة المحلل الأولي (Draft):
+"${stage1Output}"
+
+نتائج تدقيق التفضيلات والتعليمات التخصصية:
+"${stage2Output}"
+
+[DIRECTIVE TO CRITICAL REVIEWER]: Critique and review Agent 1's proposal incorporating the auditor findings. Point out any logic flaws, edge cases, or optimizations concisely in 2 bullet points.`
+        }
+      ];
+
+      let stage3Output = '';
+      try {
+        const stream3 = ModelEngine.chatWithFallback('MID', stage3Messages, state.abortController.signal, () => {});
+        for await (const { chunk } of stream3) {
+          stage3Output += chunk;
+        }
+        steps[2].status = '✓ اكتمل النقد';
+        steps[2].summary = stage3Output.slice(0, 160).trim() + (stage3Output.length > 160 ? '...' : '');
+        steps[3].status = 'نشط الآن';
+        steps[3].summary = 'جاري صياغة واعتماد القرار النهائي المعتمد بأعلى جودة...';
+        renderLiveUI(steps, '', true);
+      } catch (e) {
+        steps[2].status = 'تجاوز';
+        steps[2].hasError = true;
+        stage3Output = 'تم النقد واعتماد النقاط الأساسية.';
+      }
+
+      // --- STAGE 4: Final Synthesis ---
+      const stage4Messages = [
+        ...apiMessages.slice(0, -1),
+        {
+          role: 'user',
+          content: `${textForPayload}
+
+[CONTEXT: Multi-Agent Consensus Collaboration]
+1. المسودة الأولية:
+${stage1Output}
+
+2. تدقيق التفضيلات والتعليمات التخصصية:
+${stage2Output}
+
+3. النقد المنطقي والتحسينات:
+${stage3Output}
+
+[DIRECTIVE TO CHIEF SYNTHESIZER]: Deliver the finalized, highest quality, polished, and fully validated response to the user. Perfectly adhere to user preferences, domain instructions, and all review corrections. Do not mention the agents; directly provide the definitive answer formatted in clean Markdown.`
+        }
       ];
 
       let finalOutput = '';
-      const stream3 = ModelEngine.chatWithFallback(state.currentMode, stage3Messages, state.abortController.signal, () => {});
-      for await (const { chunk } of stream3) {
+      const stream4 = ModelEngine.chatWithFallback(state.currentMode, stage4Messages, state.abortController.signal, () => {});
+      for await (const { chunk } of stream4) {
         finalOutput += chunk;
         renderLiveUI(steps, finalOutput, false);
       }
 
-      steps[2].status = '✓ معتمد';
-      steps[2].summary = 'تم الاتفاق وصياغة القرار النهائي المعتمد بنجاح.';
+      steps[3].status = '✓ معتمد';
+      steps[3].summary = 'تم اعتماد وصياغة القرار النهائي المعتمد بنجاح.';
       renderLiveUI(steps, finalOutput, false);
 
       aiMsgObj.content = finalOutput;
@@ -2612,19 +2783,24 @@
         const reviewHtml = finalReview ? buildBullets(finalReview) : `<div style="font-size:12px; color:var(--text-dim); padding:6px 0;">${t('جاري التدقيق الخماسي...','5-Agent reviewing...')}</div>`;
         const okN = finalReview ? okC(finalReview) : 0;
         const warnN = finalReview ? (String(finalReview).split(/\n/).filter(Boolean).length - okN) : 0;
-        const applyBtn = '';
+        const statusBadgeCls = warnN > 0 ? 'warn' : 'ok';
+        const badgeLabel = warnN > 0 ? `⚠️ ${warnN} ملاحظات` : `✓ معتمد (0 أخطاء)`;
         const box = aiRow.querySelector('.observer-box') || document.createElement('div');
-        box.className = 'observer-box';
+        box.className = 'observer-box proposal-audit-section';
         box.style.cssText = 'margin-top:10px; padding:0; border:none; background:transparent;';
         if(finalReview) box.dataset.review = finalReview;
         box.innerHTML = `
-          <div class="agent-committed-header" onclick="this.closest('.observer-box')?.classList.toggle('collapsed')">
-            <span>👁️</span><span class="agent-committed-label">COMMITTED</span><span class="agent-committed-nums"><span class="agent-num ok">${okN}</span><span class="agent-num warn">${Math.max(0,warnN)}</span></span><span class="agent-toggle-icon">▾</span>
+          <div class="proposal-audit-header" onclick="this.closest('.observer-box')?.classList.toggle('collapsed')">
+            <div class="dev-peer-title">
+              <span class="dev-peer-icon">🛡️</span>
+              <span class="dev-peer-name">فحص الجودة والمطابقة (5 مراجعين)</span>
+              <span class="dev-peer-badge ${isRunning ? 'running' : statusBadgeCls}">${isRunning ? '⏳ جاري الفحص...' : badgeLabel}</span>
+            </div>
+            <span class="dev-peer-toggle">▾</span>
           </div>
-          <div class="observer-details">
+          <div class="observer-details dev-peer-body">
             ${pipelineTrackHtml}
             ${reviewHtml}
-            ${applyBtn}
           </div>
         `;
         if (!aiRow.querySelector('.observer-box')) {
