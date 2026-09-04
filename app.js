@@ -2500,7 +2500,12 @@
           e.preventDefault();
           if(optBtn.id==='other-models-trigger'){
             const tab=document.getElementById('other-models-tab');
+            const main=document.getElementById('model-dropdown-menu');
+            if(main) main.classList.remove('show');
             if(tab) tab.style.display = (tab.style.display==='none' || !tab.style.display || tab.style.display==='') ? 'block' : 'none';
+            // also ensure tab has show class for styling
+            if(tab && tab.style.display==='block') tab.classList.add('show');
+            else tab?.classList.remove('show');
             return;
           }
           if(optBtn.dataset.seekaiModel){
@@ -2514,7 +2519,7 @@
           }
           $('model-dropdown-menu')?.classList.remove('show');
           const otherTab=document.getElementById('other-models-tab');
-          if(otherTab) otherTab.style.display='none';
+          if(otherTab){ otherTab.style.display='none'; otherTab.classList.remove('show'); }
           this.updateHeaderUI();
           const conv = StateController.getActiveConv();
           if (conv) {
@@ -2527,10 +2532,10 @@
           return;
         }
 
-        if (!e.target.closest('#model-dropdown-menu') && !e.target.closest('#other-models-tab')) {
+        if (!e.target.closest('#model-dropdown-menu') && !e.target.closest('#other-models-tab') && !e.target.closest('#other-models-trigger')) {
           $('model-dropdown-menu')?.classList.remove('show');
           const ot=document.getElementById('other-models-tab');
-          if(ot) ot.style.display='none';
+          if(ot){ ot.style.display='none'; ot.classList.remove('show'); }
         }
 
         if (e.target.closest('#btn-new-chat') || e.target.closest('#header-new-chat-btn')) {
