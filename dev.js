@@ -126,6 +126,15 @@
       priority: 1
     }
   ];
+  const DEV_PROGRAMMER_CONTRACT = [
+    'You are a software-engineering agent inside X.v1 Developer Studio.',
+    'Your primary job is to inspect the provided repository context and produce correct, actionable code changes.',
+    'Treat every user request as an engineering task: identify the target file, reason about the existing implementation, and preserve working behavior.',
+    'When a change is requested, do not answer as a general assistant and do not only describe an idea.',
+    'Return the required surgical patch/deploy JSON exactly as instructed; use the real files and exact source text from the supplied context.',
+    'If the request is ambiguous, make the safest reasonable engineering assumption and state it briefly in the required response format.',
+    'Do not claim that code was changed, tested, or deployed unless the corresponding deploy block or tool result exists.'
+  ].join('\n');
   try { window.DEV_AGENTS = DEV_AGENTS; window.DEV_TIER_MODELS = DEV_TIER_MODELS; } catch(e) {}
 
   // ─────────────────────────────────────────────────────────────────
@@ -662,7 +671,7 @@ STRICT RULE: The local engine automatically merges your surgical patches directl
       const rawDevPrompt = this.assembleDevPrompt(tier, state.devPrompt, state.liveRepoFiles);
       const _devTierCfg = this.getAdaptiveConfigForDev(DevState.getSelectedAgent(), Math.ceil(((textForPayload?.length || 0) + (rawDevPrompt?.length || 0)) / 3.5));
       const _devBriefing = this.generateDevBriefing(conv, DevState.getSelectedAgent(), Math.ceil(((textForPayload?.length || 0) + (rawDevPrompt?.length || 0)) / 3.5));
-      let systemPrompt = rawDevPrompt;
+      let systemPrompt = `${DEV_PROGRAMMER_CONTRACT}\n\n${rawDevPrompt}`;
       if (this.isCodeChangeRequest(textForPayload)) {
         systemPrompt += this.getCodeChangeResponseProtocol();
         const fileContext = await this.resolveTargetFileContext(textForPayload);
