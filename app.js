@@ -76,6 +76,7 @@
   // 3. STATE & PERSISTENCE CONTROLLER (StateController)
   // ─────────────────────────────────────────────────────────────────
   const state = {
+    currentLayer: (function(){ try{ const v=localStorage.getItem('xv1_chat_layer'); return (v==='voice'||v==='seekai')? v : 'general'; }catch{ return 'general'; }})(),
     currentMode: (function(){ try{ const saved = localStorage.getItem('xv1_current_mode'); if (saved === 'BALANCE2') return 'HIGH'; if (saved === 'HARD') return 'HIGH'; return (saved === 'HIGH' ? 'HIGH' : (saved || 'MID')); }catch{ return 'MID'; }})(),
     currentModel: null,
     devModelKey: null,
@@ -105,6 +106,7 @@
           state.conversations = JSON.parse(saved);
           if (Array.isArray(state.conversations)) {
             state.conversations.forEach(conv => {
+              if(!conv.layer) conv.layer = 'general';
               if (Array.isArray(conv.messages)) {
                 conv.messages = conv.messages.filter(m => {
                   if (!m || !m.content) return false;
@@ -119,6 +121,25 @@
       } catch (e) {
         console.warn('[State] Failed to load conversations', e);
         state.conversations = [];
+      }
+    },
+    getLayerConvs(layer){ const l=layer||state.currentLayer||'general'; return state.conversations.filter(c=> (c.layer||'general')===l); },
+    setLayer(layer){
+      const l=(layer==='voice'||layer==='seekai')? layer : 'general';
+      state.currentLayer=l;
+      try{ localStorage.setItem('xv1_chat_layer', l); }catch{}
+      // switch active to last conv of this layer or none
+      const list=this.getLayerConvs(l);
+      if(list.length){
+        state.activeConvId=list[0].id;
+        try{ localStorage.setItem('activeConvId', state.activeConvId); }catch{}
+        this.loadConversation(state.activeConvId);
+      } else {
+        state.activeConvId=null;
+        try{ localStorage.removeItem('activeConvId'); }catch{}
+        MessageRenderer.renderAllMessages([]);
+        UIEngine.renderConversationsList();
+        UIEngine.updateHeaderUI();
       }
     },
 
@@ -163,6 +184,7 @@
         title: 'محادثة جديدة',
         messages: [],
         mode: state.currentMode,
+        layer: state.currentLayer || 'general',
         isDev: false,
         createdAt: new Date().toISOString()
       };
@@ -1149,18 +1171,35 @@
           if(dx<0){ this.apply(order[(idx+1)%3], true); } else { this.apply(order[(idx+2)%3], true); }
         }
       }, {passive:true});
-      // init seekai box
-      try{ window.SeekAIController?.init(); }catch{}
     },
     apply(mode, save){
       const order=['text','voice','seekai'];
       this.current = order.includes(mode)? mode : 'text';
+      const layer = this.current==='text'?'general': this.current;
+      state.currentLayer = layer;
+      if(save) try{ localStorage.setItem('xv1_chat_layer', layer); }catch{}
+      try{ localStorage.setItem('xv1_chat_layer', layer); }catch{}
       document.querySelectorAll('.chat-dot').forEach(d=> d.classList.toggle('active', d.dataset.mode===this.current));
       document.getElementById('input-section')?.classList.toggle('hidden', this.current!=='text');
       document.getElementById('voice-input-section')?.classList.toggle('hidden', this.current!=='voice');
       document.getElementById('seekai-input-section')?.classList.toggle('hidden', this.current!=='seekai');
-      if(save) try{ localStorage.setItem('xv1_chat_mode', this.current); }catch{}
-      setTimeout(()=> (this.current==='voice'? document.getElementById('voice-input'): document.getElementById('user-input'))?.focus(), 100);
+      // switch history/layer persistence
+      try{
+        const list = state.conversations.filter(c=> (c.layer||'general')===layer);
+        if(list.length){
+          state.activeConvId=list[0].id;
+          try{ localStorage.setItem('activeConvId', state.activeConvId); }catch{}
+          MessageRenderer.renderAllMessages(list[0].messages);
+        } else {
+          state.activeConvId=null;
+          try{ localStorage.removeItem('activeConvId'); }catch{}
+          MessageRenderer.renderAllMessages([]);
+        }
+        UIEngine.renderConversationsList();
+        UIEngine.updateHeaderUI();
+      }catch{}
+      const focusId=this.current==='voice'?'voice-input': this.current==='seekai'?'seekai-input':'user-input';
+      setTimeout(()=> document.getElementById(focusId)?.focus(), 100);
     },
     async sendVoice(rawText){
       // Voice box = direct TTS, no "حول النص" trigger needed — AI already understands it's voice mode
@@ -2234,12 +2273,23 @@
     renderConversationsList() {
       const list = $('conversations-list');
       if (!list) return;
-      list.innerHTML = state.conversations.map(conv => `
+      const layer = state.currentLayer || 'general';
+      const filtered = state.conversations.filter(c=> (c.layer||'general')===layer);
+      if(!filtered.length){
+        list.innerHTML = `<div style="padding:12px; font-size:12px; color:var(--text-dim); text-align:center;">لا توجد محادثات في ${layer==='voice'?'الصوت':layer==='seekai'?'SeekAI':'العام'}</div>`;
+        return;
+      }
+      list.innerHTML = filtered.map(conv => `
         <div class="conversation-item ${conv.id === state.activeConvId ? 'active' : ''}"
              onclick="window._loadConv('${conv.id}')">
           <span class="conv-title">${conv.isDev ? '🛠️ ' : ''}${MessageRenderer.escapeHtml(conv.title)}</span>
         </div>
       `).join('');
+      // settings only in general
+      const settingsBtn=document.querySelector('.sidebar-footer .footer-btn');
+      if(settingsBtn) settingsBtn.style.display = (layer==='general'?'':'none');
+      const secTitle=document.querySelector('.sidebar-section-title');
+      if(secTitle) secTitle.textContent = layer==='voice'?'محادثات الصوت':layer==='seekai'?'محادثات SeekAI':'Recent Chats';
     },
 
     highlightActiveConv(id) {
@@ -3352,21 +3402,24 @@
       window.visualViewport.addEventListener('resize', lockViewportHeight);
     }
 
+    StateController.load();
     initAppCustomization();
     UIEngine.setupEventListeners();
     try{ window.VoiceChatController?.init(); }catch{}
     try{ window.SeekAIController?.init(); }catch{}
     try{ window.UsagePieController?.init(); }catch{}
     AuthManager.setupGate();
-    StateController.load();
     setupSmoothKineticScroll();
 
     if (state.conversations.length === 0) {
       UIEngine.showWelcomeScreen();
     } else {
+      const layer = state.currentLayer || 'general';
+      const layerConvs = state.conversations.filter(c=> (c.layer||'general')===layer);
       const lastActiveId = localStorage.getItem('activeConvId');
-      const targetConv = state.conversations.find(c => c.id === lastActiveId) || state.conversations[0];
-      StateController.loadConversation(targetConv.id);
+      const targetConv = layerConvs.find(c=>c.id===lastActiveId) || layerConvs[0] || state.conversations[0];
+      if(targetConv) StateController.loadConversation(targetConv.id);
+      else UIEngine.showWelcomeScreen();
     }
 
     UIEngine.updateHeaderUI();
