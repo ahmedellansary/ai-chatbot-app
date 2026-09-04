@@ -754,29 +754,46 @@
       this.showTyping(initialWord);
       const isAr = false;
       const tier = (window.state && window.state.currentMode) || 'MID';
-      const fast = tier === 'FAST';
-      const high = tier === 'HIGH';
-      // English only — per user request (no Arabic thinking stages)
-      const flowStages = high ? [
+      // ── Dynamic thinking depth: 1-6 stages based on question complexity ──
+      const rawInput = (document.getElementById('user-input')?.value || initialWord || '').trim();
+      const convLen = (window.state?.conversations?.find(c=>c.id===window.state.activeConvId)?.messages?.length || 0);
+      const isTrivial = /^(السلام عليكم|مرحبا|هلا|اهلا|انت (كويس|عامل ايه)|كيف حالك|ترجم( كلمة)?$|ضيف تشكيل|عدل الجملة)/i.test(rawInput) || rawInput.length < 18;
+      const isSimple = rawInput.length < 40 && !/(حلل|قارن|صمم|خطة|استراتيجي|ناقش|اشرح بالتفصيل|SWOT|مصفوفة|تقرير)/i.test(rawInput);
+      const isComplex = /(حلل|قارن|صمم|استراتيجي|خطة|تقرير|مصفوفة|اشرح بالتفصيل|CNN|نظرية الألعاب|LTV|SWOT|Freemium|Network Effects|مستقبل العمل)/i.test(rawInput) || rawInput.length > 120 || convLen > 12;
+      let depth;
+      if(isTrivial) depth = 1;
+      else if(isSimple) depth = tier==='HIGH'?2: tier==='FAST'?1:2;
+      else if(isComplex) depth = tier==='HIGH'?6: tier==='MID'?4:2;
+      else depth = tier==='HIGH'?4: tier==='MID'?3:2;
+      // cap by tier
+      if(tier==='FAST') depth = Math.min(depth,2);
+      if(tier==='MID') depth = Math.min(depth,4);
+      const allHigh = [
         { icon: '🧠', text: 'Intent', delay: 500 },
         { icon: '📂', text: 'Gather context', delay: 1100 },
         { icon: '📋', text: 'Plan structure', delay: 1800 },
         { icon: '✍️', text: 'Draft', delay: 2500 },
         { icon: '🔍', text: 'Self-critique', delay: 3200 },
         { icon: '✨', text: 'Refine', delay: 4000 }
-      ] : fast ? [
-        { icon: '🧠', text: 'Understanding', delay: 400 },
-        { icon: '✨', text: 'Composing', delay: 900 }
-      ] : [
+      ];
+      const allMid = [
         { icon: '🧠', text: 'Understanding', delay: 500 },
         { icon: '🔍', text: 'Analyzing', delay: 1200 },
-        { icon: '✨', text: 'Composing', delay: 2000 }
+        { icon: '✨', text: 'Composing', delay: 2000 },
+        { icon: '📌', text: 'Polish', delay: 2600 }
       ];
-      const wordStages = [
+      const allFast = [
+        { icon: '🧠', text: 'Understanding', delay: 400 },
+        { icon: '✨', text: 'Composing', delay: 900 }
+      ];
+      let flowStages = tier==='HIGH' ? allHigh.slice(0,depth) : tier==='FAST' ? allFast.slice(0,depth) : allMid.slice(0,depth);
+      if(flowStages.length===0) flowStages=[{ icon: '🧠', text: 'Understanding', delay: 400 }];
+      const wordStagesAll = [
         { word: 'Analyzing', delay: 0 },
         { word: 'Composing', delay: 900 },
         { word: 'Refining', delay: 1900 }
       ];
+      const wordStages = wordStagesAll.slice(0, Math.min(depth, 3));
       this._thinkingTimers = [];
       wordStages.slice(1).forEach(stage => {
         const timer = setTimeout(() => { this.setThinkingStage(stage.word); }, stage.delay);
