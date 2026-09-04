@@ -66,19 +66,21 @@ const MODELS = {
     { id: 'openai/gpt-oss-120b', name: 'GPT OSS 120B (Balanced Core)', provider: 'groq' },
     { id: 'poolside/laguna-s-2.1:free', name: 'Laguna S 2.1 (118B)', provider: 'openrouter' },
     { id: 'cohere/north-mini-code:free', name: 'North Mini Code (30B)', provider: 'openrouter' },
-    { id: 'inclusionai/ling-3.0-flash-fin:free', name: 'Ling 3.0 Flash Fin', provider: 'openrouter' }
+    { id: 'qwen/qwen3.8-27b', name: 'Qwen 3.8 27B (Balanced)', provider: 'groq' }
   ],
   HIGH: [
     { id: 'deepseek/deepseek-chat', name: 'DeepSeek V3 — 671B', provider: 'openrouter' },
     { id: 'nvidia/nemotron-3-ultra-550b-a55b', name: 'Nemotron 3 Ultra 550B (High) — 550B', provider: 'openrouter' },
-    { id: 'thinkingmachines/inkling-small', name: 'Inkling Small 276B — 276B', provider: 'openrouter' }
+    { id: 'thinkingmachines/inkling-small', name: 'Inkling Small 276B — 276B', provider: 'openrouter' },
+    { id: 'openai/gpt-oss-120b', name: 'GPT OSS 120B (High Fallback)', provider: 'groq' }
   ],
   FAST: [
     { id: 'groq/compound', name: 'Groq Compound', provider: 'groq' },
     { id: 'openai/gpt-oss-20b', name: 'GPT OSS 20B', provider: 'groq' },
-    { id: 'qwen/qwen3.8-27b', name: 'Qwen 3.8 27B (Ultra Fast)', provider: 'groq' },
+    { id: 'inclusionai/ling-3.0-flash-fin:free', name: 'Ling 3.0 Flash Fin', provider: 'openrouter' },
     { id: 'nvidia/nemotron-3.5-lightning:free', name: 'Nemotron 3.5 Lightning (1M)', provider: 'openrouter' },
-    { id: 'poolside/laguna-xs-2.1:free', name: 'Laguna XS 2.1 (33B)', provider: 'openrouter' }
+    { id: 'poolside/laguna-xs-2.1:free', name: 'Laguna XS 2.1 (33B)', provider: 'openrouter' },
+    { id: 'groq/compound-mini', name: 'Groq Compound Mini', provider: 'groq' }
   ]
 };
 
