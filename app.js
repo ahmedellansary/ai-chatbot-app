@@ -917,16 +917,18 @@
       return t.slice(0, 900);
     },
     async synthesizeWithCloud(text){
-      // Try OpenRouter audio/speech if key available — model openai/tts-1
+      // Strong model only: openai/tts-1-hd (weak tts-1 removed per request)
       try{
         const key = (window.ConfigVault && window.ConfigVault.getOpenRouterKey && window.ConfigVault.getOpenRouterKey()) || '';
         if(!key || !String(key).startsWith('sk-or')) return null;
+        const voice = (document.getElementById('tts-voice-select')?.value || 'alloy').trim();
+        const speed = parseFloat(document.getElementById('tts-speed-btn')?.dataset?.speed || '1') || 1;
         const ctrl = new AbortController();
-        const tm = setTimeout(()=> ctrl.abort(), 12000);
+        const tm = setTimeout(()=> ctrl.abort(), 14000);
         const r = await fetch('https://openrouter.ai/api/v1/audio/speech',{
           method:'POST',
           headers:{ 'Authorization':`Bearer ${key}`,'Content-Type':'application/json','HTTP-Referer':window.location.origin,'X-Title':'X.v1 TTS' },
-          body: JSON.stringify({ model:'openai/tts-1', input: text.slice(0, 900), voice:'alloy' }),
+          body: JSON.stringify({ model:'openai/tts-1-hd', input: text.slice(0, 900), voice: voice, speed: Math.min(4, Math.max(0.25, speed)) }),
           signal: ctrl.signal
         });
         clearTimeout(tm);
@@ -973,6 +975,28 @@
           MessageRenderer.showToast('🔊 جاهز — اضغط تشغيل للاستماع (محلي)','info');
         }
       }catch(e){ console.warn('[TTS]',e); }
+    },
+    async handleVoiceBoxRequest(cleanText, conv){
+      // Dedicated voice box: cleanText is already pure target (no trigger needed)
+      let txt = String(cleanText||'').trim().slice(0,900);
+      if(!txt) return;
+      const ttsCard = `[tts:${txt}]`;
+      const aiMsg = { id: generateId(), role:'ai', content:`${ttsCard}`, timestamp:new Date().toISOString(), model:'TTS Voice Box (HD)' };
+      conv.messages.push(aiMsg);
+      MessageRenderer.appendMessage(aiMsg);
+      StateController.save();
+      setTimeout(()=>{ document.querySelectorAll('.tts-card.tts-loading').forEach(c=> c.classList.remove('tts-loading')); }, 900);
+      try{
+        const cloudUrl = await this.synthesizeWithCloud(txt);
+        if(cloudUrl){
+          aiMsg.content = `[audio:${cloudUrl}|${txt.slice(0,60)}|TTS HD • ${document.getElementById('tts-voice-select')?.value||'alloy'}]`;
+          MessageRenderer.appendMessage(aiMsg);
+          StateController.save();
+          MessageRenderer.showToast('🔊 تم توليد الصوت HD — جاهز','success');
+        } else {
+          MessageRenderer.showToast('🔊 جاهز محلياً — اضغط تشغيل','info');
+        }
+      }catch(e){ console.warn('[TTS voice box]',e); }
     }
   };
   window.TTSEngine = TTSEngine;
@@ -1005,13 +1029,94 @@
       const card = btn.closest('.tts-card');
       const text = decodeURIComponent(card?.dataset?.ttsText||'');
       if(!text) return;
-      // No blob available locally — offer text download as fallback + hint for cloud
       const blob = new Blob([text], {type:'text/plain;charset=utf-8'});
       const url = URL.createObjectURL(blob);
       const a=document.createElement('a'); a.href=url; a.download=`tts_${Date.now()}.txt`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),2000);
       MessageRenderer.showToast('ℹ️ الصوت المحلي لا يولّد MP3 — تم تحميل النص. فعّل Cloud TTS (OpenRouter key) للحصول على MP3','info');
     }catch(e){ console.warn(e); }
   };
+
+  // ── Voice Chat Box Controller (dot navigation + dedicated TTS box) ──
+  const VoiceChatController = {
+    current: localStorage.getItem('xv1_chat_mode') || 'text',
+    init(){
+      this.apply(this.current, false);
+      document.querySelectorAll('.chat-dot').forEach(d=>{
+        d.addEventListener('click', ()=> this.apply(d.dataset.mode, true));
+        // touch swipe on dots area
+        d.addEventListener('touchstart', e=>{ e.preventDefault(); this.apply(d.dataset.mode, true); }, {passive:false});
+      });
+      // voice input handlers
+      const vInput = document.getElementById('voice-input');
+      const vSend = document.getElementById('voice-send-btn');
+      const vSpeed = document.getElementById('tts-speed-btn');
+      const vPitch = document.getElementById('tts-pitch-btn');
+      const vMic = document.getElementById('voice-mic-btn');
+      let speedIdx = 0; const speeds = [1,1.15,1.3,1.5,0.9];
+      vSpeed?.addEventListener('click', ()=>{
+        speedIdx = (speedIdx+1)%speeds.length;
+        const s = speeds[speedIdx];
+        vSpeed.textContent = s+'x';
+        vSpeed.dataset.speed = s;
+        try{ localStorage.setItem('tts_speed', s); }catch{}
+      });
+      try{ const savedS = localStorage.getItem('tts_speed'); if(savedS){ vSpeed.textContent=savedS+'x'; vSpeed.dataset.speed=savedS; const idx=speeds.indexOf(parseFloat(savedS)); if(idx>=0) speedIdx=idx; } }catch{}
+      vPitch?.addEventListener('click', ()=> MessageRenderer.showToast('🎵 النغمة قريباً — حالياً السرعة والصوت متاحان','info'));
+      const vTrigger = ()=>{
+        const txt = vInput? vInput.value.trim() : '';
+        if(!txt){ MessageRenderer.showToast('اكتب النص أولاً','warning'); return; }
+        if(state.isStreaming || state.sendInFlight){ MessageRenderer.showToast('⏳ انتظر انتهاء الرد','info'); return; }
+        vInput.value=''; document.getElementById('voice-input')?.dispatchEvent(new Event('input'));
+        this.sendVoice(txt);
+      };
+      vSend?.addEventListener('click', vTrigger);
+      vInput?.addEventListener('keydown', e=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); vTrigger(); }});
+      vInput?.addEventListener('input', ()=>{
+        const has = vInput.value.trim().length>0;
+        if(vSend){ if(has && !state.isStreaming && !state.sendInFlight) vSend.removeAttribute('disabled'); else vSend.setAttribute('disabled','true'); vSend.classList.toggle('active', has); }
+        // auto height
+        vInput.style.height='auto'; vInput.style.height=Math.min(Math.max(vInput.scrollHeight,26),120)+'px';
+        const isAr = /[\u0600-\u06FF]/.test(vInput.value); vInput.dir=isAr?'rtl':'ltr'; vInput.style.textAlign=isAr?'right':'left';
+      });
+      // voice mic reuse main recognition
+      vMic?.addEventListener('click', ()=> document.getElementById('mic-btn')?.click());
+      // swipe on chat area to switch
+      let sx=0;
+      const area = document.getElementById('chat-area');
+      area?.addEventListener('touchstart', e=> sx=e.touches[0].clientX, {passive:true});
+      area?.addEventListener('touchend', e=>{
+        const dx = e.changedTouches[0].clientX - sx;
+        if(Math.abs(dx)>70){ if(dx<0 && this.current==='text') this.apply('voice',true); else if(dx>0 && this.current==='voice') this.apply('text',true); }
+      }, {passive:true});
+    },
+    apply(mode, save){
+      this.current = mode==='voice'?'voice':'text';
+      document.querySelectorAll('.chat-dot').forEach(d=> d.classList.toggle('active', d.dataset.mode===this.current));
+      document.getElementById('input-section')?.classList.toggle('hidden', this.current==='voice');
+      document.getElementById('voice-input-section')?.classList.toggle('hidden', this.current==='text');
+      if(save) try{ localStorage.setItem('xv1_chat_mode', this.current); }catch{}
+      setTimeout(()=> (this.current==='voice'? document.getElementById('voice-input'): document.getElementById('user-input'))?.focus(), 100);
+    },
+    async sendVoice(rawText){
+      // Voice box = direct TTS, no "حول النص" trigger needed — AI already understands it's voice mode
+      // Extract clean text if user still wrote trigger phrase
+      let txt = rawText.trim();
+      // if contains trigger, extract only target part via TTSEngine
+      if(window.TTSEngine && window.TTSEngine.isTTSRequest(txt)){
+        txt = window.TTSEngine.extractText(txt);
+      }
+      if(!txt) return;
+      // create conv if needed
+      if(!state.activeConvId) StateController.newConversation();
+      const conv = StateController.getActiveConv();
+      // show user bubble as voice type
+      const userMsg = StateController.addMessage('user', txt, null, []);
+      if(userMsg){ userMsg.isVoice = true; MessageRenderer.appendMessage(userMsg); }
+      // keep strong model only: cloud handles synthesis with selected voice/speed
+      await window.TTSEngine.handleVoiceBoxRequest(txt, conv);
+    }
+  };
+  window.VoiceChatController = VoiceChatController;
 
   // ─────────────────────────────────────────────────────────────────
   // 7. CHAT CONTROLLER & STREAM ORCHESTRATOR — Extracted to modules/chat-engine.js
@@ -2982,6 +3087,7 @@
 
     initAppCustomization();
     UIEngine.setupEventListeners();
+    try{ window.VoiceChatController?.init(); }catch{}
     AuthManager.setupGate();
     StateController.load();
     setupSmoothKineticScroll();
