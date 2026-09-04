@@ -256,19 +256,43 @@
     path: 'history/sync.json',
     _pushTimer: null,
     _lastPush: 0,
+    // ── path security: hardcoded, block traversal ──
+    _isSafePath(p){ return p==='history/sync.json' && !p.includes('..') && !p.includes('//'); },
+    // ── PII/secrets sanitization before repo ──
+    _sanitize(obj){
+      try{
+        let s=JSON.stringify(obj);
+        s=s.replace(/sk-or-v1-[a-z0-9]+/gi,'[REDACTED_OR_KEY]');
+        s=s.replace(/gsk_[A-Za-z0-9_]+/g,'[REDACTED_GROQ]');
+        s=s.replace(/ghp_[A-Za-z0-9_]+/g,'[REDACTED_GH]');
+        s=s.replace(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g,'[REDACTED_EMAIL]');
+        return JSON.parse(s);
+      }catch{ return obj; }
+    },
+    // ── light obfuscation (not crypto) — prevents plain public read ──
+    _enc(txt){ try{ return btoa(unescape(encodeURIComponent(txt))); }catch{ return btoa(txt); } },
+    _dec(b64){ try{ return decodeURIComponent(escape(atob(b64))); }catch{ try{ return atob(b64); }catch{ return b64; } } },
     async pullAndMerge(){
       try{
+        if(!this._isSafePath(this.path)) throw new Error('unsafe path');
         const token=(window.ConfigVault?.getGitHubToken?.()||'');
         if(!token || token.length<10) return;
         const r=await fetch(`${GITHUB_API}/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${this.path}?ref=${GITHUB_BRANCH}&t=${Date.now()}`,{headers:ConfigVault.getGitHubHeaders()});
         if(!r.ok) return;
         const j=await r.json();
-        const txt = (window.GitHubService?.base64ToUtf8)
+        let txt = (window.GitHubService?.base64ToUtf8)
           ? window.GitHubService.base64ToUtf8(j.content)
           : (function(b){ const bin=atob(b.replace(/\s/g,'')); const u=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i); return new TextDecoder().decode(u); })(j.content);
-        const remote=JSON.parse(txt);
+        // try decrypt, fallback to plain
+        let remote;
+        try{
+          const dec=this._dec(txt.trim());
+          remote=JSON.parse(dec);
+          if(!Array.isArray(remote)) throw new Error();
+        }catch{
+          remote=JSON.parse(txt);
+        }
         if(!Array.isArray(remote)) return;
-        // merge by id, keep newest by updatedAt/createdAt
         const localMap=new Map(state.conversations.map(c=>[c.id,c]));
         let added=0;
         for(const rc of remote){
@@ -294,15 +318,18 @@
     },
     async push(){
       try{
+        if(!this._isSafePath(this.path)) throw new Error('unsafe path');
         if(Date.now()-this._lastPush < 5000) return;
         this._lastPush=Date.now();
         const token=(window.ConfigVault?.getGitHubToken?.()||'');
         if(!token || token.length<10) return;
-        // avoid huge payload >800KB
-        const payload=JSON.stringify(state.conversations.slice(0,120));
+        const clean=this._sanitize(state.conversations.slice(0,120));
+        let payload=JSON.stringify(clean);
         if(payload.length>850000){ console.warn('[HistorySync] skip too large'); return; }
-        await GitHubService.uploadFile(this.path, payload, `🔄 History sync ${new Date().toISOString().slice(0,16)}`);
-        console.log('[HistorySync] pushed', state.conversations.length);
+        // obfuscate before repo (public repo protection)
+        const obfuscated=this._enc(payload);
+        await GitHubService.uploadFile(this.path, obfuscated, `🔄 History sync ${new Date().toISOString().slice(0,16)}`);
+        console.log('[HistorySync] pushed', clean.length, 'obfuscated');
       }catch(e){ console.warn('[HistorySync push]', e.message); }
     }
   };
