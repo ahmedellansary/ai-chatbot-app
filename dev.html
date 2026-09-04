@@ -136,13 +136,23 @@
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
           <span class="header-btn-label">File Editor</span>
         </button>
+        <button class="icon-btn" id="dev-notes-header-btn" onclick="window._openDevNotesModal()" title="Dev Notes (ملاحظات متزامنة)">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+            <line x1="10" y1="9" x2="8" y2="9"></line>
+          </svg>
+          <span class="header-btn-label">Notes</span>
+        </button>
         <a href="./ops.html" class="icon-btn" style="text-decoration:none;" title="Operations & Rollback Center">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
           <span class="header-btn-label">Ops & Rollback</span>
         </a>
         <div class="repo-status-badge">
           <span class="status-dot"></span>
-          <span class="repo-badge-text" id="dev-status-badge-text">Dev (V351) 04-09-2026 9:56PM</span>
+          <span class="repo-badge-text" id="dev-status-badge-text">Dev (V351) 04-09-2026 10:11PM</span>
         </div>
         <script>
           (function() {
@@ -317,6 +327,78 @@
           style="flex:1; width:100%; min-height:380px; background:#08080b; border:1px solid var(--border-subtle); border-radius:10px; padding:12px; font-family:var(--font-mono); font-size:12.5px; line-height:1.5; color:#f3f4f6; resize:none;"
           placeholder="Select a file to inspect and edit..."
         ></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ Developer Notes & Ideas Modal (Bidirectional GitHub Sync) ═══ -->
+  <div id="dev-notes-modal" class="custom-modal hidden" style="z-index: 9999;">
+    <div class="custom-modal-card dev-notes-modal-card">
+      <div class="custom-modal-header">
+        <div class="modal-header-top-row">
+          <div class="modal-header-title">
+            <span>📝</span>
+            <span>ملاحظات المطور (Dev Notes)</span>
+            <span id="dev-notes-sync-badge" class="dev-notes-sync-badge synced" title="حالة المزامنة السحابية">
+              <span class="sync-dot"></span>
+              <span id="dev-notes-sync-text">متزامن مع المستودع</span>
+            </span>
+          </div>
+          <button class="icon-btn" onclick="window._closeDevNotesModal()" title="إغلاق">✕</button>
+        </div>
+      </div>
+
+      <div class="dev-notes-toolbar">
+        <div class="dev-notes-search-wrap">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          <input type="text" id="dev-notes-search-input" placeholder="بحث في الملاحظات..." oninput="window._filterDevNotes(this.value)">
+        </div>
+        <div class="dev-notes-toolbar-actions">
+          <button type="button" class="dev-notes-btn-sync" onclick="window._syncDevNotesManual()" title="مزامنة فورية مع المستودع">
+            <svg id="notes-sync-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>
+            <span>مزامنة</span>
+          </button>
+          <button type="button" class="dev-notes-btn-new" onclick="window._toggleNewNoteForm(true)">
+            <span>+ ملاحظة جديدة</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Note Editor Form (Add / Edit) -->
+      <div id="dev-note-editor-wrap" class="dev-note-editor-wrap hidden">
+        <div class="dev-note-editor-card">
+          <div class="note-editor-header">
+            <span id="note-editor-title-label">➕ إضافة ملاحظة جديدة</span>
+            <button type="button" class="note-editor-close-btn" onclick="window._toggleNewNoteForm(false)">✕</button>
+          </div>
+          <input type="hidden" id="editing-note-id" value="">
+          <div class="note-editor-row">
+            <input type="text" id="note-input-title" class="note-input-field" placeholder="عنوان الملاحظة (اختياري)..." maxlength="120">
+            <select id="note-input-tag" class="note-select-tag">
+              <option value="idea">💡 فكرة (Idea)</option>
+              <option value="code">💻 كود (Code)</option>
+              <option value="todo">📋 مهمة (To-do)</option>
+              <option value="bug">🐛 ثغرة / خطأ (Bug)</option>
+              <option value="note">📌 عام (General)</option>
+            </select>
+          </div>
+          <textarea id="note-input-body" class="note-textarea-field" placeholder="اكتب الملاحظة، الفكرة، أو كود المطور هنا..." rows="5"></textarea>
+          <div class="note-editor-actions">
+            <button type="button" class="dev-btn-primary" onclick="window._saveDevNote()">
+              <span>💾 حفظ الملاحظة</span>
+            </button>
+            <button type="button" class="dev-btn-secondary" onclick="window._toggleNewNoteForm(false)">
+              <span>إلغاء</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notes List Container -->
+      <div class="dev-notes-body">
+        <div id="dev-notes-list" class="dev-notes-list">
+          <!-- Dynamically loaded -->
+        </div>
       </div>
     </div>
   </div>
