@@ -1597,6 +1597,32 @@
         return;
       }
 
+      // ── SEEKAI direct (Other tab): priority, no fallback, no enabled check ──
+      if(state.currentMode==='SEEKAI' && state.seekaiDirectModel){
+        state.attachments = [];
+        const pc2 = $('attachment-preview-container');
+        if(pc2){ pc2.classList.add('hidden'); pc2.innerHTML=''; }
+        const userMsgSeek = StateController.addMessage('user', userText.trim() || textForPayload, null, currentAttachments);
+        if(userMsgSeek) MessageRenderer.appendMessage(userMsgSeek);
+        state.sendInFlight = false; state.sendLock = false; state._lastSendStart = 0; UIEngine.updateSendBtnState();
+        const aiId2 = generateId();
+        const aiMsg2 = {id:aiId2, role:'ai', content:'⏳ '+state.seekaiDirectModel+' ...', timestamp:new Date().toISOString(), model:state.seekaiDirectModel};
+        conv.messages.push(aiMsg2); MessageRenderer.appendMessage(aiMsg2); StateController.save();
+        state.isStreaming=true; state.isThinking=true; UIEngine.updateSendBtnState();
+        try{
+          const key=window.ConfigVault?.getSeekAIKey?.()||'';
+          const base=(window.ConfigVault?.getSeekAIUrl?.()||'https://seekai.cc').replace(/\/+$/,'');
+          const r=await fetch(base+'/v1/chat/completions',{method:'POST', headers:{'Authorization':`Bearer ${key}`,'Content-Type':'application/json'}, body: JSON.stringify({model:state.seekaiDirectModel, messages:[{role:'user', content: textForPayload}], stream:false})});
+          const j=await r.json();
+          const content=j.choices?.[0]?.message?.content || j.choices?.[0]?.delta?.content || j.error?.message || JSON.stringify(j).slice(0,3000);
+          if(j.error) throw new Error(content);
+          aiMsg2.content=content; MessageRenderer.appendMessage(aiMsg2); StateController.save();
+          try{ window.UsageTracker?.record(aiMsg2.model,'seekai',textForPayload,content); }catch{}
+        }catch(e){ aiMsg2.content='⚠️ SeekAI `'+state.seekaiDirectModel+'`: '+(e.message||'error'); MessageRenderer.appendMessage(aiMsg2); }
+        state.isStreaming=false; state.isThinking=false; state.sendInFlight=false; state.sendLock=false; state._lastSendStart=0; UIEngine.updateSendBtnState(); MessageRenderer.scrollToBottom(); StateController.save();
+        return;
+      }
+
       // Clear previews & state
       state.attachments = [];
       const previewContainer = $('attachment-preview-container');
