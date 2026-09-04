@@ -2500,8 +2500,17 @@
         if (e.target.closest('#model-pill-trigger')) {
           e.preventDefault();
           e.stopPropagation();
+          const isOpen = $('model-dropdown-menu')?.classList.contains('show');
           $('model-dropdown-menu')?.classList.toggle('show');
           $('skills-vertical-menu')?.classList.remove('show');
+          // always hide Other side tab when (re)opening main levels
+          const ot=document.getElementById('other-models-tab');
+          if(ot){ ot.style.display='none'; ot.classList.remove('show'); }
+          // if closing, also hide other
+          if(isOpen){
+            const ot2=document.getElementById('other-models-tab');
+            if(ot2){ ot2.style.display='none'; ot2.classList.remove('show'); }
+          }
           return;
         }
 
@@ -2511,11 +2520,12 @@
           if(optBtn.id==='other-models-trigger'){
             const tab=document.getElementById('other-models-tab');
             const main=document.getElementById('model-dropdown-menu');
-            if(main) main.classList.remove('show');
-            if(tab) tab.style.display = (tab.style.display==='none' || !tab.style.display || tab.style.display==='') ? 'block' : 'none';
-            // also ensure tab has show class for styling
-            if(tab && tab.style.display==='block') tab.classList.add('show');
-            else tab?.classList.remove('show');
+            if(main) main.classList.add('show');
+            if(tab){
+              const willShow = tab.style.display==='none' || !tab.style.display || tab.style.display==='';
+              tab.style.display = willShow ? 'block' : 'none';
+              if(willShow) tab.classList.add('show'); else tab.classList.remove('show');
+            }
             return;
           }
           if(optBtn.dataset.seekaiModel){
