@@ -1402,10 +1402,8 @@
         });
         // ensure at least chat has models
         if(!groups.chat.length) groups.chat=models.slice(0,6);
-        // fallback for missing services — add known SeekAI services
-        if(!groups.image.length) groups.image=[{id:'dall-e-3', name:'DALL·E 3'},{id:'midjourney', name:'Midjourney'}];
-        if(!groups.video.length) groups.video=[{id:'sora', name:'Sora'},{id:'runway-gen3', name:'Runway'}];
-        if(!groups.audio.length) groups.audio=[{id:'whisper-1', name:'Whisper'}];
+        // only show services that actually exist on this key — no fallback to unavailable
+        // (dall-e-3 etc caused "No available channel" on this channel)
         const catName={chat:'💬 Chat', image:'🖼️ Image', video:'🎬 Video', audio:'🎙️ Audio'};
         const catAttr={chat:'data-seekai-model', image:'data-seekai-model', video:'data-seekai-model', audio:'data-seekai-model'};
         let html='';
@@ -1433,8 +1431,7 @@
           render(devListEl, list);
         }catch{
           const fallback=[
-            {id:'claude-opus-5'},{id:'claude-sonnet-5'},{id:'gpt-5-6'},{id:'grok-4-6'},{id:'deepseek-v4-pro'},{id:'kimi-k3'},
-            {id:'dall-e-3'},{id:'midjourney'},{id:'stable-diffusion-xl'},{id:'sora'},{id:'runway-gen3'},{id:'whisper-1'}
+            {id:'claude-opus-5'},{id:'claude-sonnet-5'},{id:'gpt-5-6'},{id:'grok-4-6'},{id:'deepseek-v4-pro'},{id:'kimi-k3'}
           ];
           render(listEl, fallback);
           render(devListEl, fallback);
