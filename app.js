@@ -135,9 +135,27 @@
     },
 
     newConversation() {
+      // Watchdog: auto-clear stale lock >28s
+      const isStale = state._lastSendStart && (Date.now() - state._lastSendStart > 28000);
+      if (isStale) {
+        state.isStreaming = false; state.sendInFlight = false; state.sendLock = false;
+        state.abortController = null; state.isThinking = false;
+        try{ MessageRenderer.hideTyping(); }catch{}
+      }
       if (state.isStreaming || state.sendInFlight || state.sendLock) {
-        MessageRenderer.showToast('⏳ انتظر انتهاء الرد الحالي قبل بدء محادثة جديدة', 'info');
-        return this.getActiveConv();
+        const since = state._lastSendStart ? Math.round((Date.now()-state._lastSendStart)/1000) : 0;
+        MessageRenderer.showToast(`⏳ جارٍ إنشاء الرد (${since}s) — انتظر اكتماله أو اضغط مرة أخرى للإجبار`, 'info');
+        // second click within 2s forces new chat
+        const now = Date.now();
+        if (state._lastNewChatAttempt && (now - state._lastNewChatAttempt < 2000)) {
+          state.isStreaming = false; state.sendInFlight = false; state.sendLock = false;
+          state.abortController?.abort?.(); state.abortController = null; state.isThinking = false;
+          try{ MessageRenderer.hideTyping(); }catch{}
+          MessageRenderer.showToast('🔓 تم إجبار محادثة جديدة', 'success');
+        } else {
+          state._lastNewChatAttempt = now;
+          return this.getActiveConv();
+        }
       }
       const id = generateId();
       const conv = {
@@ -160,6 +178,8 @@
     loadConversation(id) {
       const conv = state.conversations.find(c => c.id === id);
       if (!conv) return;
+      const isStaleLoad = state._lastSendStart && (Date.now() - state._lastSendStart > 28000);
+      if (isStaleLoad) { state.isStreaming=false; state.sendInFlight=false; state.sendLock=false; state.isThinking=false; try{MessageRenderer.hideTyping();}catch{} }
       if (state.isStreaming && id !== state.activeConvId) {
         MessageRenderer.showToast('⏳ انتظر انتهاء الرد الحالي قبل تغيير المحادثة', 'info');
         return;
@@ -1042,8 +1062,13 @@
 
     async sendMessage(userText) {
       const hasAttachments = state.attachments && state.attachments.length > 0;
-      if (state.isStreaming || state.sendInFlight || state.cacheOperationInFlight || (!userText.trim() && !hasAttachments)) return;
+      if (!userText.trim() && !hasAttachments) return;
+      if (state.isStreaming || state.sendInFlight || state.cacheOperationInFlight) {
+        MessageRenderer.showToast('⏳ انتظر انتهاء الرد الحالي قبل إرسال رسالة جديدة', 'info');
+        return;
+      }
       state.sendInFlight = true;
+      state._lastSendStart = Date.now();
 
       if (!state.activeConvId) StateController.newConversation();
       const conv = StateController.getActiveConv();
@@ -1066,8 +1091,9 @@
         if(pc){ pc.classList.add('hidden'); pc.innerHTML=''; }
         const userMsgTTS = StateController.addMessage('user', userText.trim() || textForPayload, null, currentAttachments);
         if(userMsgTTS) MessageRenderer.appendMessage(userMsgTTS);
-        state.sendInFlight = false; state.sendLock = false; UIEngine.updateSendBtnState();
+        state.sendInFlight = false; state.sendLock = false; state._lastSendStart = 0; UIEngine.updateSendBtnState();
         await window.TTSEngine.handleTTSRequest(textForPayload, conv);
+        state._lastSendStart = 0;
         return;
       }
 
@@ -1111,6 +1137,7 @@
         state.isThinking = false;
         state.isStreaming = false;
         state.abortController = null;
+        state._lastSendStart = 0;
         UIEngine.updateSendBtnState();
         const errorMessage = {
           id: generateId(),
@@ -1284,7 +1311,7 @@
           MessageRenderer.showToast('❌ ' + errText.slice(0,180), 'error');
         }
       } finally {
-        // Guaranteed unlock — prevents page freeze for giant-model tiers (HIGH) — motion only when operation actually running
+        // Guaranteed unlock — prevents freeze/ swallowed messages
         MessageRenderer.hideTyping();
         state.isThinking = false;
         state.isStreaming = false;
@@ -1292,6 +1319,7 @@
         state.sendInFlight = false;
         state.sendLock = false;
         state.cacheOperationInFlight = false;
+        state._lastSendStart = 0;
         UIEngine.updateSendBtnState();
         MessageRenderer.scrollToBottom();
         try { StateController.save(); } catch {}
@@ -2009,14 +2037,23 @@
       const triggerSend = () => {
         const text = input ? input.value.trim() : '';
         const hasAtt = state.attachments && state.attachments.length > 0;
-        if ((!text && !hasAtt) || state.isStreaming || state.sendInFlight || state.sendLock) return;
+        if (!text && !hasAtt) return;
+        // stale watchdog before blocking
+        const isStaleSend = state._lastSendStart && (Date.now() - state._lastSendStart > 28000);
+        if (isStaleSend) { state.isStreaming=false; state.sendInFlight=false; state.sendLock=false; state.cacheOperationInFlight=false; try{MessageRenderer.hideTyping();}catch{} }
+        if (state.isStreaming || state.sendInFlight || state.sendLock || state.cacheOperationInFlight) {
+          MessageRenderer.showToast('⏳ انتظر انتهاء الرد الحالي', 'info');
+          return;
+        }
         state.sendLock = true;
+        state._lastSendStart = Date.now();
+        const savedText = text;
         if (input) input.value = '';
         this.adjustTextareaHeight();
         this.updateSendBtnState();
         let sendPromise;
         try {
-          sendPromise = ChatEngine.sendMessage(text);
+          sendPromise = ChatEngine.sendMessage(savedText);
         } catch (err) {
           sendPromise = Promise.reject(err);
         }
