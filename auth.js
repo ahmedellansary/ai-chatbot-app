@@ -166,21 +166,16 @@
     };
   }
 
-  // Main ChatBot: Password completely removed as requested
-  const AuthManager = {
-    MASTER_AUTH_RECORD,
-    hashWithSalt,
-    sha256: sha256Hex,
-    verify: async () => true,
-    isUnlocked: () => true,
-    unlock: () => {},
-    lock: () => {},
-    setupGate: () => {
-      const gate = document.getElementById('app-lock-gate');
-      if (gate) gate.classList.add('hidden');
-    },
-    requireAuth: (cb) => { if (typeof cb === 'function') cb(); }
-  };
+  // Main ChatBot: locked with A7med011@@ (via _f1 fallback + MASTER_AUTH_RECORD)
+  const AuthManager = createAuthManager({
+    storageKey: 'xv1_authenticated',
+    previewFlag: '__IS_DEV_PREVIEW',
+    legacyKeys: ['nytron_app_unlocked', 'claude_app_unlocked', 'owner_unlocked'],
+    gateId: 'app-lock-gate',
+    formId: 'lock-gate-form',
+    inputId: 'gate-pin-input',
+    buttonId: 'gate-unlock-btn'
+  });
 
   const DevAuthManager = createAuthManager({
     storageKey: 'DEV_PORTAL_UNLOCKED',
