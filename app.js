@@ -571,7 +571,7 @@
       html = html.replace(/\[tts:([^\]]+)\]/gi, (m, ttsText) => {
         const clean = this.escapeHtml(ttsText.trim().slice(0, 400));
         const encoded = encodeURIComponent(ttsText.trim());
-        return `\n\n<div class="modern-audio-card tts-card" data-tts-text="${encoded}" data-src="">\n  <div class="audio-card-header"><div class="audio-tag-badge"><span class="audio-dot"></span><span>🔊 TTS</span></div></div>\n  <div class="audio-card-desc">${clean}</div>\n  <div class="audio-controls-row"><button type="button" class="audio-play-btn" onclick="window._playTTS(this)" title="تشغيل الصوت"><svg class="play-icon" viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"></polygon></svg><svg class="pause-icon" style="display:none;" viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"></rect><rect x="14" y="4" width="4" height="16" rx="1"></rect></svg> تشغيل</button><button type="button" class="audio-ctrl-btn" onclick="window._downloadTTS(this)" title="تحميل كـ WAV">⬇ تحميل</button></div>\n</div>\n\n`;
+        return `\n\n<div class="modern-audio-card tts-card tts-loading" data-tts-text="${encoded}" data-src="">\n  <div class="audio-card-header"><div class="audio-tag-badge"><span class="audio-dot"></span><span>🔊 TTS</span></div></div>\n  <div class="audio-card-desc">${clean}</div>\n  <div class="audio-controls-row" style="justify-content:center; gap:12px;"><button type="button" class="tts-play-btn" onclick="window._playTTS(this)" title="تشغيل الصوت"><svg class="play-icon" viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"></polygon></svg><svg class="pause-icon" style="display:none;" viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"></rect><rect x="14" y="4" width="4" height="16" rx="1"></rect></svg><span>تشغيل</span></button><button type="button" class="audio-ctrl-btn" onclick="window._downloadTTS(this)" title="تحميل">⬇ تحميل</button></div>\n</div>\n\n`;
       });
 
       html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
@@ -892,18 +892,28 @@
     },
     extractText(userText){
       let t = String(userText||'').trim();
-      // quoted text priority: "..." or '...' or «...»
+      // 1) quoted priority
       const qMatch = t.match(/["«»“”'‘]([^"«»“”'‘]{3,})["«»“”'‘]/);
       if(qMatch) return qMatch[1].trim();
-      // after colon : or ـ or =
+      // 2) after "لصوت" keyword — most accurate for Arabic "حولي النص ده لصوت .. سلام عليكو"
+      const lSawtIdx = t.search(/لصوت/);
+      if(lSawtIdx !== -1){
+        let after = t.slice(lSawtIdx + 4).replace(/^[\s:：\-—–\.،,]+/, '').trim();
+        // remove leading filler "ده" / "دا"
+        after = after.replace(/^(ده|دا|هذا)\s+/,'').trim();
+        if(after.length >= 3) return after.slice(0, 900);
+      }
+      // 3) after colon
       const colonIdx = t.search(/[:：]/);
       if(colonIdx !== -1){
         const after = t.slice(colonIdx+1).trim();
         if(after.length >= 3) return after.slice(0, 900);
       }
-      // strip trigger words
-      const stripped = t.replace(/^(حوّل|حول|تحويل|اقرأ|انطق|سمعني|حول النص الى صوت|حول النص لصوت|حول هذا النص الى صوت|حول هذا النص لصوت|حول لي النص الى صوت|text to speech|tts)[:\s-]*/i,'').trim();
-      if(stripped.length >= 3) return stripped.slice(0, 900);
+      // 4) generic strip — cover حولي/حول/حوليلي/حوللي etc
+      const stripped = t.replace(/.*?(حوّل|حول|حولي|حولّي|تحويل|اقرأ|انطق|سمعني).*?(لصوت|صوت|speech|voice).*?[:\s\-—–]*/i,'').trim();
+      if(stripped.length >= 3 && stripped.length < t.length) return stripped.slice(0, 900);
+      const stripped2 = t.replace(/^(حوّل|حول|حولي|تحويل|اقرأ|انطق|سمعني|text to speech|tts)[:\s\-]*/i,'').trim();
+      if(stripped2.length >= 3) return stripped2.slice(0, 900);
       return t.slice(0, 900);
     },
     async synthesizeWithCloud(text){
@@ -943,17 +953,19 @@
         const errMsg = { id: generateId(), role:'ai', content:'⚠️ لم أجد نصًا لتحويله لصوت — اكتب مثل: `حول النص "مرحبا كيف حالك" الى صوت`', timestamp:new Date().toISOString(), isError:true };
         conv.messages.push(errMsg); MessageRenderer.appendMessage(errMsg); StateController.save(); return;
       }
-      // create placeholder AI message with TTS card immediately
+      // create placeholder AI message with TTS card immediately (brown pulse during generation)
       const ttsCard = `[tts:${textToSpeak}]`;
-      const aiMsg = { id: generateId(), role:'ai', content:`تم استلام طلب تحويل النص لصوت — جارٍ التوليد عبر نماذج الصوت...\n\n${ttsCard}\n\n> النص: "${textToSpeak.slice(0,180)}"`, timestamp:new Date().toISOString(), model:'TTS Orchestrator' };
+      const aiMsg = { id: generateId(), role:'ai', content:`${ttsCard}`, timestamp:new Date().toISOString(), model:'TTS Orchestrator' };
       conv.messages.push(aiMsg);
       MessageRenderer.appendMessage(aiMsg);
       StateController.save();
+      // remove brown pulse after short local prep (if cloud not used, card stays but pulse stops)
+      setTimeout(()=>{ document.querySelectorAll('.tts-card.tts-loading').forEach(c=> c.classList.remove('tts-loading')); }, 900);
       // try cloud in background and upgrade card to [audio:blob]
       try{
         const cloudUrl = await this.synthesizeWithCloud(textToSpeak);
         if(cloudUrl){
-          aiMsg.content = `✅ تم توليد الصوت بنجاح عبر نماذج الصوت (Cloud TTS):\n\n[audio:${cloudUrl}|${textToSpeak.slice(0,60)}|TTS Cloud]\n\n> النص: "${textToSpeak.slice(0,180)}"`;
+          aiMsg.content = `[audio:${cloudUrl}|${textToSpeak.slice(0,60)}|TTS Cloud]`;
           MessageRenderer.appendMessage(aiMsg);
           StateController.save();
           MessageRenderer.showToast('🔊 تم توليد الملف الصوتي — جاهز للتشغيل والتحميل','success');
