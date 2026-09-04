@@ -62,7 +62,7 @@ const rotateGroqKey = () => {
 
 // ─── Model Tiers — Unified active model set (Strictly Isolated within Tier) ───
 const MODELS = {
-  MID: [
+  BALANCED: [
     { id: 'openai/gpt-oss-120b', name: 'GPT OSS 120B (Balanced Core)', provider: 'groq' },
     { id: 'poolside/laguna-s-2.1:free', name: 'Laguna S 2.1 (118B)', provider: 'openrouter' },
     { id: 'cohere/north-mini-code:free', name: 'North Mini Code (30B)', provider: 'openrouter' },
@@ -109,8 +109,10 @@ const DEV_TIER_MODELS = {
 
 const DEV_MODELS = DEV_TIER_MODELS.HIGH;
 
-// Backward compat alias — old localStorage values used BALANCE2
+// Backward compat aliases — old localStorage values
+MODELS.MID = MODELS.BALANCED;
 MODELS.BALANCE2 = MODELS.HIGH;
+MODELS.BALANCE = MODELS.BALANCED;
 
 // ─── Enabled/Disabled per-model fallback (checkbox) ───
 const ENABLED_KEY = 'xv1_enabled_models';
