@@ -3375,6 +3375,8 @@ pre code {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  direction: rtl !important;
+  text-align: right !important;
 }
 .peer-bullet {
   display: flex;
@@ -3385,8 +3387,16 @@ pre code {
   color: var(--text-main);
   padding: 5px 8px;
   border-radius: 6px;
-  direction: ltr;
-  text-align: left;
+  direction: rtl !important;
+  text-align: right !important;
+  unicode-bidi: isolate;
+}
+.peer-bullet-text {
+  flex: 1;
+  direction: rtl;
+  text-align: right;
+  unicode-bidi: isolate;
+  line-height: 1.55;
 }
 .peer-bullet.ok {
   background: rgba(16, 185, 129, 0.05);
@@ -3799,21 +3809,24 @@ pre code {
   align-items: flex-start;
   gap: 8px;
   font-size: 12px;
-  line-height: 1.45;
+  line-height: 1.5;
   color: var(--text-main);
-  padding: 4px 6px;
+  padding: 4px 8px;
   border-radius: 6px;
   background: rgba(255, 255, 255, 0.02);
+  direction: rtl !important;
+  text-align: right !important;
+  unicode-bidi: isolate;
 }
 .peer-bullet.warn {
   color: #fde68a;
   background: rgba(245, 158, 11, 0.06);
-  border-left: 2px solid #f59e0b;
+  border-inline-start: 3px solid #f59e0b;
 }
 .peer-bullet.ok {
   color: #a7f3d0;
   background: rgba(16, 185, 129, 0.04);
-  border-left: 2px solid #10b981;
+  border-inline-start: 3px solid #10b981;
 }
 .peer-bullet-dot {
   width: 6px;
