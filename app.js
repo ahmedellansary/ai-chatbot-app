@@ -1284,6 +1284,8 @@
     init(){
       const sSel=document.getElementById('seekai-service-select');
       const mSel=document.getElementById('seekai-model-select');
+      // page removed — keep silent (Other tab uses hardcoded models, not this controller)
+      if(!sSel || !mSel) return;
       const input=document.getElementById('seekai-input');
       const send=document.getElementById('seekai-send-btn');
       const refresh=document.getElementById('seekai-refresh-btn');
@@ -1293,7 +1295,7 @@
         try{
           const key=(window.ConfigVault?.getSeekAIKey?.()||'');
           const url=(window.ConfigVault?.getSeekAIUrl?.()||'https://seekai.cc').replace(/\/+$/,'');
-          mSel.innerHTML='<option>جاري...</option>';
+          if(mSel) mSel.innerHTML='<option>جاري...</option>';
           const r=await fetch(url+'/v1/models',{headers:{'Authorization':`Bearer ${key}`}});
           if(!r.ok) throw new Error('no models');
           const j=await r.json();
