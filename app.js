@@ -265,6 +265,8 @@
         s=s.replace(/sk-or-v1-[a-z0-9]+/gi,'[REDACTED_OR_KEY]');
         s=s.replace(/gsk_[A-Za-z0-9_]+/g,'[REDACTED_GROQ]');
         s=s.replace(/ghp_[A-Za-z0-9_]+/g,'[REDACTED_GH]');
+        s=s.replace(/\b\d{6}\b/g,'[REDACTED_OTP]');
+        s=s.replace(/\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b/g,'[REDACTED_CARD]');
         s=s.replace(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g,'[REDACTED_EMAIL]');
         return JSON.parse(s);
       }catch{ return obj; }
@@ -2039,6 +2041,13 @@
       state._lastSendStart = Date.now();
 
       let { textForPayload, currentAttachments } = this.preparePayload(userText);
+      // ── Bank/OTP protection: never store or sync sensitive ──
+      const _sensitiveRe = /\b\d{6}\b|\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b|كلمة.*سر.*بنك|OTP|CVV|رمز.*تحقق/i;
+      let _isSensitive = _sensitiveRe.test(textForPayload);
+      if(_isSensitive){
+        try{ MessageRenderer.showToast('⚠️ تم اكتشاف بيانات حساسة — لن تُزامن للمستودع', 'error'); }catch{}
+        textForPayload = textForPayload.replace(_sensitiveRe, '[REDACTED]');
+      }
       // Web Browse + RAG-lite enrichment
       try{
         const urls=[...textForPayload.matchAll(/https?:\/\/[^\s"']+/g)].map(m=>m[0]).slice(0,2);
