@@ -1,4 +1,4 @@
-const CACHE_NAME = 'xv1-chat-v345';
+const CACHE_NAME = 'xv1-chat-v346';
 
 // Install immediately
 self.addEventListener('install', event => {
