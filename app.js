@@ -917,18 +917,22 @@
       return t.slice(0, 900);
     },
     async synthesizeWithCloud(text){
-      // Strong model only: openai/tts-1-hd (weak tts-1 removed per request)
+      // Strong: Fish S2.1 Pro Free (free) default — selectable in voice box
       try{
         const key = (window.ConfigVault && window.ConfigVault.getOpenRouterKey && window.ConfigVault.getOpenRouterKey()) || '';
         if(!key || !String(key).startsWith('sk-or')) return null;
+        const model = (document.getElementById('tts-model-select')?.value || 'fishaudio/fish-speech-1.5:free').trim();
         const voice = (document.getElementById('tts-voice-select')?.value || 'alloy').trim();
         const speed = parseFloat(document.getElementById('tts-speed-btn')?.dataset?.speed || '1') || 1;
         const ctrl = new AbortController();
         const tm = setTimeout(()=> ctrl.abort(), 14000);
+        const payload = { model: model, input: text.slice(0, 900) };
+        // OpenAI family needs voice/speed, Fish ignores voice
+        if(model.includes('openai')){ payload.voice = voice; payload.speed = Math.min(4, Math.max(0.25, speed)); }
         const r = await fetch('https://openrouter.ai/api/v1/audio/speech',{
           method:'POST',
           headers:{ 'Authorization':`Bearer ${key}`,'Content-Type':'application/json','HTTP-Referer':window.location.origin,'X-Title':'X.v1 TTS' },
-          body: JSON.stringify({ model:'openai/tts-1-hd', input: text.slice(0, 900), voice: voice, speed: Math.min(4, Math.max(0.25, speed)) }),
+          body: JSON.stringify(payload),
           signal: ctrl.signal
         });
         clearTimeout(tm);
@@ -989,10 +993,12 @@
       try{
         const cloudUrl = await this.synthesizeWithCloud(txt);
         if(cloudUrl){
-          aiMsg.content = `[audio:${cloudUrl}|${txt.slice(0,60)}|TTS HD • ${document.getElementById('tts-voice-select')?.value||'alloy'}]`;
+          const sel = document.getElementById('tts-model-select');
+          const shortName = sel?.selectedOptions?.[0]?.textContent?.trim() || 'Fish S2.1';
+          aiMsg.content = `[audio:${cloudUrl}|${txt.slice(0,60)}|${shortName}]`;
           MessageRenderer.appendMessage(aiMsg);
           StateController.save();
-          MessageRenderer.showToast('🔊 تم توليد الصوت HD — جاهز','success');
+          MessageRenderer.showToast(`🔊 ${shortName} — جاهز`,'success');
         } else {
           MessageRenderer.showToast('🔊 جاهز محلياً — اضغط تشغيل','info');
         }
@@ -1050,7 +1056,8 @@
       const vInput = document.getElementById('voice-input');
       const vSend = document.getElementById('voice-send-btn');
       const vSpeed = document.getElementById('tts-speed-btn');
-      const vPitch = document.getElementById('tts-pitch-btn');
+      const vModel = document.getElementById('tts-model-select');
+      const vVoice = document.getElementById('tts-voice-select');
       const vMic = document.getElementById('voice-mic-btn');
       let speedIdx = 0; const speeds = [1,1.15,1.3,1.5,0.9];
       vSpeed?.addEventListener('click', ()=>{
@@ -1061,7 +1068,9 @@
         try{ localStorage.setItem('tts_speed', s); }catch{}
       });
       try{ const savedS = localStorage.getItem('tts_speed'); if(savedS){ vSpeed.textContent=savedS+'x'; vSpeed.dataset.speed=savedS; const idx=speeds.indexOf(parseFloat(savedS)); if(idx>=0) speedIdx=idx; } }catch{}
-      vPitch?.addEventListener('click', ()=> MessageRenderer.showToast('🎵 النغمة قريباً — حالياً السرعة والصوت متاحان','info'));
+      vModel?.addEventListener('change', ()=>{ try{ localStorage.setItem('tts_model', vModel.value); }catch{} });
+      vVoice?.addEventListener('change', ()=>{ try{ localStorage.setItem('tts_voice', vVoice.value); }catch{} });
+      try{ const m=localStorage.getItem('tts_model'); if(m && vModel) vModel.value=m; const vv=localStorage.getItem('tts_voice'); if(vv && vVoice) vVoice.value=vv; }catch{}
       const vTrigger = ()=>{
         const txt = vInput? vInput.value.trim() : '';
         if(!txt){ MessageRenderer.showToast('اكتب النص أولاً','warning'); return; }
