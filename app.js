@@ -1697,6 +1697,7 @@
   const ImageGen = {
     // priority: quality + cheapest price first (user request)
     PRIORITY:['flux','gpt-image-1','stable-diffusion-xl','imagen-3','flux-1.1-pro','dall-e-3','dall-e-2','kandinsky','midjourney','sora'],
+    _lastGen:0, _cooldownUntil:0,
     getPriorityModel(){ return this.PRIORITY[0]; },
     async fetchImageModels(){
       // curate ONLY real image models - never show chat models - ordered by quality+price
@@ -1731,12 +1732,22 @@
       return CURATED;
     },
     async generate(modelId, prompt, conv){
+      if(Date.now() < this._cooldownUntil){
+        const sec=Math.ceil((this._cooldownUntil-Date.now())/1000);
+        const aiId0=generateId(); const m0={id:aiId0, role:'ai', content:`⏳ انتظر ${sec} ثانية — حد الصور 5/دقيقة لتجنب الحظر. سيتم التوليد تلقائيا بعد العد التنازلي.`, timestamp:new Date().toISOString(), model:modelId};
+        const conv0=conv||StateController.getActiveConv(); conv0.messages.push(m0); MessageRenderer.appendMessage(m0); StateController.save();
+        await new Promise(r=>setTimeout(r, sec*1000)); 
+      }
+      if(Date.now() - this._lastGen < 15000){
+        await new Promise(r=>setTimeout(r, 15000 - (Date.now()-this._lastGen)));
+      }
       if(!conv) conv=StateController.getActiveConv();
       const clean=String(prompt||'').trim().slice(0,900) || 'a beautiful scene';
       const aiId=generateId();
       const aiMsg={id:aiId, role:'ai', content:'⏳ Generating image via `'+modelId+'`...', timestamp:new Date().toISOString(), model:modelId};
       conv.messages.push(aiMsg); MessageRenderer.appendMessage(aiMsg); StateController.save();
       state.isStreaming=true; state.isThinking=true; UIEngine.updateSendBtnState();
+      this._lastGen=Date.now();
       const key=window.ConfigVault?.getSeekAIKey?.()||'';
       const base=(window.ConfigVault?.getSeekAIUrl?.()||'https://seekai.cc').replace(/\/+$/,'');
       const tryOne=async (mid)=>{
@@ -1762,11 +1773,17 @@
         if(url){
           aiMsg.content=`![generated](${url})\n\n**${MessageRenderer.escapeHtml(clean)}** — \`${modelId}\``;
         } else if(j.error){
-          const isChannelErr=/No available channel/i.test(j.error.message||'');
-          if(isChannelErr){
-            aiMsg.content=`⚠️ Image generation not enabled for this account (tried ${modelId} + fallbacks).\nAuto-tried: ${(window.ImageGen.PRIORITY||[]).join(', ')} — all returned 503.\nAdmin must enable an image channel in SeekAI/NewAPI Dashboard → Channel Management.\n<details><summary>Details</summary>${MessageRenderer.escapeHtml(j.error.message)}</details>`;
+          const isRate=/总请求数限制|5次|rate limit|Too many requests/i.test(j.error.message||'');
+          if(isRate){
+            this._cooldownUntil=Date.now()+62000;
+            aiMsg.content=`⚠️ حد الصور 5/دقيقة — انتظر 60 ثانية ثم سيُعاد تلقائيا. لا ترسل 5 طلبات متتالية.\n<details><summary>Details</summary>${MessageRenderer.escapeHtml(j.error.message)}</details>`;
           } else {
-            aiMsg.content='⚠️ Generation failed `'+modelId+'`: '+(j.error.message||JSON.stringify(j).slice(0,600));
+            const isChannelErr=/No available channel/i.test(j.error.message||'');
+            if(isChannelErr){
+              aiMsg.content=`⚠️ Image generation not enabled for this account (tried ${modelId} + fallbacks).\nAuto-tried: ${(window.ImageGen.PRIORITY||[]).join(', ')} — all returned 503.\nAdmin must enable an image channel in SeekAI/NewAPI Dashboard → Channel Management.\n<details><summary>Details</summary>${MessageRenderer.escapeHtml(j.error.message)}</details>`;
+            } else {
+              aiMsg.content='⚠️ Generation failed `'+modelId+'`: '+(j.error.message||JSON.stringify(j).slice(0,600));
+            }
           }
         } else {
           aiMsg.content='```json\n'+JSON.stringify(j,null,2).slice(0,2000)+'\n```';
@@ -2734,6 +2751,15 @@
         }
       };
 
+      const isTrivialMA = /^(السلام عليكم|مرحبا|هلا|اهلا|انت (كويس|عامل ايه)|كيف حالك|ترجم( كلمة)?$|ضيف تشكيل|عدل الجملة)/i.test(textForPayload.trim()) || textForPayload.trim().length < 22;
+      if(isTrivialMA){
+        // bypass for trivial — direct single FAST call, no 6 stages
+        const stream0 = ModelEngine.chatWithFallback('FAST', apiMessages, state.abortController.signal, () => {});
+        let out=''; for await(const {chunk} of stream0) { out+=chunk; renderLiveUI(steps, out, false); }
+        steps.forEach(s=>{ s.status='✓ تجاوز تريفيال'; s.summary='Trivial bypass'; });
+        renderLiveUI(steps, out, false);
+        aiMsgObj.content=out; aiMsgObj.multiAgentSteps=steps; StateController.save(); return;
+      }
       const steps = [
         { id: 1, icon: '💡', title: 'المحلل الاستراتيجي (Strategic Analyst)', shortName: 'المحلل', status: 'نشط الآن', summary: 'جاري دراسة المسألة واقتراح التحليل والمسودة الأولية...' },
         { id: 2, icon: '🎯', title: 'مدقق التفضيلات والتعليمات (Preferences & Domain Auditor)', shortName: 'التفضيلات', status: 'في الانتظار', summary: 'بانتظار المسودة لمطابقتها مع التفضيلات وسياق التعليمات والهدف الجوهري...' },
@@ -2833,25 +2859,8 @@ ${domainInstructions || 'قواعد الفصاحة والأسلوب ومطابق
         }
       ];
 
-      let stage2Output = '';
-      try {
-        const stream2 = ModelEngine.chatWithFallback('MID', stage2Messages, state.abortController.signal, () => {});
-        for await (const { chunk } of stream2) {
-          stage2Output += chunk;
-        }
-        steps[1].status = '✓ تم التدقيق';
-        steps[1].summary = stage2Output.slice(0, 160).trim() + (stage2Output.length > 160 ? '...' : '');
-        steps[2].status = 'نشط الآن';
-        steps[2].summary = 'جاري النقد المنطقي وفحص الثغرات المحتملة...';
-        renderLiveUI(steps, '', true);
-      } catch (e) {
-        steps[1].status = 'تجاوز';
-        steps[1].hasError = true;
-        stage2Output = 'تم فحص التفضيلات والتعليمات.';
-      }
-
-      // --- STAGE 3: Critical Reviewer ---
-      const stage3Messages = [
+      // ── Parallel: Planning + Devil's Advocate via Promise.all on different keys (LRU) ──
+      const stage3MessagesParallel = [
         ...apiMessages.slice(0, -1),
         {
           role: 'user',
@@ -2860,31 +2869,45 @@ ${domainInstructions || 'قواعد الفصاحة والأسلوب ومطابق
 مسودة المحلل الأولي (Draft):
 "${stage1Output}"
 
-نتائج تدقيق التفضيلات والتعليمات التخصصية والهدف:
-"${stage2Output}"
-
 [DIRECTIVE TO CRITICAL REVIEWER]:
 1. Validate whether the proposal solves the actual user issue without hallucinating server/backend root causes.
 2. Strip out any unnecessary technical jargon, unsolicited terminal commands, or bloated theories.
 3. Point out any logic flaws or practical improvements concisely in 2 bullet points.`
         }
       ];
-
-      let stage3Output = '';
-      try {
-        const stream3 = ModelEngine.chatWithFallback('MID', stage3Messages, state.abortController.signal, () => {});
-        for await (const { chunk } of stream3) {
-          stage3Output += chunk;
-        }
-        steps[2].status = '✓ اكتمل النقد';
-        steps[2].summary = stage3Output.slice(0, 160).trim() + (stage3Output.length > 160 ? '...' : '');
-        steps[3].status = 'نشط الآن';
-        steps[3].summary = 'جاري صياغة واعتماد القرار النهائي المعتمد بأعلى جودة...';
-        renderLiveUI(steps, '', true);
-      } catch (e) {
-        steps[2].status = 'تجاوز';
-        steps[2].hasError = true;
-        stage3Output = 'تم النقد واعتماد النقاط الأساسية.';
+      let stage2Output = '', stage3Output = '';
+      const groqKeysAvail = (window.ConfigVault?.getGroqKeys?.()||[]).length;
+      if(groqKeysAvail >= 2){
+        // run both in parallel on different keys
+        const p2 = (async()=>{
+          try{
+            const s2 = ModelEngine.chatWithFallback('MID', stage2Messages, state.abortController.signal, () => {});
+            for await(const {chunk} of s2) stage2Output+=chunk;
+            steps[1].status='✓ تم التدقيق'; steps[1].summary=stage2Output.slice(0,160).trim()+(stage2Output.length>160?'...':'');
+          }catch(e){ steps[1].status='تجاوز'; steps[1].hasError=true; stage2Output='تم فحص التفضيلات.'; }
+        })();
+        const p3 = (async()=>{
+          try{
+            const s3 = ModelEngine.chatWithFallback('MID', stage3MessagesParallel, state.abortController.signal, () => {});
+            for await(const {chunk} of s3) stage3Output+=chunk;
+            steps[2].status='✓ اكتمل النقد'; steps[2].summary=stage3Output.slice(0,160).trim()+(stage3Output.length>160?'...':'');
+          }catch(e){ steps[2].status='تجاوز'; steps[2].hasError=true; stage3Output='تم النقد.'; }
+        })();
+        await Promise.all([p2,p3]);
+        steps[3].status='نشط الآن'; steps[3].summary='جاري صياغة واعتماد القرار النهائي...'; renderLiveUI(steps,'',true);
+      } else {
+        // fallback sequential for single key
+        try {
+          const stream2 = ModelEngine.chatWithFallback('MID', stage2Messages, state.abortController.signal, () => {});
+          for await (const { chunk } of stream2) stage2Output += chunk;
+          steps[1].status = '✓ تم التدقيق'; steps[1].summary = stage2Output.slice(0,160).trim()+(stage2Output.length>160?'...':'');
+        } catch(e){ steps[1].status='تجاوز'; steps[1].hasError=true; stage2Output='تم فحص التفضيلات.'; }
+        let stage3OutputTmp=''; try {
+          const stream3 = ModelEngine.chatWithFallback('MID', stage3MessagesParallel, state.abortController.signal, () => {});
+          for await (const { chunk } of stream3) stage3OutputTmp += chunk;
+          stage3Output=stage3OutputTmp; steps[2].status='✓ اكتمل النقد'; steps[2].summary=stage3Output.slice(0,160).trim()+(stage3Output.length>160?'...':'');
+        } catch(e){ steps[2].status='تجاوز'; steps[2].hasError=true; stage3Output='تم النقد.'; }
+        steps[3].status='نشط الآن'; steps[3].summary='جاري صياغة واعتماد القرار النهائي...'; renderLiveUI(steps,'',true);
       }
 
       // --- STAGE 4: Final Synthesis ---
@@ -2946,13 +2969,19 @@ ${stage3Output}
       // Prevent duplicate observer boxes
       if (aiRow.querySelector('.observer-box')) return;
 
-      const steps = [
+      const obsIsTrivial = /^(السلام عليكم|مرحبا|هلا|اهلا|انت (كويس|عامل ايه)|كيف حالك|ترجم( كلمة)?$|ضيف تشكيل|عدل الجملة)/i.test(userText.trim()) || userText.trim().length < 22;
+      const obsIsComplex = /(حلل|قارن|صمم|استراتيجي|خطة|تقرير|مصفوفة|اشرح بالتفصيل|SWOT|Freemium|Network Effects|CNN|نظرية الألعاب)/i.test(userText) || userText.length > 120;
+      const obsDepth = obsIsTrivial ? 2 : obsIsComplex ? 7 : 5;
+      const allSteps = [
         { icon: '👁️', title: t('مراقبة الرد', 'Monitoring response'), status: t('نشط', 'Active'), summary: t('جاري متابعة رد المستوى المختار...', 'Tracking selected level response...') },
         { icon: '📋', title: t('فحص الالتزام بالتعليمات', 'Instruction compliance'), status: t('انتظار', 'Waiting'), summary: t('بانتظار التحليل...', 'Awaiting analysis...') },
         { icon: '🔍', title: t('كشف التناقض والتكرار', 'Contradiction check'), status: t('انتظار', 'Waiting'), summary: t('بانتظار الفحص...', 'Awaiting check...') },
         { icon: '🌐', title: t('التحقق من المصادر', 'Source reliability'), status: t('انتظار', 'Waiting'), summary: t('للقصص/الشخصيات الحقيقية فقط', 'For real stories/scripts only') },
+        { icon: '🧩', title: t('وعي البيئة والسياق', 'Environment awareness'), status: t('انتظار', 'Waiting'), summary: t('هل فهم السياق والبيئة المحيطة؟', 'Context & environment?') },
+        { icon: '🎯', title: t('الصقل العميق', 'Deep polish'), status: t('انتظار', 'Waiting'), summary: t('صقل نهائي ذكي', 'Smart final polish') },
         { icon: '✨', title: t('تحسين الجودة', 'Quality enhancement'), status: t('انتظار', 'Waiting'), summary: t('بانتظار الاقتراح...', 'Awaiting suggestion...') }
       ];
+      const steps = allSteps.slice(0, obsDepth);
 
       const renderObserver = (finalReview = '', activeIdx = 0) => {
         // Floating bullets — no numbers — COMMITTED header with colored numbers, icon toggle, Apply only
@@ -3035,14 +3064,17 @@ ${stage3Output}
       ];
 
       let reviewText = '';
-      // 5-agent COMMITTED chain: MID/FAST sequential, concise
+      // 7-agent COMMITTED chain — dynamic depth without slowing trivial (1-2 stages parallel)
       const chain=[
         {id:'qwen/qwen3.8-27b', provider:'groq', name:'Qwen 27B'},
         {id:'openai/gpt-oss-20b', provider:'groq', name:'GPT 20B'},
         {id:'cohere/north-mini-code:free', provider:'openrouter', name:'North Mini'},
         {id:'openai/gpt-oss-120b', provider:'groq', name:'GPT 120B'},
-        {id:'thinkingmachines/inkling-small:free', provider:'openrouter', name:'Inkling 276B'}
+        {id:'thinkingmachines/inkling-small:free', provider:'openrouter', name:'Inkling 276B'},
+        {id:'z-ai/glm-5.2:free', provider:'openrouter', name:'GLM 5.2'},
+        {id:'nvidia/nemotron-3.5-lightning:free', provider:'openrouter', name:'Nemotron Lightning'}
       ];
+      const activeChain = chain.slice(0, Math.min(obsDepth, chain.length));
       async function callAgent(agent, msgs, signal){
         for(let a=0;a<2;a++){
           try{
@@ -3059,13 +3091,13 @@ ${stage3Output}
       }
       try{
         let accumulated='';
-        for(let i=0;i<chain.length;i++){
-          const agent=chain[i];
+        for(let i=0;i<activeChain.length;i++){
+          const agent=activeChain[i];
           renderObserver(accumulated, i);
-          const isLast=i===chain.length-1;
+          const isLast=i===activeChain.length-1;
           const prev = accumulated ? "\n\nprev:\n"+accumulated.slice(0,1500) : '';
-          const q1 = isAr ? "مراجع "+(i+1)+"/5 ("+agent.name+")"+prev+" سؤال: "+userText.slice(0,600)+" رد: "+aiResponse.slice(0,2000) : "Reviewer "+(i+1)+"/5 ("+agent.name+")"+prev+" Q: "+userText.slice(0,600)+" A: "+aiResponse.slice(0,2000);
-          const q2 = isLast ? (isAr ? "\nلخص 4 نقاط: التزام/تناقض/مصادر/تحسين عام." : "\nSummarize 4 bullets.") : (isAr ? "\nسطر واحد فقط." : "\nOne line.");
+          const q1 = isAr ? "مراجع "+(i+1)+"/"+activeChain.length+" ("+agent.name+")"+prev+" سؤال: "+userText.slice(0,600)+" رد: "+aiResponse.slice(0,2000) : "Reviewer "+(i+1)+"/"+activeChain.length+" ("+agent.name+")"+prev+" Q: "+userText.slice(0,600)+" A: "+aiResponse.slice(0,2000);
+          const q2 = isLast ? (isAr ? "\nلخص 6 نقاط: التزام/تناقض/مصادر/بيئة/صقل/تحسين عام." : "\nSummarize 6 bullets.") : (isAr ? "\nسطر واحد فقط." : "\nOne line.");
           const p = q1 + q2;
           const msgs=[{role:'system', content: isAr?'أنت مراجع مختصر':'You are concise reviewer'}, {role:'user', content:p}];
           const ac=new AbortController(); const tm=setTimeout(()=>ac.abort(), 9000);
