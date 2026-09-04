@@ -404,8 +404,11 @@ html, body {
   align-items: center;
   justify-content: space-between;
   background: var(--bg-main);
-  z-index: 20;
+  z-index: 30;
   flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  width: 100%;
 }
 
 .header-right-actions {
