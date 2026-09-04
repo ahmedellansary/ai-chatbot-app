@@ -2575,8 +2575,7 @@
             if(state.seekaiDirectModel) conv.seekaiModel = state.seekaiDirectModel;
             StateController.save();
           }
-          const name = optBtn.dataset.seekaiModel || state.currentMode;
-          MessageRenderer.showToast(`Switched to ${name}`, 'info');
+          // no toast per user request
           return;
         }
 
