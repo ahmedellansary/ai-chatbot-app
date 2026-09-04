@@ -4779,9 +4779,15 @@ ${stage3Output}
       const layer = state.currentLayer || 'general';
       const layerConvs = state.conversations.filter(c=> (c.layer||'general')===layer);
       const lastActiveId = localStorage.getItem('activeConvId');
-      const targetConv = layerConvs.find(c=>c.id===lastActiveId) || layerConvs[0] || state.conversations[0];
+      const targetConv = layerConvs.find(c=>c.id===lastActiveId) || layerConvs[0];
       if(targetConv) StateController.loadConversation(targetConv.id);
-      else UIEngine.showWelcomeScreen();
+      else {
+        // stay on current layer even if empty — don't force to first page
+        state.activeConvId = null;
+        try{ localStorage.removeItem('activeConvId'); }catch{}
+        UIEngine.showWelcomeScreen();
+        UIEngine.renderConversationsList();
+      }
     }
 
     UIEngine.updateHeaderUI();
