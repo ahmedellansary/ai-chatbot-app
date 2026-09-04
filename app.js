@@ -2273,24 +2273,31 @@
       if (inputContainer) {
         inputContainer.classList.toggle('thinking', Boolean(state.isThinking));
       }
-      if (!btn) return;
-      const textVal = inputEl ? inputEl.value : '';
-      const hasText = textVal.trim().length > 0;
-      const hasAtt = Array.isArray(state.attachments) && state.attachments.length > 0;
-      const canSend = (hasText || hasAtt) &&
-        !state.isStreaming &&
-        !state.sendInFlight &&
-        !state.sendLock &&
-        !state.cacheOperationInFlight &&
-        !state.refreshInFlight;
-
-      if (canSend) {
-        btn.classList.add('active');
-        btn.removeAttribute('disabled');
-      } else {
-        btn.classList.remove('active');
-        btn.setAttribute('disabled', 'true');
+      if (btn){
+        const textVal = inputEl ? inputEl.value : '';
+        const hasText = textVal.trim().length > 0;
+        const hasAtt = Array.isArray(state.attachments) && state.attachments.length > 0;
+        const canSend = (hasText || hasAtt) &&
+          !state.isStreaming &&
+          !state.sendInFlight &&
+          !state.sendLock &&
+          !state.cacheOperationInFlight &&
+          !state.refreshInFlight;
+        if (canSend) { btn.classList.add('active'); btn.removeAttribute('disabled'); }
+        else { btn.classList.remove('active'); btn.setAttribute('disabled', 'true'); }
       }
+      // also update voice/seekai send buttons
+      ['voice-input','seekai-input'].forEach(id=>{
+        const inp=document.getElementById(id);
+        const bId=id==='voice-input'?'voice-send-btn':'seekai-send-btn';
+        const b=document.getElementById(bId);
+        if(inp && b){
+          const has=inp.value.trim().length>0;
+          const can=has && !state.isStreaming && !state.sendInFlight && !state.sendLock;
+          if(can){ b.classList.add('active'); b.removeAttribute('disabled'); }
+          else { b.classList.remove('active'); if(!has) b.setAttribute('disabled','true'); }
+        }
+      });
     },
 
     updateInputDirection() {
