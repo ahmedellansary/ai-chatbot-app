@@ -1580,6 +1580,7 @@ Reply strictly in 5 concise lines starting with • :
       this.loadDevPrompt();
       DevAuthManager.setupGate();
       this.updateAgentPillDisplay();
+      DevNotesEngine.init();
 
       const multiBtn = $('dev-multi-agent-toggle-btn');
       if (multiBtn && state.isMultiAgentMode) {
@@ -3232,6 +3233,338 @@ Reply strictly in 5 concise lines starting with • :
     return (root || document).querySelectorAll(sel);
   }
   try { window.$ = $; window.$$ = $$; } catch(e) {}
+
+  // ─────────────────────────────────────────────────────────────────
+  // DEV NOTES ENGINE — BIDIRECTIONAL GITHUB SYNC & LOCAL PERSISTENCE
+  // ─────────────────────────────────────────────────────────────────
+  const DevNotesEngine = {
+    STORAGE_KEY: 'DEV_STUDIO_NOTES',
+    REMOTE_FILE: 'dev-notes.json',
+    isSyncing: false,
+    filterKeyword: '',
+
+    getLocalData() {
+      try {
+        const raw = localStorage.getItem(this.STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) return { version: 1, last_updated: new Date().toISOString(), notes: parsed };
+          if (parsed && Array.isArray(parsed.notes)) return parsed;
+        }
+      } catch (e) {
+        console.warn('[DevNotes] read local error:', e);
+      }
+      return { version: 1, last_updated: new Date().toISOString(), notes: [] };
+    },
+
+    saveLocalData(data) {
+      try {
+        data.last_updated = new Date().toISOString();
+        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(data));
+      } catch (e) {
+        console.warn('[DevNotes] save local error:', e);
+      }
+    },
+
+    setSyncStatus(status, text) {
+      const badge = $('dev-notes-sync-badge');
+      const label = $('dev-notes-sync-text');
+      const syncBtn = document.querySelector('.dev-notes-btn-sync');
+      if (!badge || !label) return;
+      badge.className = 'dev-notes-sync-badge ' + status;
+      label.textContent = text;
+      if (syncBtn) {
+        if (status === 'syncing') syncBtn.classList.add('spinning');
+        else syncBtn.classList.remove('spinning');
+      }
+    },
+
+    mergeNotes(localNotes = [], remoteNotes = []) {
+      const map = new Map();
+      localNotes.forEach(n => {
+        if (n && n.id) map.set(n.id, n);
+      });
+      remoteNotes.forEach(rn => {
+        if (!rn || !rn.id) return;
+        const ln = map.get(rn.id);
+        if (!ln) {
+          map.set(rn.id, rn);
+        } else {
+          const localTime = new Date(ln.updated_at || ln.created_at || 0).getTime();
+          const remoteTime = new Date(rn.updated_at || rn.created_at || 0).getTime();
+          if (remoteTime > localTime) {
+            map.set(rn.id, rn);
+          }
+        }
+      });
+      return Array.from(map.values()).sort((a, b) => {
+        const tA = new Date(a.updated_at || a.created_at || 0).getTime();
+        const tB = new Date(b.updated_at || b.created_at || 0).getTime();
+        return tB - tA;
+      });
+    },
+
+    async fetchRemoteNotes() {
+      try {
+        let remoteContent = null;
+        if (window.DevGitHubService && typeof window.DevGitHubService.getFile === 'function') {
+          try {
+            const res = await window.DevGitHubService.getFile(this.REMOTE_FILE);
+            if (res && res.content) remoteContent = res.content;
+          } catch (ghErr) {
+            console.log('[DevNotes] getFile via API failed, fallback to raw fetch:', ghErr.message);
+          }
+        }
+        if (!remoteContent) {
+          const res = await fetch(`./${this.REMOTE_FILE}?t=` + Date.now());
+          if (res.ok) remoteContent = await res.text();
+        }
+        if (remoteContent) {
+          const parsed = JSON.parse(remoteContent);
+          return parsed && Array.isArray(parsed.notes) ? parsed : null;
+        }
+      } catch (e) {
+        console.log('[DevNotes] fetch remote note error:', e.message);
+      }
+      return null;
+    },
+
+    async pushToRemote(data) {
+      if (!window.DevGitHubService || typeof window.DevGitHubService.uploadFile !== 'function') return false;
+      const content = JSON.stringify(data, null, 2);
+      const msg = `Sync Dev Notes: ${data.notes.length} notes [${new Date().toLocaleTimeString()}]`;
+      await window.DevGitHubService.uploadFile(this.REMOTE_FILE, content, msg);
+      return true;
+    },
+
+    async syncWithRemote(showToast = false) {
+      if (this.isSyncing) return;
+      this.isSyncing = true;
+      this.setSyncStatus('syncing', 'جارٍ المزامنة مع المستودع...');
+
+      try {
+        const localData = this.getLocalData();
+        const remoteData = await this.fetchRemoteNotes();
+
+        if (remoteData) {
+          const mergedNotes = this.mergeNotes(localData.notes, remoteData.notes);
+          const mergedData = {
+            version: 1,
+            last_updated: new Date().toISOString(),
+            notes: mergedNotes
+          };
+          this.saveLocalData(mergedData);
+          this.renderList();
+
+          if (JSON.stringify(mergedNotes) !== JSON.stringify(remoteData.notes)) {
+            await this.pushToRemote(mergedData);
+          }
+          this.setSyncStatus('synced', 'متزامن مع المستودع');
+          if (showToast && window.DevUIEngine) window.DevUIEngine.showToast('✅ تمت مزامنة الملاحظات مع المستودع بنجاح', 'success');
+        } else {
+          if (localData.notes.length > 0) {
+            await this.pushToRemote(localData);
+          }
+          this.setSyncStatus('synced', 'متزامن مع المستودع');
+          if (showToast && window.DevUIEngine) window.DevUIEngine.showToast('✅ تم حفظ الملاحظات في المستودع', 'success');
+        }
+      } catch (e) {
+        console.warn('[DevNotes] sync error:', e);
+        this.setSyncStatus('local', 'وضع محلي (أوفلاين)');
+        if (showToast && window.DevUIEngine) window.DevUIEngine.showToast('تعذرت المزامنة مع المستودع، تم الحفظ محلياً: ' + e.message, 'warning');
+      } finally {
+        this.isSyncing = false;
+      }
+    },
+
+    renderList() {
+      const listEl = $('dev-notes-list');
+      if (!listEl) return;
+      const data = this.getLocalData();
+      const kw = (this.filterKeyword || '').toLowerCase().trim();
+
+      const filtered = data.notes.filter(n => {
+        if (!kw) return true;
+        return (n.title || '').toLowerCase().includes(kw) ||
+               (n.content || '').toLowerCase().includes(kw) ||
+               (n.tag || '').toLowerCase().includes(kw);
+      });
+
+      if (!filtered.length) {
+        listEl.innerHTML = `
+          <div class="dev-notes-empty-state">
+            <div class="empty-icon">📝</div>
+            <p><strong>لا توجد ملاحظات ${kw ? 'تطابق البحث' : 'حتى الآن'}</strong></p>
+            <p style="margin-top:4px; font-size:11.5px; opacity:0.8;">${kw ? 'جرّب كلمة بحث أخرى.' : 'اضغط على "+ ملاحظة جديدة" لتدوين أي فكرة أو مهمة ومزامنتها فوراً بين أجهزتك.'}</p>
+          </div>
+        `;
+        return;
+      }
+
+      const tagNames = {
+        idea: '💡 فكرة',
+        code: '💻 كود',
+        todo: '📋 مهمة',
+        bug: '🐛 ثغرة',
+        note: '📌 عام'
+      };
+
+      listEl.innerHTML = filtered.map(note => {
+        const tagCls = note.tag || 'note';
+        const tagLabel = tagNames[tagCls] || '📌 عام';
+        const dateStr = note.updated_at ? new Date(note.updated_at).toLocaleString('ar-EG', { dateStyle: 'short', timeStyle: 'short' }) : '';
+        const safeTitle = (note.title || 'ملاحظة بدون عنوان').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const safeContent = (note.content || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+        return `
+          <div class="dev-note-item-card" data-note-id="${note.id}">
+            <div class="note-card-top">
+              <div class="note-card-title-group">
+                <span class="note-tag-chip ${tagCls}">${tagLabel}</span>
+                <span class="note-card-title">${safeTitle}</span>
+              </div>
+              <span class="note-card-time">${dateStr}</span>
+            </div>
+            <div class="note-card-body">${safeContent}</div>
+            <div class="note-card-actions">
+              <button type="button" class="note-action-btn" onclick="window._copyDevNote('${note.id}')" title="نسخ نص الملاحظة">
+                <span>📋</span><span>نسخ</span>
+              </button>
+              <button type="button" class="note-action-btn" onclick="window._editDevNote('${note.id}')" title="تعديل الملاحظة">
+                <span>✏️</span><span>تعديل</span>
+              </button>
+              <button type="button" class="note-action-btn delete" onclick="window._deleteDevNote('${note.id}')" title="حذف الملاحظة">
+                <span>🗑️</span><span>حذف</span>
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    },
+
+    init() {
+      this.renderList();
+      setTimeout(() => this.syncWithRemote(false), 800);
+    }
+  };
+  try { window.DevNotesEngine = DevNotesEngine; } catch(e) {}
+
+  window._openDevNotesModal = function() {
+    $('dev-notes-modal')?.classList.remove('hidden');
+    DevNotesEngine.renderList();
+    DevNotesEngine.syncWithRemote(false);
+  };
+
+  window._closeDevNotesModal = function() {
+    $('dev-notes-modal')?.classList.add('hidden');
+    window._toggleNewNoteForm(false);
+  };
+
+  window._toggleNewNoteForm = function(show, editNote = null) {
+    const wrap = $('dev-note-editor-wrap');
+    if (!wrap) return;
+    if (show) {
+      wrap.classList.remove('hidden');
+      if (editNote) {
+        $('note-editor-title-label').textContent = '✏️ تعديل الملاحظة';
+        $('editing-note-id').value = editNote.id;
+        $('note-input-title').value = editNote.title || '';
+        $('note-input-tag').value = editNote.tag || 'note';
+        $('note-input-body').value = editNote.content || '';
+      } else {
+        $('note-editor-title-label').textContent = '➕ إضافة ملاحظة جديدة';
+        $('editing-note-id').value = '';
+        $('note-input-title').value = '';
+        $('note-input-tag').value = 'idea';
+        $('note-input-body').value = '';
+      }
+      setTimeout(() => $('note-input-body')?.focus(), 100);
+    } else {
+      wrap.classList.add('hidden');
+      $('editing-note-id').value = '';
+      $('note-input-title').value = '';
+      $('note-input-body').value = '';
+    }
+  };
+
+  window._saveDevNote = async function() {
+    const bodyInput = $('note-input-body');
+    const content = bodyInput ? bodyInput.value.trim() : '';
+    if (!content) {
+      if (window.DevUIEngine) window.DevUIEngine.showToast('يرجى كتابة نص الملاحظة', 'warning');
+      return;
+    }
+    const editId = $('editing-note-id')?.value;
+    const title = $('note-input-title')?.value.trim() || '';
+    const tag = $('note-input-tag')?.value || 'note';
+    const data = DevNotesEngine.getLocalData();
+
+    if (editId) {
+      const idx = data.notes.findIndex(n => n.id === editId);
+      if (idx !== -1) {
+        data.notes[idx].title = title;
+        data.notes[idx].content = content;
+        data.notes[idx].tag = tag;
+        data.notes[idx].updated_at = new Date().toISOString();
+      }
+    } else {
+      const newNote = {
+        id: 'note_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
+        title,
+        content,
+        tag,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      data.notes.unshift(newNote);
+    }
+
+    DevNotesEngine.saveLocalData(data);
+    DevNotesEngine.renderList();
+    window._toggleNewNoteForm(false);
+    if (window.DevUIEngine) window.DevUIEngine.showToast('💾 تم حفظ الملاحظة وجارٍ المزامنة...', 'success');
+    await DevNotesEngine.syncWithRemote(false);
+  };
+
+  window._editDevNote = function(id) {
+    const data = DevNotesEngine.getLocalData();
+    const note = data.notes.find(n => n.id === id);
+    if (note) {
+      window._toggleNewNoteForm(true, note);
+    }
+  };
+
+  window._deleteDevNote = async function(id) {
+    if (!confirm('هل أنت متأكد من حذف هذه الملاحظة؟')) return;
+    const data = DevNotesEngine.getLocalData();
+    data.notes = data.notes.filter(n => n.id !== id);
+    DevNotesEngine.saveLocalData(data);
+    DevNotesEngine.renderList();
+    if (window.DevUIEngine) window.DevUIEngine.showToast('🗑️ تم حذف الملاحظة وجارٍ التحديث في المستودع...', 'info');
+    await DevNotesEngine.pushToRemote(data).catch(()=>{});
+    DevNotesEngine.setSyncStatus('synced', 'متزامن مع المستودع');
+  };
+
+  window._copyDevNote = function(id) {
+    const data = DevNotesEngine.getLocalData();
+    const note = data.notes.find(n => n.id === id);
+    if (!note) return;
+    const text = (note.title ? `[${note.title}]\n` : '') + (note.content || '');
+    navigator.clipboard.writeText(text).then(() => {
+      if (window.DevUIEngine) window.DevUIEngine.showToast('📋 تم نسخ نص الملاحظة!', 'success');
+    }).catch(err => {
+      if (window.DevUIEngine) window.DevUIEngine.showToast('فشل النسخ: ' + err.message, 'error');
+    });
+  };
+
+  window._filterDevNotes = function(val) {
+    DevNotesEngine.filterKeyword = val || '';
+    DevNotesEngine.renderList();
+  };
+
+  window._syncDevNotesManual = function() {
+    DevNotesEngine.syncWithRemote(true);
+  };
 
   // PWA Install Prompt Handler
   let deferredPrompt = null;
