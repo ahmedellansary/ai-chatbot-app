@@ -1137,20 +1137,28 @@
       });
       // voice mic reuse main recognition
       vMic?.addEventListener('click', ()=> document.getElementById('mic-btn')?.click());
-      // swipe on chat area to switch
+      // swipe on chat area to switch (3-way cycle)
       let sx=0;
       const area = document.getElementById('chat-area');
       area?.addEventListener('touchstart', e=> sx=e.touches[0].clientX, {passive:true});
       area?.addEventListener('touchend', e=>{
         const dx = e.changedTouches[0].clientX - sx;
-        if(Math.abs(dx)>70){ if(dx<0 && this.current==='text') this.apply('voice',true); else if(dx>0 && this.current==='voice') this.apply('text',true); }
+        if(Math.abs(dx)>70){
+          const order=['text','voice','seekai'];
+          const idx=order.indexOf(this.current);
+          if(dx<0){ this.apply(order[(idx+1)%3], true); } else { this.apply(order[(idx+2)%3], true); }
+        }
       }, {passive:true});
+      // init seekai box
+      try{ window.SeekAIController?.init(); }catch{}
     },
     apply(mode, save){
-      this.current = mode==='voice'?'voice':'text';
+      const order=['text','voice','seekai'];
+      this.current = order.includes(mode)? mode : 'text';
       document.querySelectorAll('.chat-dot').forEach(d=> d.classList.toggle('active', d.dataset.mode===this.current));
-      document.getElementById('input-section')?.classList.toggle('hidden', this.current==='voice');
-      document.getElementById('voice-input-section')?.classList.toggle('hidden', this.current==='text');
+      document.getElementById('input-section')?.classList.toggle('hidden', this.current!=='text');
+      document.getElementById('voice-input-section')?.classList.toggle('hidden', this.current!=='voice');
+      document.getElementById('seekai-input-section')?.classList.toggle('hidden', this.current!=='seekai');
       if(save) try{ localStorage.setItem('xv1_chat_mode', this.current); }catch{}
       setTimeout(()=> (this.current==='voice'? document.getElementById('voice-input'): document.getElementById('user-input'))?.focus(), 100);
     },
@@ -1174,6 +1182,107 @@
     }
   };
   window.VoiceChatController = VoiceChatController;
+
+  // ── SeekAI Controller — third box with all services from seekai.cc ──
+  const SeekAIController = {
+    models: [],
+    init(){
+      const sSel=document.getElementById('seekai-service-select');
+      const mSel=document.getElementById('seekai-model-select');
+      const input=document.getElementById('seekai-input');
+      const send=document.getElementById('seekai-send-btn');
+      const refresh=document.getElementById('seekai-refresh-btn');
+      const mic=document.getElementById('seekai-mic-btn');
+      const attach=document.getElementById('seekai-attach-btn');
+      const fetchModels= async ()=>{
+        try{
+          const key=(window.ConfigVault?.getSeekAIKey?.()||'');
+          const url=(window.ConfigVault?.getSeekAIUrl?.()||'https://seekai.cc').replace(/\/+$/,'');
+          mSel.innerHTML='<option>جاري...</option>';
+          const r=await fetch(url+'/v1/models',{headers:{'Authorization':`Bearer ${key}`}});
+          if(!r.ok) throw new Error('no models');
+          const j=await r.json();
+          this.models=j.data||[];
+          this.renderModels();
+          MessageRenderer.showToast(`✨ SeekAI — ${this.models.length} موديل`,'success');
+        }catch(e){
+          // fallback to known list
+          this.models=[
+            {id:'claude-opus-5', owned_by:'claude'},{id:'claude-sonnet-5', owned_by:'claude'},{id:'gpt-5-6', owned_by:'openai'},{id:'grok-4-6', owned_by:'openai'},{id:'deepseek-v4-pro', owned_by:'openai'},{id:'kimi-k3', owned_by:'openai'}
+          ];
+          this.renderModels();
+        }
+      };
+      this.renderModels=()=>{
+        const svc=sSel?.value||'chat';
+        let list=this.models;
+        // filter rough by service (chat shows all, image/video may filter later)
+        if(svc==='chat') list=this.models;
+        mSel.innerHTML=list.map(m=> `<option value="${m.id}">${m.id.slice(0,22)}</option>`).join('') || '<option>—</option>';
+        const saved=localStorage.getItem('seekai_model');
+        if(saved && [...mSel.options].some(o=>o.value===saved)) mSel.value=saved;
+      };
+      sSel?.addEventListener('change', ()=>{ localStorage.setItem('seekai_service', sSel.value); this.renderModels(); });
+      mSel?.addEventListener('change', ()=> localStorage.setItem('seekai_model', mSel.value));
+      refresh?.addEventListener('click', fetchModels);
+      try{ const ss=localStorage.getItem('seekai_service'); if(ss) sSel.value=ss; }catch{}
+      fetchModels();
+      const trigger= async ()=>{
+        const txt=input?input.value.trim():'';
+        if(!txt){ MessageRenderer.showToast('اكتب طلبك أولاً','warning'); return; }
+        if(state.isStreaming || state.sendInFlight){ MessageRenderer.showToast('⏳ انتظر','info'); return; }
+        input.value=''; input.dispatchEvent(new Event('input'));
+        await this.send(sSel.value, mSel.value, txt);
+      };
+      send?.addEventListener('click', trigger);
+      input?.addEventListener('keydown', e=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); trigger(); }});
+      input?.addEventListener('input', ()=>{
+        const has=input.value.trim().length>0;
+        if(send){ if(has && !state.isStreaming) send.removeAttribute('disabled'); else send.setAttribute('disabled','true'); }
+        input.style.height='auto'; input.style.height=Math.min(Math.max(input.scrollHeight,26),120)+'px';
+      });
+      mic?.addEventListener('click', ()=> document.getElementById('mic-btn')?.click());
+      attach?.addEventListener('click', ()=> document.getElementById('file-upload-input')?.click());
+    },
+    async send(service, model, prompt){
+      if(!state.activeConvId) StateController.newConversation();
+      const conv=StateController.getActiveConv();
+      const userMsg=StateController.addMessage('user', `[${service}/${model}] ${prompt}`, null, []);
+      if(userMsg) MessageRenderer.appendMessage(userMsg);
+      const aiId=generateId();
+      const aiMsg={id:aiId, role:'ai', content:'⏳ جارٍ التنفيذ عبر SeekAI...', timestamp:new Date().toISOString(), model:model};
+      conv.messages.push(aiMsg); MessageRenderer.appendMessage(aiMsg);
+      state.isStreaming=true; state.isThinking=true; UIEngine.updateSendBtnState();
+      try{
+        const key=window.ConfigVault?.getSeekAIKey?.()||'';
+        const base=(window.ConfigVault?.getSeekAIUrl?.()||'https://seekai.cc').replace(/\/+$/,'');
+        if(service==='chat'){
+          const r=await fetch(base+'/v1/chat/completions',{method:'POST', headers:{'Authorization':`Bearer ${key}`,'Content-Type':'application/json'}, body: JSON.stringify({model:model, messages:[{role:'user', content:prompt}], stream:false})});
+          const j=await r.json();
+          const content=j.choices?.[0]?.message?.content || j.choices?.[0]?.delta?.content || JSON.stringify(j).slice(0,2000);
+          aiMsg.content=content; MessageRenderer.appendMessage(aiMsg); StateController.save();
+        } else if(service==='image'){
+          const r=await fetch(base+'/v1/images/generations',{method:'POST', headers:{'Authorization':`Bearer ${key}`,'Content-Type':'application/json'}, body: JSON.stringify({model:model, prompt:prompt, n:1, size:'1024x1024'})});
+          const j=await r.json();
+          const url=j.data?.[0]?.url || j.data?.[0]?.b64_json && ('data:image/png;base64,'+j.data[0].b64_json);
+          if(url){ aiMsg.content=`![generated](${url})\n\n${prompt}`; } else aiMsg.content='```json\n'+JSON.stringify(j,null,2).slice(0,2000)+'\n```';
+          MessageRenderer.appendMessage(aiMsg); StateController.save();
+        } else {
+          // video/audio generic
+          const r=await fetch(base+'/v1/chat/completions',{method:'POST', headers:{'Authorization':`Bearer ${key}`,'Content-Type':'application/json'}, body: JSON.stringify({model:model, messages:[{role:'user', content:`[${service}] ${prompt}`}]})});
+          const j=await r.json();
+          aiMsg.content=j.choices?.[0]?.message?.content || JSON.stringify(j).slice(0,2000);
+          MessageRenderer.appendMessage(aiMsg); StateController.save();
+        }
+      }catch(e){
+        aiMsg.content='⚠️ خطأ SeekAI: '+(e.message||'unknown'); MessageRenderer.appendMessage(aiMsg);
+      } finally {
+        state.isStreaming=false; state.isThinking=false; UIEngine.updateSendBtnState(); MessageRenderer.scrollToBottom();
+        try{ StateController.save(); }catch{}
+      }
+    }
+  };
+  window.SeekAIController = SeekAIController;
 
   // ─────────────────────────────────────────────────────────────────
   // 7. CHAT CONTROLLER & STREAM ORCHESTRATOR — Extracted to modules/chat-engine.js
@@ -3145,6 +3254,7 @@
     initAppCustomization();
     UIEngine.setupEventListeners();
     try{ window.VoiceChatController?.init(); }catch{}
+    try{ window.SeekAIController?.init(); }catch{}
     AuthManager.setupGate();
     StateController.load();
     setupSmoothKineticScroll();
