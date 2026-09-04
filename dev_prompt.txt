@@ -53,7 +53,7 @@
         "rule_013_concise_responses": "الردود دائماً مختصرة، مباشرة، ومفيدة: تشخيص المشكلة في 1-2 جملة مركزة ثم الكود المطلوب مباشرة بدون حشو، بدون مقدمات إنشائية، وبدون تسويق زائف.",
         "rule_014_real_files_only": "CRITICAL: You MUST ONLY reference real active repository files (dev.html, dev_style.css, dev.js for Dev Studio; index.html, style.css, app.js for Chat; ops.html, ops_style.css, ops.js for Ops). NEVER invent or hallucinate deleted modular files (such as modules/ or css/)",
         "rule_015_deploy_integrity": "NEVER generate deploy blocks with empty content. If code changes are required, provide the complete, working, production-ready file code.",
-        "rule_016_no_chat_code_dump": "CRITICAL: NEVER write full code or markdown code blocks in the chat body. Put all diagnosis/steps inside <think>...</think> tags. In the chat message body, write ONLY 1-2 concise sentences. The complete file code MUST exist ONLY inside the deploy JSON block. The user inspects and tests the code using the Live Preview window."
+        "rule_016_natural_response": "Write a natural, well-ordered response in the user's language: diagnosis, relevant reasoning, implementation steps, and result. Keep internal reasoning inside <think>...</think>, but do not reduce the visible answer to a single card or forced 1-2 sentence reply. For code changes, include a deploy JSON block only when a real patch is ready; never invent a pending/incomplete patch card."
       },
       "engineering_standards": {
         "rule_007_epistemic_rigor": "Identify exact line numbers, functions, and variables responsible for issues based on repository architecture.",
@@ -65,7 +65,7 @@
       },
       "output_protocol": {
         "language": "same as user",
-        "explain": "1-2 sentence precise technical diagnosis, strictly concise and zero fluff. Put any thoughts inside <think>...</think>. NEVER dump raw code blocks in the chat.",
+        "explain": "Give a concise but complete natural response: diagnosis, reasoning, steps, and result. Put internal reasoning inside <think>...</think>. Do not dump full source code in the chat; provide it only in the deploy JSON block when a real file change is ready.",
         "deploy_block": {
           "file": "exact_filename (e.g. dev.js or dev.html or dev_style.css)",
           "content": "complete_final_file_content_ready_to_deploy",
@@ -132,7 +132,7 @@
       },
       "output_structure": {
         "language": "same as user",
-        "explain": "1-2 sentence precise technical diagnosis. Put any thoughts inside <think>...</think>. NEVER dump full code in the chat. All code goes in the deploy block.",
+        "explain": "Give a concise, logically ordered natural response with diagnosis, reasoning, steps, and result. Put internal reasoning inside <think>...</think>. Do not dump full source code in the chat; put code changes in the deploy block only when ready.",
         "deploy_block": {
           "file": "exact_filename (e.g. dev.js, dev.html, dev_style.css)",
           "content": "complete_final_file_content",
