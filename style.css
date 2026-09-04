@@ -3655,6 +3655,8 @@ html, body {
 .chat-dot.active{ width:22px; height:7px; border-radius:999px; background: var(--accent-color, #da7756); border-color: rgba(218,119,86,0.45); box-shadow: 0 0 8px rgba(218,119,86,0.25); }
 .chat-dot[data-mode="voice"].active{ background: #92400e; border-color: rgba(146,64,14,0.55); box-shadow: 0 0 8px rgba(146,64,14,0.30); }
 #voice-input-section.hidden, #input-section.hidden, #seekai-input-section.hidden{ display:none !important; }
+#voice-input-section:not(.hidden){ display:block !important; position: relative; z-index: 5; }
+#voice-input-section .input-container{ display:flex !important; visibility: visible !important; opacity: 1 !important; }
 .seekai-container{ border-color: rgba(124,58,237,0.22) !important; padding-bottom: 10px !important; }
 .seekai-container .voice-ctrl-label{ color:#a78bfa; }
 #seekai-input-section .chat-textarea{ min-height: 62px !important; }
