@@ -404,8 +404,8 @@ You must follow this EXACT compact output structure:
    • 🔍 Diagnosing root cause in [target_file]
    • ⚡ Inspecting live repository implementation
    • 🛠️ Preparing surgical code patch
-2. FINAL USER REPLY (IN ARABIC): Outside of <think>, write EXACTLY 1 to 2 brief sentences in Arabic explaining what was modified concisely.
-   - NO greetings, NO warnings, NO marketing fluff, NO markdown headings (no ###), and NO big vertical gaps.
+   2. FINAL USER REPLY: Outside of <think>, write a short, natural response in the user's language with compact headings and ordered sections: Diagnosis, Steps, Result. Use English labels for controls and workflow states.
+   - NO greetings, NO marketing fluff, NO forced card language, and NO big vertical gaps.
    - NEVER write full code or raw code blocks (\`\`\`javascript, \`\`\`css, \`\`\`html) in the chat text!
 3. DEPLOY BLOCK: Output the JSON patch block at the very end of your response. For every code-change request, this block is mandatory; never ask the user for source lines or file contents.
 For large files (like dev.js, dev_style.css, app.js), use SURGICAL SEARCH & REPLACE (preserves all 3100+ lines without truncation):
@@ -666,7 +666,7 @@ STRICT RULE: The local engine automatically merges your surgical patches directl
       DevUIEngine.setThinking(true);
       const isArDev = /[\u0600-\u06FF]/.test(userText);
       DevUIEngine.showDevThinking(isArDev ? 'تحليل' : 'Analyzing');
-      const _shouldObserve = !!state.isMultiAgentMode;
+      const _shouldObserve = !!state.isMultiAgentMode || this.isCodeChangeRequest(userText);
 
        const tier = 'HIGH';
       const rawDevPrompt = this.assembleDevPrompt(tier, state.devPrompt, state.liveRepoFiles);
@@ -1005,6 +1005,7 @@ STRICT RULE: The local engine automatically merges your surgical patches directl
         // 1. Check for Surgical Patch format (Search & Replace)
         const patches = Array.isArray(data.patches) ? data.patches : ((data.search && data.replace) ? [{ search: data.search, replace: data.replace }] : null);
         let wasSurgicallyMerged = false;
+        let patchApplyFailed = false;
 
         if (patches && originalFileContent) {
           let merged = originalFileContent;
@@ -1027,6 +1028,9 @@ STRICT RULE: The local engine automatically merges your surgical patches directl
             patchContent = merged;
             wasSurgicallyMerged = true;
             if (window.DevUIEngine) DevUIEngine.showToast?.(`⚡ تم دمج ${appliedCount} تعديل جراحي مع الملف الأصلي بنجاح!`, 'success');
+          } else {
+            patchApplyFailed = true;
+            patchContent = originalFileContent;
           }
         }
 
@@ -1060,10 +1064,10 @@ STRICT RULE: The local engine automatically merges your surgical patches directl
           }
         }
 
-        const isBlocked = isCircuitBreakerTriggered || Boolean(syntaxError);
+        const isBlocked = isCircuitBreakerTriggered || Boolean(syntaxError) || patchApplyFailed;
         const blockReason = isCircuitBreakerTriggered 
           ? circuitBreakerMsg 
-          : (syntaxError ? `🚫 تم رصد خطأ نحوي محلياً (Syntax Error): ${syntaxError} — تم حظر النشر لحماية المشروع!` : '');
+          : (syntaxError ? `Syntax error: ${syntaxError} — deployment blocked.` : (patchApplyFailed ? 'Patch mismatch — deployment blocked.' : ''));
 
         const propId = generateId();
         state.pendingModifications[propId] = { file, content: patchContent, message, isBlocked };
@@ -1077,12 +1081,30 @@ STRICT RULE: The local engine automatically merges your surgical patches directl
         card.innerHTML = `
           <div class="dev-proposal-title">
             <span>${isBlocked ? '🚫' : '🛠️'}</span>
-            <span>${isBlocked ? (syntaxError ? 'Syntax Error Detected' : 'Blind Overwrite Blocked') : 'Ready to Patch'}: <code>${escapeHtml(file)}</code></span>
+            <span>${isBlocked ? (syntaxError ? 'Syntax Error' : 'Overwrite Blocked') : 'Ready'}: <code>${escapeHtml(file)}</code></span>
             ${wasSurgicallyMerged ? '<span class="dev-peer-badge ok" style="margin-inline-start:auto;">⚡ Surgical Patch Merged</span>' : ''}
             ${(!isBlocked && !syntaxError) ? '<span class="dev-peer-badge ok" style="margin-inline-start:auto;">✓ Syntax Validated</span>' : ''}
           </div>
           ${isBlocked ? `<div class="circuit-breaker-banner">${escapeHtml(blockReason)}</div>` : ''}
-          <div class="dev-proposal-desc">📝 <strong>Summary:</strong> ${escapeHtml(message)}</div>
+          <div class="dev-proposal-desc">📝 <strong>Change:</strong> ${escapeHtml(String(message).slice(0, 100))}${patchApplyFailed ? ' <span class="proposal-muted">Mismatch</span>' : ''}</div>
+          <div class="dev-proposal-tabs" role="tablist">
+            <button class="dev-proposal-tab active" onclick="window._switchProposalTab('${propId}','code',this)">Code</button>
+            <button class="dev-proposal-tab" onclick="window._switchProposalTab('${propId}','change',this)">Change</button>
+            <button class="dev-proposal-tab" onclick="window._switchProposalTab('${propId}','checks',this)">Checks <span class="proposal-error-count ${syntaxError || isCircuitBreakerTriggered || patchApplyFailed ? 'has-errors' : ''}">${syntaxError || isCircuitBreakerTriggered || patchApplyFailed ? '1' : '0'}</span></button>
+          </div>
+          <div class="dev-proposal-panel active" data-panel="code">
+            <pre class="proposal-full-code"><code>${escapeHtml(patchContent)}</code></pre>
+          </div>
+          <div class="dev-proposal-panel" data-panel="change">
+            <div class="proposal-change-summary">File: <code>${escapeHtml(file)}</code><br>${escapeHtml(message)}<br><span class="proposal-muted">Full file preserved for review before deployment.</span></div>
+          </div>
+          <div class="dev-proposal-panel" data-panel="checks">
+            <ul class="proposal-check-list">
+              <li class="${syntaxError ? 'fail' : 'pass'}">${syntaxError ? 'Syntax error: ' + escapeHtml(syntaxError) : 'Syntax valid'}</li>
+              <li class="${isCircuitBreakerTriggered || patchApplyFailed ? 'fail' : 'pass'}">${isCircuitBreakerTriggered ? 'Blind overwrite blocked' : (patchApplyFailed ? 'Mismatch — no change applied' : 'Integrity passed')}</li>
+              <li class="pass">Manual deploy required</li>
+            </ul>
+          </div>
           <div class="dev-proposal-btns">
             <button class="dev-btn-action preview" onclick="window._previewProposal('${propId}')" title="Live Preview">
               <span>👁️</span>
@@ -1103,16 +1125,16 @@ STRICT RULE: The local engine automatically merges your surgical patches directl
               <span>📋</span>
               <span>Copy</span>
             </button>
-            <button class="dev-btn-action review-fix" onclick="window._togglePatchDrawer('${propId}')" title="Inspect Patch">
+            <button class="dev-btn-action review-fix" onclick="window._switchProposalTab('${propId}','checks')" title="Review checks">
               <span>🔍</span>
-              <span>Inspect</span>
+              <span>Review</span>
             </button>
             <button class="dev-btn-action cancel" onclick="window._cancelProposal('${propId}')" title="Cancel">
               <span>✕</span>
             </button>
           </div>
 
-          <!-- Collapsible Mini Code Drawer inside Proposal Card -->
+          <!-- Compatibility drawer for existing preview integrations -->
           <div class="dev-patch-drawer hidden" id="drawer-${propId}">
             <div class="patch-drawer-header">
               <span>📄 Modified Code (${escapeHtml(file)})</span>
@@ -1129,12 +1151,21 @@ STRICT RULE: The local engine automatically merges your surgical patches directl
   };
   try { window.DevChatEngine = DevChatEngine; } catch(e) {}
 
+  window._switchProposalTab = function(propId, panel, button) {
+    const card = document.getElementById(`proposal-${propId}`);
+    if (!card) return;
+    card.querySelectorAll('.dev-proposal-tab').forEach(tab => tab.classList.remove('active'));
+    card.querySelectorAll('.dev-proposal-panel').forEach(item => item.classList.remove('active'));
+    if (button) button.classList.add('active');
+    const target = card.querySelector(`.dev-proposal-panel[data-panel="${panel}"]`);
+    if (target) target.classList.add('active');
+  };
+
   // ─────────────────────────────────────────────────────────────────
   // 7b. DEV OBSERVER — 5-Agent Code Audit & Verification Card
   // ─────────────────────────────────────────────────────────────────
   const DevObserverEngine = window.DevObserverEngine || {
     async observe(userText, aiResponse, tier, aiMsgId, conv) {
-      if (!state.isMultiAgentMode) return;
       const isAr = /[\u0600-\u06FF]/.test((userText || '') + ' ' + (aiResponse || '').slice(0, 200));
       const t = (ar, en) => isAr ? ar : en;
       const row = document.querySelector(`[data-id="${CSS.escape ? CSS.escape(aiMsgId) : aiMsgId}"]`);
@@ -1149,6 +1180,7 @@ STRICT RULE: The local engine automatically merges your surgical patches directl
       }
 
       let proposalCard = null;
+      const agentNames = ['Lead', 'Coder', 'Verifier', 'Security', 'Architecture'];
       const renderUI = (bullets = [], statusText = '', isRunning = false, warnCount = 0, finalSuggestion = '') => {
         const statusBadgeCls = isRunning ? 'running' : (warnCount > 0 ? 'warn' : 'ok');
         const badgeLabel = isRunning 
@@ -1186,6 +1218,7 @@ STRICT RULE: The local engine automatically merges your surgical patches directl
               <span class="dev-peer-toggle">▾</span>
             </div>
             <div class="dev-peer-body observer-details">
+              <div class="observer-agent-strip">${agentNames.map((name, i) => `<span class="observer-agent-chip ${isRunning ? 'running' : 'done'}"><i>${i + 1}</i>${name}</span>`).join('')}</div>
               ${bullets.length ? `<ul class="peer-bullets-list">${bulletsHtml}</ul>` : `<div class="peer-loading-text" style="font-size:12px; color:var(--text-dim); padding:6px 0;">${t('الوكلاء الـ 5 يفحصون الكود: المطابقة، سلامة الملف الكامل، الأمان، المعمارية، والشياكة...', '5 agents auditing code: Compliance, Full Integrity, Security, Architecture, & Elegance...')}</div>`}
               ${actionsHtml}
             </div>
