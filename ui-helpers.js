@@ -42,10 +42,25 @@
     let startY = 0, currentPull = 0, isTracking = false;
     const TOP_THRESHOLD = opts.threshold || 50;
 
+    const findScrollableAncestor = (target) => {
+      let el = target;
+      while (el && el !== document.body && el !== document.documentElement) {
+        if (el.id === chatAreaId) return null;
+        const style = window.getComputedStyle ? window.getComputedStyle(el) : null;
+        const oy = style ? style.overflowY : '';
+        const isScrollable = (oy === 'auto' || oy === 'scroll' || el.classList.contains('img-picker-body') || el.classList.contains('code-window') || el.classList.contains('instruction-files-list')) && el.scrollHeight > el.clientHeight + 4;
+        if (isScrollable) return el;
+        el = el.parentElement;
+      }
+      return null;
+    };
     const onTouchStart = (e) => {
       if (e.touches.length !== 1) return;
       const chatArea = document.getElementById(chatAreaId);
       if (!chatArea) return;
+      // guard: if touch is inside an inner scrollable box that is not at its top, don't start page pull
+      const inner = findScrollableAncestor(e.target);
+      if (inner && inner.scrollTop > 4) return;
       if (chatArea.scrollTop <= 4) {
         startY = e.touches[0].clientY;
         isTracking = true;
@@ -57,6 +72,13 @@
       if (!isTracking || e.touches.length !== 1) return;
       const y = e.touches[0].clientY;
       const diff = y - startY;
+      // if pulling inside an inner box that can still scroll up, cancel page pull
+      // re-check on move in case start was at top but user scrolls inner
+      if (diff > 0) {
+        const chatArea = document.getElementById(chatAreaId);
+        // if chat itself not at top any more, stop
+        if (chatArea && chatArea.scrollTop > 4) { isTracking = false; indicator.classList.remove('visible'); indicator.style.opacity='0'; return; }
+      }
       if (diff > 8) {
         if (e.cancelable) e.preventDefault();
         currentPull = diff;
