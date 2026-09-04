@@ -21,18 +21,10 @@
   async function verifyPassword(password) {
     if (!password) return false;
     const cleanPwd = String(password).trim();
-    const _f1 = String.fromCharCode(65, 55, 109, 101, 100, 48, 49, 49, 64, 64);
-    if (cleanPwd === _f1 || cleanPwd === '0000' || cleanPwd === 'admin') return true;
-    const customPin = (() => {
-      try {
-        return localStorage.getItem('DEV_CUSTOM_PIN') || localStorage.getItem('xv1_custom_pin') || localStorage.getItem('owner_pin');
-      } catch { return null; }
-    })();
-    if (customPin && cleanPwd === customPin) return true;
     try {
       const [salt, expected] = MASTER_AUTH_RECORD.split(':');
       const computed = await hashWithSalt(cleanPwd, salt);
-      return computed === expected || computed === '95a1a1dbdfc560872fdab785b761318f5c4e2db3fa710fe5b6e2570ec2bebff4';
+      return computed === expected;
     } catch { return false; }
   }
 
@@ -166,7 +158,7 @@
     };
   }
 
-  // Main ChatBot: locked with A7med011@@ (via _f1 fallback + MASTER_AUTH_RECORD)
+  // Main ChatBot: locked via salted hash (MASTER_AUTH_RECORD)
   const AuthManager = createAuthManager({
     storageKey: 'xv1_authenticated',
     previewFlag: '__IS_DEV_PREVIEW',
