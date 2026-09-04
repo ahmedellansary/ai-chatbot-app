@@ -1067,11 +1067,20 @@
         MessageRenderer.showToast('⏳ انتظر انتهاء الرد الحالي قبل إرسال رسالة جديدة', 'info');
         return;
       }
+      // create conv BEFORE locking — otherwise first message swallows (newConversation blocked by sendInFlight)
+      if (!state.activeConvId) StateController.newConversation();
+      let conv = StateController.getActiveConv();
+      if (!conv) {
+        // fallback create directly if still null
+        const id = generateId();
+        conv = { id, title: 'محادثة جديدة', messages: [], mode: state.currentMode, isDev: false, createdAt: new Date().toISOString() };
+        state.conversations.unshift(conv);
+        state.activeConvId = id;
+        try{ localStorage.setItem('activeConvId', id); }catch{}
+        StateController.save();
+      }
       state.sendInFlight = true;
       state._lastSendStart = Date.now();
-
-      if (!state.activeConvId) StateController.newConversation();
-      const conv = StateController.getActiveConv();
 
       let { textForPayload, currentAttachments } = this.preparePayload(userText);
       // Web Browse + RAG-lite enrichment
