@@ -2284,6 +2284,7 @@
         for await (const { chunk, model, usedFallback } of stream) {
           fullContent += chunk;
           aiMsgObj.model = model.name;
+          aiMsgObj.modelId = model.id;
           aiMsgObj.usedFallback = usedFallback;
 
           if (!msgRow) {
@@ -2347,7 +2348,7 @@
           }
         } catch {}
         StateController.save();
-        try { UsageTracker.record(aiMsgObj.model, aiMsgObj.provider || 'groq', textForPayload, fullContent); } catch {}
+        try { UsageTracker.record(aiMsgObj.modelId || aiMsgObj.model, aiMsgObj.provider || 'groq', textForPayload, fullContent); } catch {}
 
       } catch (err) {
         MessageRenderer.hideTyping();
@@ -3977,11 +3978,14 @@
     const all=[];
     ['HIGH','MID','FAST'].forEach(tier=> (window.MODELS[tier]||[]).forEach(m=> all.push({...m, tier, params:getParam(m.name)})));
     all.sort((a,b)=> b.params - a.params || (['HIGH','MID','FAST'].indexOf(a.tier)-['HIGH','MID','FAST'].indexOf(b.tier)));
-    const per=(window.UsageTracker? window.UsageTracker.load().perModel||{} : {});
+    const rawPer=(window.UsageTracker? window.UsageTracker.load().perModel||{} : {});
+    // migrate name-keyed entries to id-keyed for display (old data stored by name)
+    const per={...rawPer};
+    for(const k of Object.keys(rawPer)){ const byName=all.find(x=>x.name===k); if(byName && !per[byName.id]) per[byName.id]=rawPer[k]; }
     const getRenew=(p)=>{ const now=new Date(); if(p==='groq'){ const t=new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()+1,0,0,0)); const h=Math.round((t-now)/3600000); const m=Math.round((t-now)/60000)%60; return h<1? `${m}m left` : `${h}h left`; } else { const t=new Date(now.getFullYear(), now.getMonth()+1,1); const d=Math.ceil((t-now)/86400000); return `${d}d left`; } };
     tbody.innerHTML=all.map(m=>{
       const en=window.isModelEnabled? window.isModelEnabled(m.id):true;
-      const u=per[m.id]||{t:0,r:0};
+      const u=per[m.id]||per[m.name]||{t:0,r:0};
       const hName=m.name.replace(/(\d+(?:\.\d+)?\s*B)/i,'<span style="color:var(--accent-color)">$1</span>'); return `<tr><td><input type="checkbox" style="width:16px;height:16px;accent-color:var(--accent-color);" data-id="${m.id}" ${en?'checked':''} onchange="toggleModelInline(this)"></td><td><div style="font-weight:700;">${hName}</div><div style="font-size:11px; color:var(--accent-color); font-family:var(--font-mono); text-transform:capitalize;">${m.provider}</div></td><td style="text-align:center;"><div style="font-size:10px; color:var(--text-dim); line-height:1.3;">${u.t.toLocaleString()} tokens<br>${u.r} reqs</div><div style="font-size:11px; font-weight:700; color:var(--text-main); margin-top:3px;">${getRenew(m.provider)}</div></td></tr>`;
     }).join('');
   }
