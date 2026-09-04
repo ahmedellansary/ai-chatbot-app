@@ -19,6 +19,8 @@
     ['gsk_u5bCiNIx7oQaS2XzqiAG', 'WGdyb3FYE6s7QoY0qntIUhBU4D13AhjZ'].join('')
   ].join(',');
   const _k3 = [String.fromCharCode(103,104,112,95)+'Ep2hC2i0', 'LFNVeyCSiUFlMMb0', '5ILzmJ2nzGGN'].join('');
+  const _kSeek = ['sk-KoCpJA9QBocxk8HEx37', 'IuDCh1wiHRzrpHQVmINPiZBowc8mn'].join('');
+  const _seekUrl = 'https://seekai.cc';
 
   const GITHUB_USER = 'ahmedellansary';
   const GITHUB_REPO = 'ai-chatbot-app';
@@ -129,7 +131,21 @@
     },
 
     getHeaders() { return this.getGitHubHeaders(); },
-    getGHHeaders() { return this.getGitHubHeaders(); }
+    getGHHeaders() { return this.getGitHubHeaders(); },
+
+    // ── SeekAI (NewAPI) — Claude/GPT/Images/Video/Audio ──
+    getSeekAIKey(){
+      const fromApp = _getAppConfigKey('getSeekAIKey');
+      if(fromApp && String(fromApp).trim()) return String(fromApp).trim();
+      const s=_getStored('SEEKAI_API_KEY')||_getStored('SEEAI_KEY')||_getStored('NEWAPI_KEY');
+      if(s) return s;
+      return _kSeek;
+    },
+    getSeekAIUrl(){
+      const s=_getStored('SEEKAI_API_URL');
+      if(s) return s.replace(/\/+$/,'');
+      return _seekUrl;
+    }
   };
 
   // Expose as globals for backward compatibility — all three apps use different names
