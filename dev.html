@@ -150,18 +150,29 @@
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
           <span class="header-btn-label">Ops & Rollback</span>
         </a>
-        <div class="repo-status-badge">
+        <div class="repo-status-badge" title="Dev Version & Sync Timestamp">
           <span class="status-dot"></span>
-          <span class="repo-badge-text" id="dev-status-badge-text">Dev (V360) 04-09-2026 11:30PM</span>
+          <span class="repo-badge-text" id="dev-status-badge-text">Dev (V360) 04-09-2026 11:35PM</span>
         </div>
         <script>
           (function() {
+            function formatShortDevBadge(ver, rawDate) {
+              if (!rawDate) return 'Dev (V' + ver + ')';
+              var m = String(rawDate).match(/(\d{1,2})[-/](\d{1,2})(?:[-/]\d{2,4})?\s*([0-9:]+\s*(?:AM|PM|am|pm)?)/i);
+              if (m) {
+                var day = parseInt(m[1], 10);
+                var month = parseInt(m[2], 10);
+                var time = m[3].trim().toUpperCase();
+                return 'Dev (V' + ver + ') ' + day + '/' + month + ' ' + time;
+              }
+              return 'Dev (V' + ver + ') ' + rawDate;
+            }
             var b = document.getElementById('dev-status-badge-text');
             var saved = localStorage.getItem('DEV_LAST_SYNC_BADGE');
             if (saved && b) b.textContent = saved;
             fetch('./version.json?t=' + Date.now()).then(function(r) { return r.json(); }).then(function(d) {
-              if (d && d.version && d.updated_at && b) {
-                var txt = 'Dev (V' + d.version + ') ' + d.updated_at;
+              if (d && d.version && b) {
+                var txt = formatShortDevBadge(d.version, d.updated_at);
                 b.textContent = txt;
                 localStorage.setItem('DEV_LAST_SYNC_BADGE', txt);
               }
