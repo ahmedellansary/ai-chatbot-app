@@ -3679,29 +3679,55 @@ html, body {
 .claude-actions-bar{display:none !important}
 .claude-footer-note{display:none !important}
 @media(max-width:600px){.observer-bullet{padding:8px 10px;font-size:12.5px}}
-/* ─── Dual Chat Mode Dots (text • voice) — brown subtle pulse on voice box ─── */
+/* ─── Triple Chat Mode Dots (text • voice • genspark) ─── */
 .chat-mode-dots{ display:flex; align-items:center; justify-content:center; gap:10px; padding:8px 0 6px; }
 .chat-dot{ width:7px; height:7px; border-radius:50%; background: rgba(255,255,255,0.22); border:1px solid rgba(255,255,255,0.12); cursor:pointer; transition: all .22s ease; padding:0; }
 .chat-dot.active{ width:22px; height:7px; border-radius:999px; background: var(--accent-color, #da7756); border-color: rgba(218,119,86,0.45); box-shadow: 0 0 8px rgba(218,119,86,0.25); }
-.chat-dot[data-mode="voice"].active{ background: #92400e; border-color: rgba(146,64,14,0.55); box-shadow: 0 0 8px rgba(146,64,14,0.30); }
-#voice-input-section.hidden, #input-section.hidden, #seekai-input-section.hidden{ display:none !important; }
-#voice-input-section:not(.hidden){ display:block !important; position: relative; z-index: 5; }
-#voice-input-section .input-container{ display:flex !important; visibility: visible !important; opacity: 1 !important; }
-.seekai-container{ border-color: rgba(124,58,237,0.22) !important; padding-bottom: 10px !important; }
-.seekai-container .voice-ctrl-label{ color:#a78bfa; }
-#seekai-input-section .chat-textarea{ min-height: 62px !important; }
-#seekai-input-section .input-container{ min-height: calc(100% + 38px); }
+.chat-dot[data-mode="voice"].active{ background: #d97706; border-color: rgba(217,119,6,0.55); box-shadow: 0 0 8px rgba(217,119,6,0.30); }
+.chat-dot[data-mode="genspark"].active{ background: #8b5cf6; border-color: rgba(139,92,246,0.55); box-shadow: 0 0 8px rgba(139,92,246,0.35); }
+
+/* Sticky bottom behavior for all 3 layer input sections */
+#input-section, #voice-input-section, #genspark-input-section {
+  padding: 6px 14px max(16px, env(safe-area-inset-bottom));
+  background: var(--bg-main);
+  flex-shrink: 0;
+  z-index: 25;
+  position: sticky;
+  bottom: 0;
+}
+#input-section.hidden, #voice-input-section.hidden, #genspark-input-section.hidden {
+  display: none !important;
+}
+#input-section:not(.hidden), #voice-input-section:not(.hidden), #genspark-input-section:not(.hidden) {
+  display: block !important;
+}
+#voice-input-section .input-container, #genspark-input-section .input-container {
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+.voice-container{ border-color: rgba(217,119,6,0.25) !important; }
+.voice-controls-top{ display:flex; align-items:center; gap:8px; padding:6px 2px 2px; flex-wrap:wrap; }
+.voice-ctrl-label{ font-size:11px; font-weight:700; color: var(--text-dim); letter-spacing:0.02em; }
+.tts-voice-select{ background: rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.12); color:#f3f4f6; border-radius:8px; padding:6px 10px; font-size:12px; font-weight:600; cursor:pointer; }
+.tts-voice-select option{ background:#1e1e24; color:#fff; }
+
+/* ─── Genspark Layer Styling ─── */
+.genspark-container{ border-color: rgba(139,92,246,0.30) !important; }
+.genspark-controls-top{ display:flex; align-items:center; justify-content:space-between; gap:8px; padding:6px 2px 2px; flex-wrap:wrap; }
+.genspark-service-select{ background: rgba(139,92,246,0.12); border:1px solid rgba(139,92,246,0.28); color:#ede9fe; border-radius:8px; padding:6px 10px; font-size:12px; font-weight:600; cursor:pointer; outline:none; }
+.genspark-service-select option{ background:#1a1726; color:#ede9fe; }
+.genspark-credit-badge{ display:inline-flex; align-items:center; gap:5px; background: rgba(139,92,246,0.14); border:1px solid rgba(139,92,246,0.25); color:#c4b5fd; border-radius:999px; padding:3px 9px; font-size:11px; font-weight:700; cursor:pointer; transition: all .15s ease; }
+.genspark-credit-badge:hover{ background: rgba(139,92,246,0.22); color:#fff; }
+#genspark-send-btn.active{ background: #8b5cf6 !important; color:#fff !important; }
+
 .usage-pie-wrap{ position:relative; display:flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:50%; background: rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); cursor:pointer; }
 .usage-pie{ display:block; }
 .usage-pie .pie-bg{ fill:none; stroke: rgba(255,255,255,0.10); stroke-width:4; }
 .usage-pie .pie-fg{ fill:none; stroke: var(--accent-color, #da7756); stroke-width:4; stroke-linecap:round; transform: rotate(-90deg); transform-origin: 50% 50%; transition: stroke-dasharray .35s ease; }
 .usage-popup{ position:absolute; top:34px; right:0; min-width:240px; max-width:300px; background:#18181d; border:1px solid rgba(255,255,255,0.12); border-radius:12px; padding:12px 14px; box-shadow:0 16px 40px rgba(0,0,0,0.55); z-index:120; text-align:right; direction:rtl; }
 .usage-popup.hidden{ display:none !important; }
-.voice-container{ border-color: rgba(146,64,14,0.22) !important; }
-.voice-controls-top{ display:flex; align-items:center; gap:8px; padding:6px 2px 2px; flex-wrap:wrap; }
-.voice-ctrl-label{ font-size:11px; font-weight:700; color: var(--text-dim); letter-spacing:0.02em; }
-.tts-voice-select{ background: rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.12); color:#f3f4f6; border-radius:8px; padding:6px 10px; font-size:12px; font-weight:600; cursor:pointer; }
-.tts-voice-select option{ background:#1e1e24; color:#fff; }
 
 /* ─── Chatbot Horizontal Audit Pulse Track Motion ─── */
 .audit-pulse-track {
