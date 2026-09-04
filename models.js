@@ -50,14 +50,20 @@ const getGroqKeys = () => {
 };
 
 let groqKeyIndex = 0;
+const groqLastUsed = [];
 const getGroqKey = () => {
   if (typeof window !== 'undefined' && window.ConfigVault && window.ConfigVault.getGroqKey) return window.ConfigVault.getGroqKey();
   const keys = getGroqKeys();
-  return keys[groqKeyIndex % keys.length];
+  // LRU: pick least recently used
+  let minIdx=0, minTime=Infinity;
+  for(let i=0;i<keys.length;i++){ const t=groqLastUsed[i]||0; if(t<minTime){ minTime=t; minIdx=i; } }
+  groqLastUsed[minIdx]=Date.now();
+  groqKeyIndex=minIdx;
+  return keys[minIdx];
 };
 const rotateGroqKey = () => {
   if (typeof window !== 'undefined' && window.ConfigVault && window.ConfigVault.rotateGroqKey) return window.ConfigVault.rotateGroqKey();
-  groqKeyIndex++;
+  groqKeyIndex=(groqKeyIndex+1)%getGroqKeys().length; groqLastUsed[groqKeyIndex]=Date.now();
 };
 
 // ─── Model Tiers — Unified active model set (Strictly Isolated within Tier) ───
@@ -181,7 +187,7 @@ async function callOpenRouter(model, messages, signal) {
 
   let timedOut = false;
   const controller = new AbortController();
-  const requestTimeoutMs = isNemotronUltra ? 10000 : 14000;
+  const requestTimeoutMs = isNemotronUltra ? 12000 : 28000;
   const timeoutId = setTimeout(() => {
     timedOut = true;
     controller.abort();
@@ -249,7 +255,7 @@ async function callGroq(model, messages, signal) {
   const timeoutId = setTimeout(() => {
     timedOut = true;
     controller.abort();
-  }, 6000);
+  }, 20000);
   const combinedSignal = signal ? AbortSignal.any([signal, controller.signal]) : controller.signal;
 
   try {
@@ -308,12 +314,12 @@ async function* readStream(response, signal, model) {
   try {
     while (true) {
       if (signal && signal.aborted) break;
-      // Overall 10s content timeout for giant models — prevents infinite heartbeat wait
-      if (!hasContent && Date.now() - streamStart > 10000) throw new Error('STREAM_STALL');
+      // Overall 28s content timeout for deep reasoning — allows 20-30s Claude-like depth
+      if (!hasContent && Date.now() - streamStart > 28000) throw new Error('STREAM_STALL');
       const isNemotronUltra = model?.id === 'nvidia/nemotron-3-ultra-550b-a55b';
       const timeoutMs = receivedFirstChunk
-        ? (isNemotronUltra ? 10000 : 8000)
-        : (isNemotronUltra ? 10000 : 12000);
+        ? (isNemotronUltra ? 15000 : 12000)
+        : (isNemotronUltra ? 15000 : 20000);
       const readResult = await readWithTimeout(timeoutMs);
       if (signal && signal.aborted) return;
       const { done, value } = readResult;
@@ -429,6 +435,21 @@ async function* chatWithFallback(tier, messages, signal, onModelChange) {
     }
 
     if (succeeded) return;
+  }
+
+  // ── Global fallback for HIGH: use all 50 models across all keys (protects from outage) ──
+  if (normalizedTier === 'HIGH' && !succeeded) {
+    const all = Object.values(MODELS).flat().filter(m=>m && m.id);
+    const uniq=new Map(); for(const m of all) if(!uniq.has(m.id)) uniq.set(m.id,m);
+    const sorted=[...uniq.values()].sort((a,b)=> (b.name.match(/(\d+)B/)?.[1]||0) - (a.name.match(/(\d+)B/)?.[1]||0));
+    for(const model of sorted){
+      if(models.some(x=>x.id===model.id)) continue; // already tried
+      try{
+        const resp = model.provider==='groq' ? await callGroq(model,messages,signal) : await callOpenRouter(model,messages,signal);
+        for await(const chunk of readStream(resp,signal,model)) yield {chunk, model, usedFallback:true};
+        return;
+      }catch(e){ if(e.name==='AbortError') throw e; lastError=e.message; }
+    }
   }
 
   const details = lastError ? ` — آخر خطأ: ${String(lastError).slice(0,220)}` : '';
