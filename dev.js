@@ -132,6 +132,8 @@
     'Treat every user request as an engineering task: identify the target file, reason about the existing implementation, and preserve working behavior.',
     'When a change is requested, do not answer as a general assistant and do not only describe an idea.',
     'Return the required surgical patch/deploy JSON exactly as instructed; use the real files and exact source text from the supplied context.',
+    'The prompt may include TARGET FILE CONTEXT. Treat it as the authoritative source: never ask the user to provide source lines, file contents, or indentation.',
+    'For a code-change request, if TARGET FILE CONTEXT is present, immediately build the patch from it. If it is missing, report the missing context briefly instead of asking the user for it.',
     'If the request is ambiguous, make the safest reasonable engineering assumption and state it briefly in the required response format.',
     'Do not claim that code was changed, tested, or deployed unless the corresponding deploy block or tool result exists.'
   ].join('\n');
@@ -405,8 +407,7 @@ You must follow this EXACT compact output structure:
 2. FINAL USER REPLY (IN ARABIC): Outside of <think>, write EXACTLY 1 to 2 brief sentences in Arabic explaining what was modified concisely.
    - NO greetings, NO warnings, NO marketing fluff, NO markdown headings (no ###), and NO big vertical gaps.
    - NEVER write full code or raw code blocks (\`\`\`javascript, \`\`\`css, \`\`\`html) in the chat text!
-3. DEPLOY BLOCK: Output the JSON deploy block at the very end of your response:
-3. DEPLOY BLOCK: Output the JSON patch block at the very end of your response.
+3. DEPLOY BLOCK: Output the JSON patch block at the very end of your response. For every code-change request, this block is mandatory; never ask the user for source lines or file contents.
 For large files (like dev.js, dev_style.css, app.js), use SURGICAL SEARCH & REPLACE (preserves all 3100+ lines without truncation):
 \`\`\`json
 {
