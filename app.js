@@ -1058,7 +1058,22 @@
       const vSpeed = document.getElementById('tts-speed-btn');
       const vModel = document.getElementById('tts-model-select');
       const vVoice = document.getElementById('tts-voice-select');
+      const vAccent = document.getElementById('tts-accent-select');
       const vMic = document.getElementById('voice-mic-btn');
+      const MODEL_VOICES = {
+        'fishaudio/fish-speech-1.5:free': [{id:'auto',name:'Auto'},{id:'fish-ar',name:'عربي'},{id:'fish-en',name:'EN'},{id:'fish-cheerful',name:'Cheerful'},{id:'fish-calm',name:'Calm'}],
+        'openai/tts-1-hd': [{id:'alloy',name:'Alloy'},{id:'echo',name:'Echo'},{id:'fable',name:'Fable'},{id:'onyx',name:'Onyx'},{id:'nova',name:'Nova'},{id:'shimmer',name:'Shimmer'}],
+        'openai/tts-1': [{id:'alloy',name:'Alloy'},{id:'echo',name:'Echo'},{id:'fable',name:'Fable'},{id:'onyx',name:'Onyx'},{id:'nova',name:'Nova'},{id:'shimmer',name:'Shimmer'}]
+      };
+      const refreshVoices = (model)=>{
+        const list = MODEL_VOICES[model] || MODEL_VOICES['fishaudio/fish-speech-1.5:free'];
+        if(!vVoice) return;
+        const saved = localStorage.getItem('tts_voice') || '';
+        vVoice.innerHTML = list.map(o=> `<option value="${o.id}">${o.name}</option>`).join('');
+        if(saved && list.some(o=>o.id===saved)) vVoice.value = saved;
+        // try fetch live voices for Fish (best-effort, no block)
+        if(model.includes('fish')) try{ fetch('https://api.openrouter.ai/api/v1/models/'+encodeURIComponent(model),{headers:{'Authorization':`Bearer ${(window.ConfigVault?.getOpenRouterKey?.()||'')}`}}).then(r=>r.json()).then(j=>{ /* reserved for live voice discovery */}).catch(()=>{});}catch{}
+      };
       let speedIdx = 0; const speeds = [1,1.15,1.3,1.5,0.9];
       vSpeed?.addEventListener('click', ()=>{
         speedIdx = (speedIdx+1)%speeds.length;
@@ -1068,9 +1083,20 @@
         try{ localStorage.setItem('tts_speed', s); }catch{}
       });
       try{ const savedS = localStorage.getItem('tts_speed'); if(savedS){ vSpeed.textContent=savedS+'x'; vSpeed.dataset.speed=savedS; const idx=speeds.indexOf(parseFloat(savedS)); if(idx>=0) speedIdx=idx; } }catch{}
-      vModel?.addEventListener('change', ()=>{ try{ localStorage.setItem('tts_model', vModel.value); }catch{} });
+      vModel?.addEventListener('change', ()=>{
+        try{ localStorage.setItem('tts_model', vModel.value); }catch{}
+        refreshVoices(vModel.value);
+        try{ localStorage.removeItem('tts_voice'); }catch{}
+        MessageRenderer.showToast(`🎙️ ${vModel.selectedOptions[0]?.textContent} — تم تحديث الأصوات`,'info');
+      });
       vVoice?.addEventListener('change', ()=>{ try{ localStorage.setItem('tts_voice', vVoice.value); }catch{} });
-      try{ const m=localStorage.getItem('tts_model'); if(m && vModel) vModel.value=m; const vv=localStorage.getItem('tts_voice'); if(vv && vVoice) vVoice.value=vv; }catch{}
+      vAccent?.addEventListener('change', ()=>{ try{ localStorage.setItem('tts_accent', vAccent.value); }catch{} });
+      try{
+        const m=localStorage.getItem('tts_model'); if(m && vModel) vModel.value=m;
+        refreshVoices(vModel?.value || 'fishaudio/fish-speech-1.5:free');
+        const vv=localStorage.getItem('tts_voice'); if(vv && vVoice) { if([...vVoice.options].some(o=>o.value===vv)) vVoice.value=vv; }
+        const ac=localStorage.getItem('tts_accent'); if(ac && vAccent) vAccent.value=ac;
+      }catch{ refreshVoices('fishaudio/fish-speech-1.5:free'); }
       const vTrigger = ()=>{
         const txt = vInput? vInput.value.trim() : '';
         if(!txt){ MessageRenderer.showToast('اكتب النص أولاً','warning'); return; }
