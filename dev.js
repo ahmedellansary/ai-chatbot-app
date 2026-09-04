@@ -3278,21 +3278,23 @@ Reply strictly in 5 concise lines starting with • :
     try{
       const box = btn.closest('.observer-box, .multi-agent-box, .dev-observer-box');
       const raw = box?.dataset?.review || box?.innerText || '';
-      const lines = String(raw).split(/\n/).map(s=>s.trim()).filter(Boolean);
-      let contras = lines.filter(l=> /لا|تناقض|تعارض|✗|contradiction|inconsistent|conflict/i.test(l) && !/نعم|مُلتزم|Compliant|✓/i.test(l.split('—')[0]));
-      if(!contras.length) contras = lines.filter(l=> /لا\s*—|✗|تناقض/i.test(l)).slice(0,3);
-      if(!contras.length) contras = lines.slice(1,3);
-      const q = contras.length ? `⚠️ تناقض مكتشف:\n- ${contras.join('\n- ')}\n\nهل تلاحظ هذه المشكلة؟ وضح وصحح.` : `هل ترى أي تناقض في الرد السابق؟ راجع: ${String(raw).slice(0,300)}`;
-      const input = document.getElementById('user-input');
+      const bullets = String(raw).split(/\n/).map(s=>s.trim()).filter(Boolean).map(s=>s.replace(/^[•\-]\s*/,'').trim()).filter(Boolean).slice(0,6);
+      let negatives = bullets.filter(b=> /^لا(\s|—|–)/.test(b) || /تحتاج|يوجد تناقض|غير موثوق/i.test(b));
+      const allClean = bullets.length>0 && bullets.every(b=> /^نعم(\s|$)/.test(b) || /موثوقة/.test(b) || /لا يوجد تحسين مطلوب/.test(b) || /^لا$/.test(b));
+      let q;
+      if(allClean || negatives.length===0) q = `راجع تاني وتأكد — تم الفحص، الكود سليم جاهز للنشر.`;
+      else q = `راجع تاني النقاط دي وتأكد أن الكود سليم:\n- ${negatives.join('\n- ')}`;
+      const input = document.getElementById('dev-input') || document.getElementById('user-input');
       if(!input) return;
       input.value = q.slice(0,900);
       input.dispatchEvent(new Event('input'));
       if(window.DevUIEngine) window.DevUIEngine.updateSendBtn();
       input.focus();
       setTimeout(()=>{
-        const sendBtn=document.getElementById('send-btn');
+        const sendBtn=document.getElementById('dev-send-btn') || document.getElementById('send-btn');
         if(sendBtn && !sendBtn.disabled) sendBtn.click();
         else if(window.DevChatEngine) window.DevChatEngine.sendMessage(q);
+        else if(window.ChatEngine) window.ChatEngine.sendMessage(q);
         if(window.DevUIEngine) window.DevUIEngine.showToast('↗ Sent to LLM as your message','success');
       },120);
     }catch(e){}
