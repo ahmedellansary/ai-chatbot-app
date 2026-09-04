@@ -3261,6 +3261,27 @@ pre code {
   background: rgba(255, 255, 255, 0.1);
 }
 
+/* Unified review card: code, change summary, and verification checks */
+.dev-proposal-tabs{display:flex;gap:6px;padding:8px 0 0;border-bottom:1px solid var(--border-subtle)}
+.dev-proposal-tab{border:0;background:transparent;color:var(--text-dim);padding:6px 10px;font-size:11px;font-weight:700;cursor:pointer;border-bottom:2px solid transparent}
+.dev-proposal-tab.active{color:var(--accent-dev);border-bottom-color:var(--accent-dev)}
+.proposal-error-count{display:inline-flex;min-width:16px;justify-content:center;border-radius:999px;padding:1px 4px;margin-inline-start:3px;background:rgba(16,185,129,.15);color:#34d399}
+.proposal-error-count.has-errors{background:rgba(239,68,68,.16);color:#f87171}
+.dev-proposal-panel{display:none;padding:8px 0}
+.dev-proposal-panel.active{display:block}
+.proposal-full-code{max-height:360px;overflow:auto;margin:0;padding:10px;border:1px solid var(--border-subtle);border-radius:8px;background:rgba(0,0,0,.28);font:11px/1.55 var(--font-mono);direction:ltr;text-align:left;white-space:pre}
+.proposal-change-summary{padding:10px;border-radius:8px;background:rgba(255,255,255,.03);font-size:12px;line-height:1.7}
+.proposal-muted{color:var(--text-dim);font-size:11px}
+.proposal-check-list{list-style:none;margin:0;padding:0;display:grid;gap:6px;font-size:11.5px}
+.proposal-check-list li{padding:7px 9px;border-radius:7px}
+.proposal-check-list .pass{background:rgba(16,185,129,.07);color:#6ee7b7}
+.proposal-check-list .fail{background:rgba(239,68,68,.09);color:#fca5a5}
+.observer-agent-strip{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:2px}
+.observer-agent-chip{display:inline-flex;align-items:center;gap:4px;padding:3px 7px;border-radius:999px;background:rgba(255,255,255,.05);border:1px solid var(--border-subtle);color:var(--text-dim);font-size:10px}
+.observer-agent-chip i{font-style:normal;color:var(--accent-dev);font-weight:800}
+.observer-agent-chip.running{border-color:rgba(96,165,250,.35);color:#93c5fd}
+.observer-agent-chip.done{border-color:rgba(16,185,129,.25)}
+
 /* ─── Compact Chat Typography & Zero Clutter ─── */
 .message-row.ai .msg-content p {
   margin: 4px 0 !important;
@@ -3277,23 +3298,23 @@ pre code {
 
 /* ─── Sleek Dynamic Thinking Tabs Component ─── */
 .dev-thinking-container {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
   margin-bottom: 8px;
   overflow: hidden;
   transition: all 0.2s ease;
   font-family: var(--font-sans);
 }
 .dev-thinking-container:hover {
-  border-color: rgba(255, 255, 255, 0.14);
+  border-color: transparent;
 }
 .dev-thinking-summary {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 10px;
-  background: rgba(0, 0, 0, 0.18);
+  padding: 4px 0;
+  background: transparent;
   cursor: pointer;
   user-select: none;
   font-size: 11.5px;
@@ -3332,18 +3353,22 @@ pre code {
   gap: 6px;
   padding: 8px 10px;
   background: rgba(0, 0, 0, 0.1);
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-top: 0;
+  padding-inline: 0;
+  padding-block: 2px 4px;
+  flex-direction: column;
+  align-items: flex-start;
 }
 .dev-thinking-tab {
   display: flex;
   align-items: center;
   gap: 6px;
   font-size: 11px;
-  padding: 4px 9px;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  color: var(--text-main);
+  padding: 2px 0;
+  border-radius: 0;
+  background: transparent;
+  border: 0;
+  color: var(--text-dim);
   animation: tabFadeIn 0.3s ease both;
 }
 @keyframes tabFadeIn {
@@ -3357,8 +3382,8 @@ pre code {
   background: #10b981;
 }
 .dev-thinking-container.active-streaming {
-  border-color: rgba(59, 130, 246, 0.3);
-  background: rgba(59, 130, 246, 0.04);
+  border-color: transparent;
+  background: transparent;
 }
 .streaming-dot-pulse i {
   display: inline-block;
@@ -3615,5 +3640,3 @@ pre code {
   border-color: rgba(168, 85, 247, 0.55);
   color: #f3e8ff;
 }
-
-
