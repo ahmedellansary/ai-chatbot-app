@@ -21,6 +21,8 @@
   const _k3 = [String.fromCharCode(103,104,112,95)+'Ep2hC2i0', 'LFNVeyCSiUFlMMb0', '5ILzmJ2nzGGN'].join('');
   const _kSeek = ['sk-KoCpJA9QBocxk8HEx37', 'IuDCh1wiHRzrpHQVmINPiZBowc8mn'].join('');
   const _seekUrl = 'https://seekai.cc';
+  const _kGenspark = 'gsk-eyJjb2dlbl9pZCI6ImFjZTI0YjIyLWJkNDktNGZkZS1iYjBhLTUyZTgxODBkMDBlMSIsImtleV9pZCI6IjI1YmQyZWYwLTQ5NDQtNDE3NS1iYzM3LTdhNzA2YzhjMmVhOSIsImN0aW1lIjoxNzg4NTYyMDE1LCJjbGF1ZGVfYmlnX21vZGVsIjpudWxsLCJjbGF1ZGVfbWlkZGxlX21vZGVsIjpudWxsLCJjbGF1ZGVfc21hbGxfbW9kZWwiOm51bGx9fH-RaSZ6xQ7TPgi91bY-WDClZOys9NKafZDvkbFBu7X4';
+  const _gensparkUrl = 'https://www.genspark.ai';
 
   const GITHUB_USER = 'ahmedellansary';
   const GITHUB_REPO = 'ai-chatbot-app';
@@ -145,6 +147,20 @@
       const s=_getStored('SEEKAI_API_URL');
       if(s) return s.replace(/\/+$/,'');
       return _seekUrl;
+    },
+
+    // ── Genspark Super Agent & Services API ──
+    getGensparkKey(){
+      const fromApp = _getAppConfigKey('getGensparkKey');
+      if(fromApp && String(fromApp).trim()) return String(fromApp).trim();
+      const s = _getStored('GSK_API_KEY') || _getStored('GENSPARK_API_KEY');
+      if(s) return s;
+      return _kGenspark;
+    },
+    getGensparkUrl(){
+      const s = _getStored('GSK_BASE_URL') || _getStored('GENSPARK_BASE_URL');
+      if(s) return s.replace(/\/+$/,'');
+      return _gensparkUrl;
     }
   };
 
