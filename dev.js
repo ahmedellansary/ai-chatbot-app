@@ -1015,16 +1015,59 @@ STRICT RULE: The local engine automatically merges your surgical patches directl
         if (patches && originalFileContent) {
           let merged = originalFileContent;
           let appliedCount = 0;
+
+          // Helper: normalize whitespace & newlines for fuzzy matching
+          const normalizeWs = s => String(s || '').replace(/\r\n/g, '\n').replace(/[ \t]+/g, ' ').trim();
+
           for (const p of patches) {
             if (p.search && typeof p.replace === 'string') {
+              // Level 1: Exact match
               if (merged.includes(p.search)) {
                 merged = merged.replace(p.search, p.replace);
                 appliedCount++;
-              } else {
-                const cleanSearch = p.search.trim();
-                if (cleanSearch && merged.includes(cleanSearch)) {
-                  merged = merged.replace(cleanSearch, p.replace.trim());
+                continue;
+              }
+              // Level 2: Trimmed match
+              const cleanSearch = p.search.trim();
+              if (cleanSearch && merged.includes(cleanSearch)) {
+                merged = merged.replace(cleanSearch, p.replace.trim());
+                appliedCount++;
+                continue;
+              }
+              // Level 3: Normalized Line Endings (CRLF vs LF)
+              const normMergedLF = merged.replace(/\r\n/g, '\n');
+              const normSearchLF = p.search.replace(/\r\n/g, '\n');
+              if (normMergedLF.includes(normSearchLF)) {
+                const replaced = normMergedLF.replace(normSearchLF, p.replace.replace(/\r\n/g, '\n'));
+                merged = merged.includes('\r\n') ? replaced.replace(/\n/g, '\r\n') : replaced;
+                appliedCount++;
+                continue;
+              }
+              // Level 4: Fuzzy Line-by-Line Whitespace Normalization
+              const searchLines = p.search.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+              if (searchLines.length > 0) {
+                const origLines = merged.split(/\r?\n/);
+                let matchIdx = -1;
+                for (let i = 0; i <= origLines.length - searchLines.length; i++) {
+                  let allMatch = true;
+                  for (let j = 0; j < searchLines.length; j++) {
+                    if (origLines[i + j].trim() !== searchLines[j]) {
+                      allMatch = false;
+                      break;
+                    }
+                  }
+                  if (allMatch) {
+                    matchIdx = i;
+                    break;
+                  }
+                }
+                if (matchIdx !== -1) {
+                  const leadingIndent = origLines[matchIdx].match(/^\s*/)?.[0] || '';
+                  const indentedReplace = p.replace.split(/\r?\n/).map((l, idx) => idx === 0 ? leadingIndent + l.trimStart() : leadingIndent + l.trimStart()).join('\n');
+                  origLines.splice(matchIdx, searchLines.length, indentedReplace);
+                  merged = origLines.join('\n');
                   appliedCount++;
+                  continue;
                 }
               }
             }
@@ -1284,11 +1327,20 @@ STRICT RULE: The local engine automatically merges your surgical patches directl
 
       // Extract full code context from deploy block or response for complete-file auditing
       let codeToAudit = aiResponse;
+      let isSurgicalPatch = false;
       try {
         const deployMatch = aiResponse.match(/```json\s*(\{[\s\S]*?"file"[\s\S]*?\})\s*```/);
         if (deployMatch) {
           const parsed = JSON.parse(deployMatch[1]);
-          codeToAudit = `[Target File: ${parsed.file || 'active'}]\n[Commit: ${parsed.message || ''}]\n[Full Code Implementation]:\n${parsed.content || ''}`;
+          if (parsed.patches || (parsed.search && parsed.replace)) {
+            isSurgicalPatch = true;
+            const patchSummary = parsed.patches 
+              ? parsed.patches.map(p => `SEARCH: ${p.search}\nREPLACE: ${p.replace}`).join('\n---\n')
+              : `SEARCH: ${parsed.search}\nREPLACE: ${parsed.replace}`;
+            codeToAudit = `[Target File: ${parsed.file || 'active'}] (SURGICAL PATCH MERGE)\n[Patch Changes]:\n${patchSummary}\n[Note]: This is a targeted surgical patch that was safely merged with the existing file without truncating it.`;
+          } else {
+            codeToAudit = `[Target File: ${parsed.file || 'active'}]\n[Commit: ${parsed.message || ''}]\n[Full Code Implementation]:\n${parsed.content || ''}`;
+          }
         } else {
           const codeBlocks = [...aiResponse.matchAll(/```(?:html|javascript|js|css)?\s*([\s\S]*?)```/g)];
           if (codeBlocks.length) {
@@ -1300,16 +1352,17 @@ STRICT RULE: The local engine automatically merges your surgical patches directl
       const reviewPrompt = isAr
         ? `أنت عضو في هيئة التدقيق الخماسي الموحد (5-Agent Unified Code Quality Audit) في X.v1 Dev Studio.
 مهمتك الصارمة: فحص ومراجعة الكود والتطبيق كاملاً وليس فقط السطور المعدلة، للتحقق من أن التطبيق تم فيه بشكل سليم بنسبة 100% وبكامل وظائفه ولا يسبب أي كسر لمعمارية النظام.
+${isSurgicalPatch ? 'تنبيه خاص: هذا التعديل تم عبر باتش جراحي (Surgical Patch) استبدل الأسطر المستهدفة ودمجها مع الملف الأصلي دون حذفه. قيّم صحة الاستبدال والتأثير على المعمارية ولا ترفض الكود بحجة عدم كتابة الملف كاملاً.' : ''}
 أجب باختصار شديد ومباشر لتحقيق نفس الهدف دون أي مقدمات، عبر 5 أسطر محددة تبدأ بـ • :
 
-1. مطابقة التطبيق الشامل (Full Implementation Compliance): هل تم تطبيق الميزة/التعديل المطلوب بشكل سليم ومكتمل داخل الكود بالكامل دون نقص؟ (مطابق وسليم / غير مطابق: السبب بكلمات معدودة)
-2. سلامة المعمارية والتطبيق الكامل (Full Architecture & Integrity): هل يحتفظ الملف بكامل هيكله ووظائفه الحيوية، وهل التعديل منسجم مع كامل دوال الملف دون كسر أو استبدال أعمى؟ (سليم ومتماسك / تنبيه: خلل بالتكامل أو نقص)
+1. مطابقة التطبيق الشامل (Full Implementation Compliance): هل تم تطبيق الميزة/التعديل المطلوب بشكل سليم ومكتمل دون نقص؟ (مطابق وسليم / غير مطابق: السبب بكلمات معدودة)
+2. سلامة المعمارية والتطبيق الكامل (Full Architecture & Integrity): هل يحتفظ الملف بكامل هيكله ووظائفه الحيوية دون كسر أو استبدال أعمى؟ (سليم ومتماسك / تنبيه: خلل بالتكامل أو نقص)
 3. الأمان وتدفق البيانات (Security & Resource Safety): هل الكود آمن تماماً عبر كامل المسار من XSS، وتطهير المدخلات، وتفادي تسريب الذاكرة (Event Leaks)؟ (آمن ومحمي / ثغرة: اذكرها باختصار)
-4. توافق الـ DOM والعناصر الحقيقية (DOM & State Sync): هل يستخدم الكود المعرفات الحقيقية لملفات dev/app بدون اختراع عناصر وهمية وبما يضمن عمل الواجهة بنجاح؟ (متوافق ودقيق / تنبيه: عدم تطابق)
+4. توافق الـ DOM والعناصر الحقيقية (DOM & State Sync): هل يستخدم الكود المعرفات الحقيقية لملفات dev/app بدون اختراع عناصر وهمية؟ (متوافق ودقيق / تنبيه: عدم تطابق)
 5. الجاهزية للإنتاج والأداء (Production-Ready Elegance): هل الكود جاهز للتشغيل والإنتاج الفعلي بنسبة 100% وخالٍ من الأكواد التجريبية أو التعليقات الزائفة؟ (جاهز للإنتاج / ملاحظة تحسين)
 
 طلب المستخدم: """${userText.slice(0, 600)}"""
-كود وتطبيق المطور الكامل: """${codeToAudit.slice(0, 5000)}"""
+كود وتطبيق المطور: """${codeToAudit.slice(0, 5000)}"""
 
 أجب بإيجاز صارم في 5 أسطر فقط تبدأ بـ • (سطر لكل محور بنفس الهدف المباشر):
 • 1. مطابقة التطبيق: (مطابق وسليم / غير مطابق: السبب باختصار)
