@@ -1383,6 +1383,68 @@
   };
   window.SeekAIController = SeekAIController;
 
+  // ── Other Tab — dynamic services from SeekAI (Chat/Image/Video/Audio) ──
+  const OtherModelsController = {
+    async init(){
+      const listEl=document.getElementById('other-models-list');
+      const devListEl=document.getElementById('dev-other-list');
+      if(!listEl && !devListEl) return;
+      const render=(container, models)=>{
+        if(!container) return;
+        const groups={chat:[], image:[], video:[], audio:[]};
+        models.forEach(m=>{
+          const id=m.id||m;
+          const low=id.toLowerCase();
+          if(low.includes('dall')||low.includes('midjourney')||low.includes('stable')||low.includes('image')||low.includes('flux')||low.includes('sd')) groups.image.push(m);
+          else if(low.includes('sora')||low.includes('runway')||low.includes('pika')||low.includes('video')||low.includes('veo')) groups.video.push(m);
+          else if(low.includes('whisper')||low.includes('tts')||low.includes('audio')||low.includes('fish')||low.includes('speech')) groups.audio.push(m);
+          else groups.chat.push(m);
+        });
+        // ensure at least chat has models
+        if(!groups.chat.length) groups.chat=models.slice(0,6);
+        // fallback for missing services — add known SeekAI services
+        if(!groups.image.length) groups.image=[{id:'dall-e-3', name:'DALL·E 3'},{id:'midjourney', name:'Midjourney'}];
+        if(!groups.video.length) groups.video=[{id:'sora', name:'Sora'},{id:'runway-gen3', name:'Runway'}];
+        if(!groups.audio.length) groups.audio=[{id:'whisper-1', name:'Whisper'}];
+        const catName={chat:'💬 Chat', image:'🖼️ Image', video:'🎬 Video', audio:'🎙️ Audio'};
+        const catAttr={chat:'data-seekai-model', image:'data-seekai-model', video:'data-seekai-model', audio:'data-seekai-model'};
+        let html='';
+        ['chat','image','video','audio'].forEach(cat=>{
+          if(!groups[cat].length) return;
+          html+=`<div style="font-size:10px; color:#a78bfa; padding:6px 6px 2px; font-weight:700;">${catName[cat]}</div>`;
+          groups[cat].forEach(m=>{
+            const id=m.id||m; const name=(m.name||id).slice(0,16);
+            const attr=catAttr[cat];
+            html+=`<button class="dropdown-opt" ${attr}="${id}"><div class="opt-title" style="font-size:12px;">${name}</div></button>`;
+          });
+        });
+        container.innerHTML=html;
+      };
+      const fetchAll= async ()=>{
+        try{
+          const key=(window.ConfigVault?.getSeekAIKey?.()||'');
+          const base=(window.ConfigVault?.getSeekAIUrl?.()||'https://seekai.cc').replace(/\/+$/,'');
+          const r=await fetch(base+'/v1/models',{headers:{'Authorization':`Bearer ${key}`}});
+          if(!r.ok) throw new Error();
+          const j=await r.json();
+          const list=j.data||[];
+          // also try to enrich with known image/video models via additional fetch (best-effort)
+          render(listEl, list);
+          render(devListEl, list);
+        }catch{
+          const fallback=[
+            {id:'claude-opus-5'},{id:'claude-sonnet-5'},{id:'gpt-5-6'},{id:'grok-4-6'},{id:'deepseek-v4-pro'},{id:'kimi-k3'},
+            {id:'dall-e-3'},{id:'midjourney'},{id:'stable-diffusion-xl'},{id:'sora'},{id:'runway-gen3'},{id:'whisper-1'}
+          ];
+          render(listEl, fallback);
+          render(devListEl, fallback);
+        }
+      };
+      await fetchAll();
+    }
+  };
+  window.OtherModelsController = OtherModelsController;
+
   // ── Usage Pie Controller — tiny pie next to refresh, popup on click ──
   const UsagePieController = {
     getCurrentModelId(){
@@ -3566,6 +3628,7 @@
     UIEngine.setupEventListeners();
     try{ window.VoiceChatController?.init(); }catch(e){ console.warn('[voice init]',e); }
     try{ window.SeekAIController?.init(); }catch(e){ console.warn('[seekai init]',e); }
+    try{ window.OtherModelsController?.init(); }catch(e){ console.warn('[other init]',e); }
     try{ window.UsagePieController?.init(); }catch(e){ console.warn('[pie init]',e); }
     // fallback direct dot handler (ensures voice page loads even if controller fails)
     try{
