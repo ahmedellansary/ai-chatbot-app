@@ -1623,25 +1623,24 @@ Reply strictly in 5 concise lines starting with • :
     const badgeEl = $('dev-status-badge-text');
     if (!badgeEl) return;
 
-    const formatDateTime = (d) => {
-      const pad = (n) => String(n).padStart(2, '0');
-      const day = pad(d.getDate());
-      const month = pad(d.getMonth() + 1);
-      const year = d.getFullYear();
-      let hours = d.getHours();
-      const minutes = pad(d.getMinutes());
-      const ampm = hours >= 12 ? 'PM' : 'AM';
-      hours = hours % 12;
-      hours = hours ? hours : 12;
-      return `${day}-${month}-${year} ${hours}:${minutes}${ampm}`;
+    const formatShortDevBadge = (ver, rawDate) => {
+      if (!rawDate) return `Dev (V${ver})`;
+      const m = String(rawDate).match(/(\d{1,2})[-/](\d{1,2})(?:[-/]\d{2,4})?\s*([0-9:]+\s*(?:AM|PM|am|pm)?)/i);
+      if (m) {
+        const day = parseInt(m[1], 10);
+        const month = parseInt(m[2], 10);
+        const time = m[3].trim().toUpperCase();
+        return `Dev (V${ver}) ${day}/${month} ${time}`;
+      }
+      return `Dev (V${ver}) ${rawDate}`;
     };
 
     try {
       const res = await fetch('./version.json?t=' + Date.now());
       if (res.ok) {
         const data = await res.json();
-        if (data && data.version && data.updated_at) {
-          const badgeText = `Dev (V${data.version}) ${data.updated_at}`;
+        if (data && data.version) {
+          const badgeText = formatShortDevBadge(data.version, data.updated_at);
           badgeEl.textContent = badgeText;
           localStorage.setItem('DEV_LAST_SYNC_BADGE', badgeText);
           return;
@@ -1652,7 +1651,7 @@ Reply strictly in 5 concise lines starting with • :
     }
 
     // Fallback if version.json unavailable
-    let verNum = '129';
+    let verNum = '360';
     try {
       const swRes = await fetch('./sw.js?t=' + Date.now());
       if (swRes.ok) {
@@ -1662,7 +1661,14 @@ Reply strictly in 5 concise lines starting with • :
       }
     } catch {}
 
-    const fallbackBadge = `Dev (V${verNum}) ${formatDateTime(new Date())}`;
+    const now = new Date();
+    const day = now.getDate();
+    const month = now.getMonth() + 1;
+    let hours = now.getHours();
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12 || 12;
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const fallbackBadge = `Dev (V${verNum}) ${day}/${month} ${hours}:${minutes}${ampm}`;
     badgeEl.textContent = fallbackBadge;
   }
 
