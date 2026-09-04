@@ -186,10 +186,11 @@
     </div>
 
     <!-- Floating Input Bar -->
-    <!-- Chat Mode Dots — text / voice (2 pages) -->
+    <!-- Chat Mode Dots — text / voice / genspark (3 pages) -->
     <div id="chat-mode-dots" class="chat-mode-dots" aria-label="Chat mode">
-      <button class="chat-dot active" data-mode="text" aria-label="نص"></button>
-      <button class="chat-dot" data-mode="voice" aria-label="صوت"></button>
+      <button class="chat-dot active" data-mode="text" aria-label="نص" title="الدردشة العامة"></button>
+      <button class="chat-dot" data-mode="voice" aria-label="صوت" title="توليد الصوت"></button>
+      <button class="chat-dot" data-mode="genspark" aria-label="Genspark" title="خدمات Genspark"></button>
     </div>
 
     <div id="input-section">
@@ -354,6 +355,43 @@
           <div class="input-bottom-right">
             <button id="voice-send-btn" class="claude-send-btn" aria-label="Send voice" title="توليد الصوت" disabled>
               <svg viewBox="0 0 24 24" width="17" height="17" stroke="currentColor" stroke-width="2.8" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"></path><path d="M5 12l7-7 7 7"></path><circle cx="12" cy="12" r="10" opacity="0.0"></circle></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Genspark Layer Chat Box — hidden until dot 3 or swipe -->
+    <div id="genspark-input-section" class="hidden">
+      <div class="input-container genspark-container">
+        <div class="genspark-controls-top">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <label class="voice-ctrl-label" style="color:#a78bfa;">✨ Genspark</label>
+            <select id="genspark-service-select" class="genspark-service-select" title="خدمات Genspark">
+              <option value="web_search">🔍 بحث الويب (Web Search)</option>
+              <option value="deep_research">🧠 بحث عميق (Deep Research)</option>
+              <option value="image_generation">🎨 توليد صور (Image Gen)</option>
+              <option value="understand_images">🖼️ تحليل الصور (Image Vision)</option>
+              <option value="slides">📊 عروض وشرائح (Slides)</option>
+              <option value="docs">📄 مستندات (Docs)</option>
+              <option value="super_agent">🤖 وكيل مهام فائق (Super Agent)</option>
+            </select>
+          </div>
+          <span id="genspark-credit-badge" class="genspark-credit-badge" title="الرصيد المتاح • اضغط للتحديث">Plus • 7.8K ⟳</span>
+        </div>
+        <textarea id="genspark-input" class="chat-textarea" placeholder="ابحث في الويب عبر Genspark..." rows="1" autocomplete="off"></textarea>
+        <div class="input-bottom-bar">
+          <div class="input-bottom-left">
+            <button class="claude-plus-btn" id="genspark-attach-btn" title="إرفاق ملف أو صورة" aria-label="Attach">
+              <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            </button>
+            <button class="claude-voice-btn" id="genspark-mic-btn" title="تسجيل صوتي">
+              <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="22"></line></svg>
+            </button>
+          </div>
+          <div class="input-bottom-right">
+            <button id="genspark-send-btn" class="claude-send-btn" aria-label="Send Genspark" title="إرسال عبر Genspark" disabled>
+              <svg viewBox="0 0 24 24" width="17" height="17" stroke="currentColor" stroke-width="2.8" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
             </button>
           </div>
         </div>
