@@ -1236,32 +1236,11 @@ STRICT RULE: The local engine automatically merges your surgical patches directl
 
       let proposalCard = null;
       const agentNames = ['Lead', 'Coder', 'Verifier', 'Security', 'Architecture'];
-      const renderUI = (bullets = [], statusText = '', isRunning = false, warnCount = 0, finalSuggestion = '', reviewerResults = []) => {
+      const renderUI = (bullets = [], statusText = '', isRunning = false, warnCount = 0, finalSuggestion = '', reviewerResults = [], currentAgentIndex = -1) => {
         const statusBadgeCls = isRunning ? 'running' : (warnCount > 0 ? 'warn' : 'ok');
         const badgeLabel = isRunning 
           ? t('جاري التدقيق الخماسي...', '5-Agent Auditing...') 
-          : (warnCount > 0 ? `⚠️ ${warnCount} ${t('ملاحظات / ثغرات', 'Issues Found')}` : t('✓ 0 أخطاء (معتمد)', '✓ 0 Issues (Clean)'));
-
-        const auditQuestions = isAr
-          ? ['هل الطلب مطابق؟', 'هل الملف الكامل محفوظ؟', 'هل توجد مشكلة أمنية؟', 'هل المعمارية والمعرفات صحيحة؟', 'هل الكود نظيف وجاهز؟']
-          : ['Request compliant?', 'Full file preserved?', 'Any security issue?', 'DOM architecture valid?', 'Production-ready code?'];
-        const answerRows = reviewerResults.length
-          ? reviewerResults.map((review, reviewerIndex) => {
-              const answers = review.lines.length ? review.lines : [t('لم تصل إجابة الوكيل بعد.', 'No reviewer answer received.')];
-              return `<li class="audit-reviewer-group"><div class="audit-reviewer-name" data-available="${review.available !== false}">${reviewerIndex + 1}. ${escapeHtml(review.name)}${review.available === false ? ' — unavailable' : ''}</div><ul>${auditQuestions.map((question, index) => {
-                const answer = answers[index] || t('لم تصل إجابة الوكيل بعد.', 'No reviewer answer received.');
-                return `<li class="${/تنبيه|ثغرة|غير مطابق|استبدال أعمى|استبدال|خطأ|وهمي|Warn|Fail|Error|Vulnerability|Non-compliant/i.test(answer) ? 'fail' : 'pass'}"><strong>${question}</strong> <span>${escapeHtml(answer.replace(/^[•\-\*\d\.\s]+/, ''))}</span></li>`;
-              }).join('')}</ul></li>`;
-            }).join('')
-          : auditQuestions.map((question, index) => {
-              const answer = bullets[index] || t('لم تصل إجابة الوكيل بعد.', 'No reviewer answer received.');
-              return `<li class="${/تنبيه|ثغرة|غير مطابق|استبدال أعمى|استبدال|خطأ|وهمي|Warn|Fail|Error|Vulnerability|Non-compliant/i.test(answer) ? 'fail' : 'pass'}"><strong>${question}</strong> <span>${escapeHtml(answer.replace(/^[•\-\*\d\.\s]+/, ''))}</span></li>`;
-            }).join('');
-        const issueSummary = bullets.filter(b => /تنبيه|ثغرة|غير مطابق|استبدال أعمى|استبدال|خطأ|وهمي|Warn|Fail|Error|Vulnerability|Non-compliant/i.test(b)).join(' ') || t('لا توجد مشكلة حرجة في نتائج الفحص.', 'No critical issue found in the audit.');
-        const bulletsHtml = bullets.map(b => {
-          const isWarn = /تنبيه|ثغرة|غير مطابق|استبدال أعمى|استبدال|خطأ|وهمي|Warn|Fail|Error|Vulnerability/i.test(b);
-          return `<li class="peer-bullet ${isWarn ? 'warn' : 'ok'}"><span class="peer-bullet-dot"></span><span>${escapeHtml(b)}</span></li>`;
-        }).join('');
+          : (warnCount > 0 ? `⚠️ ${warnCount} ${t('ملاحظات', 'Issues')}` : t('✓ معتمد (0 أخطاء)', '✓ Approved (0 Issues)'));
 
         const actionsHtml = (!isRunning && bullets.length) ? `
           <div class="peer-actions-bar">
@@ -1279,19 +1258,46 @@ STRICT RULE: The local engine automatically merges your surgical patches directl
         proposalCard = proposalCard || row.querySelector('.dev-proposal-box');
         box.dataset.review = finalSuggestion || bullets.join('\n');
 
+        // Elegant Pulse Animation Track
+        const pipelineTrackHtml = `
+          <div class="audit-pulse-track">
+            ${agentNames.map((name, i) => {
+              const isCompleted = !isRunning || i < currentAgentIndex;
+              const isActive = isRunning && i === currentAgentIndex;
+              const hasError = reviewerResults[i] && reviewerResults[i].lines && reviewerResults[i].lines.some(l => /تنبيه|ثغرة|غير مطابق|Warn|Fail|Error|Vulnerability/i.test(l));
+              const nodeClass = isCompleted ? (hasError ? 'failed' : 'completed') : (isActive ? 'active' : 'pending');
+              return `
+                <div class="audit-pulse-node ${nodeClass}" title="${name}">
+                  <span class="audit-pulse-dot"></span>
+                  <span class="audit-pulse-label">${i + 1}. ${name}</span>
+                </div>
+                ${i < agentNames.length - 1 ? `<div class="audit-pulse-connector ${isCompleted ? 'completed' : ''}"></div>` : ''}
+              `;
+            }).join('')}
+          </div>
+        `;
+
+        // Simplified clean bullets list (only genuine issues or concise status)
+        const simplifiedBullets = bullets.map(b => {
+          const isWarn = /تنبيه|ثغرة|غير مطابق|استبدال أعمى|استبدال|خطأ|وهمي|Warn|Fail|Error|Vulnerability/i.test(b);
+          return `<li class="peer-bullet ${isWarn ? 'warn' : 'ok'}"><span class="peer-bullet-dot"></span><span>${escapeHtml(b.replace(/^[•\-\*\d\.\s]+/, ''))}</span></li>`;
+        }).join('');
+
         const auditMarkup = `
           <section class="proposal-audit-section" aria-label="${t('نتائج الفحص', 'Audit results')}">
             <div class="proposal-audit-header">
               <div class="dev-peer-title">
                 <span class="dev-peer-icon">🛡️</span>
-                <span class="dev-peer-name">${t('نتائج الفحص (5 مراجعين)', 'Audit Results (5 Reviewers)')}</span>
+                <span class="dev-peer-name">${t('فحص الـ 5 مراجعين', '5-Agent Audit')}</span>
                 <span class="dev-peer-badge ${statusBadgeCls}">${badgeLabel}</span>
               </div>
               <span class="dev-peer-toggle">▾</span>
             </div>
             <div class="observer-details">
-              <div class="observer-agent-strip">${agentNames.map((name, i) => `<span class="observer-agent-chip ${isRunning ? 'running' : 'done'}"><i>${i + 1}</i>${name}</span>`).join('')}</div>
-              ${isRunning ? `<div class="peer-loading-text">${t('الوكلاء الـ 5 يفحصون الكود...', '5 agents are auditing the code...')}</div>` : `<ul class="peer-bullets-list">${answerRows}</ul><div class="observer-brief"><strong>${t('Brief:', 'Brief:')}</strong> ${escapeHtml(issueSummary)}</div>`}
+              ${pipelineTrackHtml}
+              ${isRunning 
+                ? `<div class="peer-loading-text">${t('جاري التدقيق وفحص المعمارية...', 'Auditing architecture & security...')}</div>` 
+                : `<ul class="peer-bullets-list">${simplifiedBullets}</ul>`}
               ${actionsHtml}
             </div>
           </section>
@@ -1323,7 +1329,7 @@ STRICT RULE: The local engine automatically merges your surgical patches directl
         }
       };
 
-      renderUI([], t('جاري فحص الكود بالوكلاء الـ 5...', 'Auditing with 5 agents...'), true, 0);
+      renderUI([], t('جاري فحص الكود بالوكلاء الـ 5...', 'Auditing with 5 agents...'), true, 0, '', [], 0);
 
       // Extract full code context from deploy block or response for complete-file auditing
       let codeToAudit = aiResponse;
@@ -1433,6 +1439,7 @@ Reply strictly in 5 concise lines starting with • :
         .sort((a, b) => remainingQuota(b) - remainingQuota(a))[0];
 
       for (let i = 0; i < reviewers.length; i++) {
+        renderUI(collectedBullets, '', true, 0, '', reviewerResults, i);
         let rev = reviewers[i];
         let completed = false;
         while (!completed) {
@@ -1482,6 +1489,7 @@ Reply strictly in 5 concise lines starting with • :
           completed = true;
         }
         }
+        renderUI(collectedBullets, '', true, 0, '', reviewerResults, i + 1);
       }
 
       if (!collectedBullets.length) {
@@ -1495,7 +1503,26 @@ Reply strictly in 5 concise lines starting with • :
       }
 
       const warnCount = collectedBullets.filter(b => /تنبيه|ثغرة|غير مطابق|استبدال أعمى|استبدال|خطأ|وهمي|Warn|Fail|Error|Vulnerability/i.test(b)).length;
-      renderUI(collectedBullets, '', false, warnCount, finalSummary || collectedBullets.join('\n'), reviewerResults);
+      renderUI(collectedBullets, '', false, warnCount, finalSummary || collectedBullets.join('\n'), reviewerResults, 5);
+
+      // Persist audit results in the active conversation message for seamless persistence across page reloads
+      try {
+        const activeConv = conv || DevState.getActiveConv();
+        if (activeConv && activeConv.messages) {
+          const targetMsg = activeConv.messages.find(m => m.id === aiMsgId) || activeConv.messages[activeConv.messages.length - 1];
+          if (targetMsg) {
+            targetMsg.auditData = {
+              bullets: collectedBullets,
+              warnCount,
+              finalSummary: finalSummary || collectedBullets.join('\n'),
+              reviewerResults
+            };
+            DevState.save();
+          }
+        }
+      } catch (err) {
+        console.warn('[Audit Persistence Error]', err);
+      }
     }
   };
   try { window.DevObserverEngine = DevObserverEngine; } catch(e) {}
@@ -2137,6 +2164,82 @@ Reply strictly in 5 concise lines starting with • :
 
       if (msg.role === 'ai') {
         DevChatEngine.handleDevProposal(msg.content, row);
+
+        // Restore persisted audit results across refresh
+        if (msg.auditData && window.DevObserverEngine) {
+          setTimeout(() => {
+            const proposalCard = row.querySelector('.dev-proposal-box');
+            const agentNames = ['Lead', 'Coder', 'Verifier', 'Security', 'Architecture'];
+            const bullets = msg.auditData.bullets || [];
+            const warnCount = msg.auditData.warnCount || 0;
+            const reviewerResults = msg.auditData.reviewerResults || [];
+            const statusBadgeCls = warnCount > 0 ? 'warn' : 'ok';
+            const badgeLabel = warnCount > 0 ? `⚠️ ${warnCount} ملاحظات` : `✓ معتمد (0 أخطاء)`;
+
+            const actionsHtml = bullets.length ? `
+              <div class="peer-actions-bar">
+                <button class="peer-action-btn retry-btn" onclick="window._sendReviewToDev('', this)" title="Send to LLM">
+                  <span>🚀</span><span>Send to LLM</span>
+                </button>
+                <button class="peer-action-btn apply-btn" onclick="window._applyObserverSuggestion('${escapeHtml(bullets.join('\n')).replace(/'/g, "\\'")}', this)" title="Save as Rule">
+                  <span>⚡</span><span>Save as Rule</span>
+                </button>
+              </div>
+            ` : '';
+
+            const pipelineTrackHtml = `
+              <div class="audit-pulse-track">
+                ${agentNames.map((name, i) => {
+                  const hasError = reviewerResults[i] && reviewerResults[i].lines && reviewerResults[i].lines.some(l => /تنبيه|ثغرة|غير مطابق|Warn|Fail|Error|Vulnerability/i.test(l));
+                  const nodeClass = hasError ? 'failed' : 'completed';
+                  return `
+                    <div class="audit-pulse-node ${nodeClass}" title="${name}">
+                      <span class="audit-pulse-dot"></span>
+                      <span class="audit-pulse-label">${i + 1}. ${name}</span>
+                    </div>
+                    ${i < agentNames.length - 1 ? `<div class="audit-pulse-connector completed"></div>` : ''}
+                  `;
+                }).join('')}
+              </div>
+            `;
+
+            const simplifiedBullets = bullets.map(b => {
+              const isWarn = /تنبيه|ثغرة|غير مطابق|استبدال أعمى|استبدال|خطأ|وهمي|Warn|Fail|Error|Vulnerability/i.test(b);
+              return `<li class="peer-bullet ${isWarn ? 'warn' : 'ok'}"><span class="peer-bullet-dot"></span><span>${escapeHtml(b.replace(/^[•\-\*\d\.\s]+/, ''))}</span></li>`;
+            }).join('');
+
+            const auditMarkup = `
+              <section class="proposal-audit-section" aria-label="Audit results">
+                <div class="proposal-audit-header">
+                  <div class="dev-peer-title">
+                    <span class="dev-peer-icon">🛡️</span>
+                    <span class="dev-peer-name">فحص الـ 5 مراجعين</span>
+                    <span class="dev-peer-badge ${statusBadgeCls}">${badgeLabel}</span>
+                  </div>
+                  <span class="dev-peer-toggle">▾</span>
+                </div>
+                <div class="observer-details">
+                  ${pipelineTrackHtml}
+                  <ul class="peer-bullets-list">${simplifiedBullets}</ul>
+                  ${actionsHtml}
+                </div>
+              </section>
+            `;
+
+            if (proposalCard) {
+              let auditSection = proposalCard.querySelector('.proposal-audit-section');
+              if (!auditSection) {
+                proposalCard.insertAdjacentHTML('beforeend', auditMarkup);
+                auditSection = proposalCard.querySelector('.proposal-audit-section');
+              } else {
+                auditSection.outerHTML = auditMarkup;
+              }
+              auditSection?.querySelector('.proposal-audit-header')?.addEventListener('click', () => {
+                auditSection.classList.toggle('collapsed');
+              });
+            }
+          }, 60);
+        }
       }
       this.scrollToBottom();
     },
