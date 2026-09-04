@@ -493,7 +493,13 @@
       async uploadFile(p,c,m='Update via X.v1'){ const s=await this.getFileSHA(p); const e=this.utf8ToBase64(c); const b={message:m,content:e,branch:GITHUB_BRANCH}; if(s) b.sha=s; const r=await fetch(`${GITHUB_API}/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${p}`,{method:'PUT',headers:ConfigVault.getGitHubHeaders(),body:JSON.stringify(b)}); if(!r.ok) throw new Error((await r.json().catch(()=>({}))).message||'فشل رفع الملف'); return await r.json(); },
       async getLatestCommits(l=10){ const r=await fetch(`${GITHUB_API}/repos/${GITHUB_USER}/${GITHUB_REPO}/commits?per_page=${l}&t=${Date.now()}`,{headers:ConfigVault.getGitHubHeaders()}); if(!r.ok) throw new Error('فشل جلب سجل النسخ'); return await r.json(); },
       async rollbackToPreviousCommit(){ MessageRenderer.showToast('🔄 جاري البحث عن آخر نسخة مستقرة...','info'); try{ const cs=await this.getLatestCommits(5); if(cs.length<2) throw new Error('لا توجد نسخ سابقة'); const p=cs[1]; MessageRenderer.showToast(`⏪ جاري استرجاع النسخة (${p.sha.slice(0,7)})...`,'info'); for(const f of ['index.html','style.css','app.js']){ const fr=await fetch(`${GITHUB_API}/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${f}?ref=${p.sha}`,{headers:ConfigVault.getGitHubHeaders()}); if(fr.ok){ const fd=await fr.json(); await this.uploadFile(f,this.base64ToUtf8(fd.content),`⏪ Emergency Rollback to ${p.sha.slice(0,7)}`); } } MessageRenderer.showToast('✅ تم استرجاع النسخة بنجاح! جاري التحديث...','success'); setTimeout(()=>location.reload(),1500); }catch(e){ MessageRenderer.showToast('❌ خطأ أثناء الاسترجاع: '+e.message,'error'); } },
-      applyRuntimePatch(f,c){ if(!f) return false; try{ if(f.endsWith('.css')){ let t=document.getElementById('live-patch-style'); if(!t){ t=document.createElement('style'); t.id='live-patch-style'; document.head.appendChild(t); } t.textContent=c; return true; } if(f.endsWith('.html')||f==='index.html'){ const d=new DOMParser().parseFromString(c,'text/html'); const n=d.getElementById('app'); const cur=document.getElementById('app'); if(n&&cur){ cur.innerHTML=n.innerHTML; return true; } } if(f==='system_prompt.txt'){ state.systemPrompt=c; try{localStorage.setItem('system_prompt',c);}catch{} return true; } }catch(e){ console.warn('[Live Patch Failed]',e.message); } return false; }
+      applyRuntimePatch(f,c){ if(!f) return false; try{
+        // sanitize: strip script/eval/javascript: to prevent XSS via live patch
+        const sanitized=String(c).replace(/<script[\s\S]*?<\/script>/gi,'').replace(/\bjavascript\s*:/gi,'').replace(/\bon\w+\s*=/gi,'');
+        if(f.endsWith('.css')){ let t=document.getElementById('live-patch-style'); if(!t){ t=document.createElement('style'); t.id='live-patch-style'; document.head.appendChild(t); } t.textContent=sanitized; return true; }
+        if(f.endsWith('.html')||f==='index.html'){ const d=new DOMParser().parseFromString(sanitized,'text/html'); const n=d.getElementById('app'); const cur=document.getElementById('app'); if(n&&cur){ cur.innerHTML=n.innerHTML; return true; } }
+        if(f==='system_prompt.txt'){ state.systemPrompt=sanitized; try{localStorage.setItem('system_prompt',sanitized);}catch{} return true; }
+      }catch(e){ console.warn('[Live Patch Failed]',e.message); } return false; }
     };
     return _fallback;
   })();
@@ -1626,7 +1632,7 @@
         aiMsg.content='⚠️ Image error: '+(e.message||'unknown');
         MessageRenderer.appendMessage(aiMsg);
       } finally {
-        state.isStreaming=false; state.isThinking=false; UIEngine.updateSendBtnState(); MessageRenderer.scrollToBottom(); try{ StateController.save(); }catch{}
+        state.isStreaming=false; state.isThinking=false; state._cooldownUntil=Date.now()+450; UIEngine.updateSendBtnState(); MessageRenderer.scrollToBottom(); try{ StateController.save(); }catch{}
       }
     }
   };
@@ -1900,6 +1906,10 @@
     async sendMessage(userText) {
       const hasAttachments = state.attachments && state.attachments.length > 0;
       if (!userText.trim() && !hasAttachments) return;
+      if (state._cooldownUntil && Date.now() < state._cooldownUntil) {
+        MessageRenderer.showToast('⏳ ثانية واحدة...', 'info');
+        return;
+      }
       if (state.isStreaming || state.sendInFlight || state.cacheOperationInFlight) {
         MessageRenderer.showToast('⏳ انتظر انتهاء الرد الحالي قبل إرسال رسالة جديدة', 'info');
         return;
@@ -2288,14 +2298,15 @@
         state.sendLock = false;
         state.cacheOperationInFlight = false;
         state._lastSendStart = 0;
+        state._cooldownUntil = Date.now() + 450;
         UIEngine.updateSendBtnState();
         MessageRenderer.scrollToBottom();
         try { StateController.save(); } catch {}
-        // Observer agents: follow-up review AFTER main level response (non-blocking, prevents freeze)
+        // Observer agents: follow-up review AFTER main level response (non-blocking, prevents freeze) — 650ms gap to avoid overlap
         if (shouldObserve && fullContent && !aiMsgObj.isError) {
           setTimeout(() => {
             try { if (window.ObserverEngine) window.ObserverEngine.observe(userText, fullContent, tier, aiMsgId, conv); } catch (e) { console.warn('[Observer]', e); }
-          }, 500);
+          }, 650);
         }
       }
     }
