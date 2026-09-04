@@ -3686,7 +3686,16 @@ html, body {
 .chat-dot[data-mode="voice"].active{ background: #d97706; border-color: rgba(217,119,6,0.55); box-shadow: 0 0 8px rgba(217,119,6,0.30); }
 .chat-dot[data-mode="genspark"].active{ background: #8b5cf6; border-color: rgba(139,92,246,0.55); box-shadow: 0 0 8px rgba(139,92,246,0.35); }
 
-/* Sticky bottom behavior for all 3 layer input sections */
+/* Sticky bottom behavior for all 3 layer input sections — only visible one occupies space */
+#input-section.hidden, #voice-input-section.hidden, #genspark-input-section.hidden {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  height: 0 !important;
+  overflow: hidden !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
 #input-section, #voice-input-section, #genspark-input-section {
   padding: 6px 14px max(16px, env(safe-area-inset-bottom));
   background: var(--bg-main);
@@ -3697,9 +3706,29 @@ html, body {
 }
 #input-section.hidden, #voice-input-section.hidden, #genspark-input-section.hidden {
   display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  height: 0 !important;
+  overflow: hidden !important;
+  padding: 0 !important;
+  margin: 0 !important;
 }
 #input-section:not(.hidden), #voice-input-section:not(.hidden), #genspark-input-section:not(.hidden) {
   display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  height: auto !important;
+  pointer-events: auto !important;
+}
+@media (max-width: 768px) {
+  #voice-input-section:not(.hidden), #genspark-input-section:not(.hidden) {
+    display: block !important;
+    visibility: visible !important;
+    height: auto !important;
+  }
+  #voice-input-section .input-container, #genspark-input-section .input-container {
+    min-height: 88px;
+  }
 }
 #voice-input-section .input-container, #genspark-input-section .input-container {
   display: flex !important;
