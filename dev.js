@@ -1097,9 +1097,9 @@ STRICT RULE: The local engine automatically merges your surgical patches directl
         card.innerHTML = `
           <div class="dev-proposal-title">
             <span>${isBlocked ? '🚫' : '🛠️'}</span>
-            <span>${isBlocked ? (syntaxError ? 'Syntax Error' : 'Overwrite Blocked') : 'Ready'}: <code>${escapeHtml(file)}</code></span>
-            ${wasSurgicallyMerged ? '<span class="dev-peer-badge ok" style="margin-inline-start:auto;">⚡ Surgical Patch Merged</span>' : ''}
-            ${(!isBlocked && !syntaxError) ? '<span class="dev-peer-badge ok" style="margin-inline-start:auto;">✓ Syntax Validated</span>' : ''}
+            <span class="proposal-status-label">${isBlocked ? (syntaxError ? 'Syntax Err' : 'Blocked') : 'Ready'}: <code>${escapeHtml(file)}</code></span>
+            ${wasSurgicallyMerged ? '<span class="dev-peer-badge ok proposal-peer-badge">⚡ Patched</span>' : ''}
+            ${(!isBlocked && !syntaxError) ? '<span class="dev-peer-badge ok proposal-peer-badge">✓ Valid</span>' : ''}
             <button class="dev-btn-action cancel proposal-cancel-top" onclick="window._cancelProposal('${propId}')" title="Cancel" aria-label="Cancel">✕</button>
           </div>
           ${isBlocked ? `<div class="proposal-blocked-note">${escapeHtml(blockReason)}</div>` : ''}
