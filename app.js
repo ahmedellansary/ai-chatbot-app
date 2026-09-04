@@ -311,11 +311,8 @@
   const _origLoad=StateController.load.bind(StateController);
   StateController.load=function(){
     _origLoad();
-    // async pull after local load
+    // pull only on refresh (initial load) — no periodic, per user request
     setTimeout(()=> HistorySync.pullAndMerge(), 900);
-    // periodic pull every 45s
-    setInterval(()=> HistorySync.pullAndMerge(), 45000);
-    window.addEventListener('online', ()=> HistorySync.pullAndMerge());
   };
 
   // ─────────────────────────────────────────────────────────────────
