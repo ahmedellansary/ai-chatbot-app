@@ -77,7 +77,7 @@
   // ─────────────────────────────────────────────────────────────────
   const state = {
     currentLayer: (function(){ try{ const v=localStorage.getItem('xv1_chat_layer'); return (v==='voice'||v==='seekai')? v : 'general'; }catch{ return 'general'; }})(),
-    currentMode: (function(){ try{ const saved = localStorage.getItem('xv1_current_mode'); if (saved === 'BALANCE2') return 'HIGH'; if (saved === 'HARD') return 'HIGH'; return (saved === 'HIGH' ? 'HIGH' : (saved || 'MID')); }catch{ return 'MID'; }})(),
+    currentMode: (function(){ try{ const saved = localStorage.getItem('xv1_current_mode'); if (saved === 'BALANCE2') return 'HIGH'; if (saved === 'HARD') return 'HIGH'; if (saved === 'AUTO') return 'MID'; return (saved === 'HIGH' ? 'HIGH' : (saved || 'MID')); }catch{ return 'MID'; }})(),
     seekaiDirectModel: (function(){ try{ return localStorage.getItem('xv1_seekai_direct') || null; }catch{ return null; }})(),
     currentModel: null,
     devModelKey: null,
@@ -2498,6 +2498,11 @@
         const optBtn = e.target.closest('.dropdown-opt');
         if (optBtn) {
           e.preventDefault();
+          if(optBtn.id==='other-models-trigger'){
+            const tab=document.getElementById('other-models-tab');
+            if(tab) tab.style.display = (tab.style.display==='none' || !tab.style.display || tab.style.display==='') ? 'block' : 'none';
+            return;
+          }
           if(optBtn.dataset.seekaiModel){
             state.seekaiDirectModel = optBtn.dataset.seekaiModel;
             state.currentMode = 'SEEKAI';
@@ -2508,6 +2513,8 @@
             try{ localStorage.setItem('xv1_current_mode', state.currentMode); localStorage.removeItem('xv1_seekai_direct'); }catch{}
           }
           $('model-dropdown-menu')?.classList.remove('show');
+          const otherTab=document.getElementById('other-models-tab');
+          if(otherTab) otherTab.style.display='none';
           this.updateHeaderUI();
           const conv = StateController.getActiveConv();
           if (conv) {
@@ -2520,8 +2527,10 @@
           return;
         }
 
-        if (!e.target.closest('#model-dropdown-menu')) {
+        if (!e.target.closest('#model-dropdown-menu') && !e.target.closest('#other-models-tab')) {
           $('model-dropdown-menu')?.classList.remove('show');
+          const ot=document.getElementById('other-models-tab');
+          if(ot) ot.style.display='none';
         }
 
         if (e.target.closest('#btn-new-chat') || e.target.closest('#header-new-chat-btn')) {
