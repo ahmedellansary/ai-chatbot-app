@@ -834,8 +834,8 @@ html, body {
   flex-direction: column;
   gap: 10px;
   margin-top: 10px;
-  padding-left: 14px;
-  border-left: 1px solid var(--border-subtle);
+  padding-inline-start: 16px;
+  border-inline-start: 2px solid rgba(218, 119, 86, 0.28);
   position: relative;
 }
 .thinking-flow-item {
@@ -849,18 +849,26 @@ html, body {
   animation: thinkingFlowIn 0.35s ease forwards;
   position: relative;
 }
-.thinking-flow-item .flow-dot{
-  position:absolute;
-  left:-16px;
-  top:7px;
-  width:7px;
-  height:7px;
-  border-radius:50%;
-  background:var(--accent-color);
-  box-shadow:0 0 6px var(--accent-glow);
-  display:none;
+.thinking-flow-item .flow-dot {
+  position: absolute;
+  left: -21px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-color);
+  box-shadow: 0 0 8px var(--accent-glow);
+  flex-shrink: 0;
+  display: block;
 }
-.thinking-flow-item.reached .flow-dot{display:block;animation:flowDotPulse 1.1s ease-in-out infinite}
+[dir="rtl"] .thinking-flow-item .flow-dot {
+  left: auto;
+  right: -21px;
+}
+.thinking-flow-item.reached .flow-dot {
+  animation: flowDotPulse 1.1s ease-in-out infinite;
+}
 /* Highlight by importance — for chat & dev */
 .hl-important { color: var(--hl-important); font-weight: 700; }
 .hl-critical { color: var(--hl-critical); font-weight: 700; }
@@ -877,23 +885,17 @@ html, body {
 .thinking-flow-item .flow-text {
   flex: 1;
   line-height: 1.4;
+  font-weight: 500;
+  color: var(--text-dim);
 }
-.thinking-flow-item .flow-dot {
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: var(--accent-color);
-  opacity: 0;
-  flex-shrink: 0;
+.thinking-flow-item.reached .flow-text {
+  color: #f3f4f6;
+  font-weight: 600;
 }
-.thinking-flow-item.reached .flow-dot {
-  opacity: 0.9;
-  animation: flowDotPulse 1.2s ease-in-out infinite;
-}
-@keyframes flowDotPulse{
-  0%{transform:scale(0.8);opacity:0.5}
-  50%{transform:scale(1.3);opacity:1}
-  100%{transform:scale(0.8);opacity:0.5}
+@keyframes flowDotPulse {
+  0% { transform: translateY(-50%) scale(0.85); opacity: 0.6; box-shadow: 0 0 4px var(--accent-glow); }
+  50% { transform: translateY(-50%) scale(1.35); opacity: 1; box-shadow: 0 0 12px var(--accent-color); }
+  100% { transform: translateY(-50%) scale(0.85); opacity: 0.6; box-shadow: 0 0 4px var(--accent-glow); }
 }
 @keyframes thinkingFlowIn {
   to { opacity: 1; transform: translateY(0); }
