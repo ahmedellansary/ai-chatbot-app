@@ -964,13 +964,55 @@
         return URL.createObjectURL(blob);
       }catch{ return null; }
     },
-    speakLocal(text){
+    speakLocal(text, voiceId){
       try{
         window.speechSynthesis.cancel();
         const u = new SpeechSynthesisUtterance(text);
         const isAr = /[\u0600-\u06FF]/.test(text);
         u.lang = isAr ? 'ar-EG' : 'en-US';
-        u.rate = 1; u.pitch = 1;
+        // pick matching system voice if available
+        try{
+          const voices = window.speechSynthesis.getVoices() || [];
+          let pick = null;
+          if(voiceId){
+            const vid = String(voiceId).toLowerCase();
+            pick = voices.find(v=> String(v.name).toLowerCase().includes(vid) || String(v.voiceURI).toLowerCase().includes(vid));
+            if(!pick) pick = voices.find(v=> String(v.lang).toLowerCase().includes(vid.slice(0,2)));
+          }
+          if(!pick){
+            // fallback: distinct local voice per model/voice to make preview audible difference
+            const selModel = document.getElementById('tts-model-select')?.value || '';
+            if(selModel.includes('fish')){
+              const fmap={auto:1, 'fish-ar':1, 'fish-en':1.08, 'fish-cheerful':1.18, 'fish-calm':0.88};
+              const v = String(voiceId||'auto').toLowerCase();
+              u.pitch = fmap[v] || 1;
+              u.rate = (parseFloat(document.getElementById('tts-speed-btn')?.dataset?.speed || '1') || 1) * (v==='fish-cheerful'?1.06: v==='fish-calm'?0.94:1);
+              pick = voices.find(v=> v.lang.startsWith('ar')) || voices[0];
+              if(pick) u.voice = pick;
+              window.speechSynthesis.speak(u); return true;
+            } else {
+              const map={alloy:1, echo:0.9, fable:1.1, onyx:0.85, nova:1.05, shimmer:1.15};
+              const v = String(voiceId||'alloy').toLowerCase();
+              u.pitch = map[v] || 1;
+              u.rate = parseFloat(document.getElementById('tts-speed-btn')?.dataset?.speed || '1') || 1;
+              if(pick) u.voice = pick;
+              window.speechSynthesis.speak(u); return true;
+            }
+          }
+          if(pick) u.voice = pick;
+          // even when voice found, apply pitch for distinction
+          if(!u.pitch || u.pitch===1){
+            const selModel2=document.getElementById('tts-model-select')?.value||'';
+            if(selModel2.includes('fish')){
+              const fmap2={auto:1, 'fish-ar':1, 'fish-en':1.08, 'fish-cheerful':1.18, 'fish-calm':0.88};
+              u.pitch = fmap2[String(voiceId||'auto').toLowerCase()] || 1;
+            } else {
+              const map2={alloy:1, echo:0.9, fable:1.1, onyx:0.85, nova:1.05, shimmer:1.15};
+              u.pitch = map2[String(voiceId||'alloy').toLowerCase()] || u.pitch || 1;
+            }
+          }
+        }catch{}
+        u.rate = parseFloat(document.getElementById('tts-speed-btn')?.dataset?.speed || '1') || 1;
         window.speechSynthesis.speak(u);
         return true;
       }catch{ return false; }
@@ -1042,6 +1084,19 @@
         return;
       }
       window.speechSynthesis.cancel();
+      // use selected voice from voice box for distinct preview
+      const selVoice = document.getElementById('tts-voice-select')?.value || '';
+      const selModel = document.getElementById('tts-model-select')?.value || '';
+      // delegate to speakLocal which handles pitch/voice mapping per model
+      const ok = window.TTSEngine?.speakLocal(text, selVoice || selModel);
+      if(ok){
+        if(playIcon) playIcon.style.display='none';
+        if(pauseIcon) pauseIcon.style.display='block';
+        // reset icons after ~ duration estimate
+        const est = Math.max(1200, text.length*65);
+        setTimeout(()=>{ if(playIcon) playIcon.style.display='block'; if(pauseIcon) pauseIcon.style.display='none'; }, est);
+        return;
+      }
       const u = new SpeechSynthesisUtterance(text);
       const isAr = /[\u0600-\u06FF]/.test(text);
       u.lang = isAr ? 'ar-EG' : 'en-US';
@@ -1109,21 +1164,23 @@
       const doVoicePreview = async ()=>{
         if(!vModel || !vVoice) return;
         const accent = vAccent?.value || 'auto';
-        const isAr = accent.startsWith('ar') || /ar/.test(vVoice.value);
-        const sample = isAr ? 'مرحبا، هذه معاينة نبرة صوتي' : 'Hello, this is a voice preview';
+        const vid = vVoice.value;
+        const isAr = accent.startsWith('ar') || /ar/.test(vid);
+        const sample = isAr ? `مرحبا، هذه معاينة صوت ${vVoice.selectedOptions[0]?.textContent||vid}` : `Hello, preview of ${vVoice.selectedOptions[0]?.textContent||vid}`;
         if(vPreview) vPreview.textContent = '⏳';
         try{
           const url = await window.TTSEngine?.synthesizeWithCloud(sample);
           if(url){
             const a = new Audio(url);
             a.onended = ()=>{ if(vPreview) vPreview.textContent='▶️'; setTimeout(()=>URL.revokeObjectURL(url),1500); };
-            a.onerror = ()=>{ if(vPreview) vPreview.textContent='▶️'; window.TTSEngine?.speakLocal(sample); };
+            a.onerror = ()=>{ if(vPreview) vPreview.textContent='▶️'; window.TTSEngine?.speakLocal(sample, vid); };
             await a.play();
+            // keep pulse during playback
             return;
           }
-          window.TTSEngine?.speakLocal(sample);
-        }catch{ window.TTSEngine?.speakLocal(sample); }
-        if(vPreview) vPreview.textContent='▶️';
+          window.TTSEngine?.speakLocal(sample, vid);
+        }catch{ window.TTSEngine?.speakLocal(sample, vid); }
+        setTimeout(()=>{ if(vPreview) vPreview.textContent='▶️'; }, 900);
       };
       vPreview?.addEventListener('click', doVoicePreview);
       vModel?.addEventListener('change', ()=>{
