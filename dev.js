@@ -978,27 +978,6 @@ STRICT RULE: The local engine automatically merges your surgical patches directl
       if (!msgRow || !content) return;
       const jsonMatch = content.match(/```json\s*(\{[\s\S]*?\})\s*```/) || content.match(/(\{[\s\S]*"(?:file|deploy|files)"[\s\S]*"(?:content|patches|search)"[\s\S]*\})/);
       if (!jsonMatch) {
-        if (userText && this.isCodeChangeRequest(userText)) {
-          const existingCard = msgRow.querySelector('.dev-proposal-box');
-          if (existingCard) existingCard.remove();
-          const card = document.createElement('div');
-          card.className = 'dev-proposal-box blocked';
-          card.innerHTML = `
-            <div class="dev-proposal-title">
-              <span>⚠️</span>
-              <span>Pending Code Patch: <code>dev.js</code></span>
-              <span class="dev-peer-badge warn" style="margin-inline-start:auto;">Incomplete Output</span>
-            </div>
-            <div class="circuit-breaker-banner">لم يقم الموديل بتوليد كود التعديل البرمجي المطلوب واكتفى بالرد النصي. اضغط أدناه لإلزامه بتوليد الكود الجراحي فوراً.</div>
-            <div class="dev-proposal-btns">
-              <button class="dev-btn-action retry-btn" onclick="window._sendReviewToDev('يجب توليد التعديل بصيغة JSON Block يحتوي على patches (Search & Replace) لتطبيق الميزة المطلوبة فوراً.', this)" title="طلب توليد الكود الجراحي">
-                <span>🔄</span>
-                <span>Generate Patch</span>
-              </button>
-            </div>
-          `;
-          msgRow.appendChild(card);
-        }
         return;
       }
 
@@ -1169,6 +1148,7 @@ STRICT RULE: The local engine automatically merges your surgical patches directl
         row.appendChild(box);
       }
 
+      let proposalCard = null;
       const renderUI = (bullets = [], statusText = '', isRunning = false, warnCount = 0, finalSuggestion = '') => {
         const statusBadgeCls = isRunning ? 'running' : (warnCount > 0 ? 'warn' : 'ok');
         const badgeLabel = isRunning 
@@ -1193,6 +1173,7 @@ STRICT RULE: The local engine automatically merges your surgical patches directl
           </div>
         ` : '';
 
+        proposalCard = proposalCard || row.querySelector('.dev-proposal-box');
         box.dataset.review = finalSuggestion || bullets.join('\n');
         box.innerHTML = `
           <div class="dev-peer-card ${box.classList.contains('collapsed') ? 'collapsed' : ''}">
@@ -1210,6 +1191,7 @@ STRICT RULE: The local engine automatically merges your surgical patches directl
             </div>
           </div>
         `;
+        if (proposalCard) box.querySelector('.observer-details')?.appendChild(proposalCard);
       };
 
       renderUI([], t('جاري فحص الكود بالوكلاء الـ 5...', 'Auditing with 5 agents...'), true, 0);
@@ -1252,7 +1234,10 @@ Reply in exactly 5 brief lines starting with • :
 
       const reviewers = [
         { id: 'openai/gpt-oss-120b', provider: 'groq', name: 'GPT 120B Lead Architect' },
-        { id: 'qwen/qwen3.8-27b', provider: 'groq', name: 'Qwen 27B Fast Coder' }
+        { id: 'qwen/qwen3.8-27b', provider: 'groq', name: 'Qwen 27B Fast Coder' },
+        { id: 'openai/gpt-oss-20b', provider: 'groq', name: 'GPT 20B Patch Verifier' },
+        { id: 'cohere/north-mini-code:free', provider: 'openrouter', name: 'North Mini Code Auditor' },
+        { id: 'poolside/laguna-s-2.1:free', provider: 'openrouter', name: 'Laguna S Architecture Reviewer' }
       ];
 
       let collectedBullets = [];
