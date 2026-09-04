@@ -3492,7 +3492,6 @@ Reply in exactly 5 brief lines starting with • :
         localStorage.setItem('dev_seekai_active','1');
         dd?.classList.remove('show'); document.getElementById('dev-other-tab').style.display='none';
         updatePill();
-        if(window.DevUIEngine?.showToast) window.DevUIEngine.showToast('SeekAI '+m+' — له أولوية', 'success');
       });
     });
     document.querySelectorAll('[data-dev-mode="DEFAULT"]').forEach(b=>{
@@ -3501,7 +3500,6 @@ Reply in exactly 5 brief lines starting with • :
         localStorage.removeItem('dev_seekai_model'); localStorage.removeItem('dev_seekai_active');
         dd?.classList.remove('show'); document.getElementById('dev-other-tab').style.display='none';
         updatePill();
-        if(window.DevUIEngine?.showToast) window.DevUIEngine.showToast('Default — النظام القديم', 'info');
       });
     });
     updatePill();
