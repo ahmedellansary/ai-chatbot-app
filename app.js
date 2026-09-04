@@ -832,9 +832,9 @@
       } else {
         row.innerHTML = `
           <div class="msg-content" ${dirAttr}>
+            ${multiAgentHtml}
             ${parsed}
             ${attachmentsHtml}
-            ${multiAgentHtml}
             ${observerHtml}
           </div>
         `;
@@ -2187,9 +2187,10 @@
     },
 
     getAdaptiveConfig(tier) {
-      if (tier === 'HIGH') return { recentCount: 18, maxBriefingChars: 3200 };
-      if (tier === 'FAST') return { recentCount: 6, maxBriefingChars: 600 };
-      return { recentCount: 10, maxBriefingChars: 1200 };
+      // efficient high-quality: HIGH uses more of 1M when needed, but still throttled
+      if (tier === 'HIGH') return { recentCount: 18, maxBriefingChars: 8000 };
+      if (tier === 'FAST') return { recentCount: 6, maxBriefingChars: 800 };
+      return { recentCount: 12, maxBriefingChars: 3500 };
     },
 
     generateBriefing(conv, tier) {
@@ -2723,7 +2724,7 @@
         `;
 
         const parsedFinal = finalContent ? MessageRenderer.parseMarkdown(finalContent) : (isThinking ? '<div style="color:var(--text-dim); font-size:13px; padding:4px;">⏳ جاري صياغة القرار النهائي المعتمد...</div>' : '');
-        row.innerHTML = parsedFinal + boxHtml;
+        row.innerHTML = boxHtml + parsedFinal;
 
         const isAr = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(finalContent || userText);
         const parentRow = document.querySelector(`[data-id="${aiMsgId}"]`);
@@ -2735,7 +2736,7 @@
 
       const steps = [
         { id: 1, icon: '💡', title: 'المحلل الاستراتيجي (Strategic Analyst)', shortName: 'المحلل', status: 'نشط الآن', summary: 'جاري دراسة المسألة واقتراح التحليل والمسودة الأولية...' },
-        { id: 2, icon: '🎯', title: 'مدقق التفضيلات والتعليمات (Preferences & Domain Auditor)', shortName: 'التفضيلات', status: 'في الانتظار', summary: 'بانتظار المسودة لمطابقتها مع التفضيلات وسياق التعليمات...' },
+        { id: 2, icon: '🎯', title: 'مدقق التفضيلات والتعليمات (Preferences & Domain Auditor)', shortName: 'التفضيلات', status: 'في الانتظار', summary: 'بانتظار المسودة لمطابقتها مع التفضيلات وسياق التعليمات والهدف الجوهري...' },
         { id: 3, icon: '🔍', title: 'الناقد المنطقي (Critical Reviewer)', shortName: 'الناقد', status: 'في الانتظار', summary: 'بانتظار فحص المسودة وتدقيق الثغرات...' },
         { id: 4, icon: '👑', title: 'المقرر النهائي (Chief Synthesizer)', shortName: 'المقرر', status: 'في الانتظار', summary: 'بانتظار التقارير للصياغة المعتمدة...' }
       ];
@@ -2745,7 +2746,16 @@
       // --- STAGE 1: Strategic Analyst ---
       const stage1Messages = [
         ...apiMessages.slice(0, -1),
-        { role: 'user', content: `${textForPayload}\n\n[DIRECTIVE TO STRATEGIC ANALYST]: Provide a sharp, structured, and comprehensive initial draft/solution. Be concise, clear, and logical.` }
+        {
+          role: 'user',
+          content: `${textForPayload}
+
+[DIRECTIVE TO STRATEGIC ANALYST]:
+1. Understand the exact problem from the user's perspective (client/end-user vs server admin).
+2. DO NOT assume the user runs, owns, or configures the backend/server/hosting (e.g. nginx, permissions, chmod, apache) unless explicitly stated.
+3. DO NOT output unsolicited code blocks or configuration scripts unless the user explicitly requested code.
+4. Provide a sharp, structured, and logical direct diagnosis and practical solution in clean, concise Arabic.`
+        }
       ];
 
       let stage1Output = '';
@@ -2757,7 +2767,7 @@
         steps[0].status = '✓ مسودة أولية';
         steps[0].summary = stage1Output.slice(0, 160).trim() + (stage1Output.length > 160 ? '...' : '');
         steps[1].status = 'نشط الآن';
-        steps[1].summary = 'جاري مراجعة التفضيلات وسياق الشات والتعليمات التخصصية...';
+        steps[1].summary = 'جاري مراجعة التفضيلات وسياق الشات والتعليمات والهدف الجوهري...';
         renderLiveUI(steps, '', true);
       } catch (e) {
         steps[0].status = 'تجاوز';
@@ -2808,17 +2818,18 @@
 ${userContextDigest}
 
 [التعليمات والقواعد التخصصية النشطة]:
-${domainInstructions || 'قواعد الفصاحة والأسلوب ومطابقة المطلوب بدون حشو أو هلوسة.'}
+${domainInstructions || 'قواعد الفصاحة والأسلوب ومطابقة المطلوب دون حشو أو هلوسة.'}
 
 [مسودة المحلل الأولي (Agent 1 Draft)]:
 """${stage1Output}"""
 
-[المطلوب منك كمدقق للتفضيلات والتعليمات]:
-1. لخص وصنف التفضيلات الشخصية وسياق المستخدم من رسائله (مثال: أسلوب قصصي/سيناريو/كود/نبرة جادة).
-2. افحص المسودة وطابقها مع التفضيلات وقواعد المجال (أسلوب الحوار، اللغة، الحبكة، خلوها من الأخطاء).
-3. هل توجد أخطاء لغوية أو أسلوبية أو انحراف عن تعليمات المجال وسياق المستخدم؟
-4. إذا وُجدت ملاحظات: لخصها بدقة في سطرين محددين مع التصحيح.
-5. إذا كانت المسودة مطابقة وممتازة: اكتب "✓ المسودة متطابقة تماماً مع التفضيلات والتعليمات التخصصية".`
+[المطلوب منك كمدقق للتفضيلات والتعليمات وفحص الهدف الجوهري]:
+1. فحص الهدف الجوهري (Intent & Reality Check): هل فهم المحلل المشكلة من منظور المستخدم الحقيقي (مستخدم/عميل) أم افترض افتراضات وهمية (مثل إدارة سيرفر/أوامر لينكس/nginx/صلاحيات ملفات) دون أن يطلب المستخدم ذلك؟
+2. فحص الأكواد غير المطلوبة (Zero Unsolicited Code): إذا لم يطلب المستخدم كوداً صراحة، فارفض إقحام الأكواد أو أوامر التيرمينال فوراً.
+3. لخص وصنف التفضيلات الشخصية وسياق المستخدم من رسائله (مثال: أسلوب قصصي/سيناريو/كود/نبرة عملية مباشرة).
+4. افحص المسودة وطابقها مع التفضيلات وقواعد المجال (أسلوب الرد، اللغة، خلوها من الهلوسة).
+5. إذا كانت المسودة تحتوي على فرضيات خاطئة أو أكواد غير مطلوبة أو حشو: ارفضها وحدد التعديل المطلوب بصرامة في سطرين.
+6. إذا كانت المسودة ممتازة ومتطابقة: اكتب "✓ المسودة متطابقة تماماً مع الهدف والتفضيلات والتعليمات".`
         }
       ];
 
@@ -2849,10 +2860,13 @@ ${domainInstructions || 'قواعد الفصاحة والأسلوب ومطابق
 مسودة المحلل الأولي (Draft):
 "${stage1Output}"
 
-نتائج تدقيق التفضيلات والتعليمات التخصصية:
+نتائج تدقيق التفضيلات والتعليمات التخصصية والهدف:
 "${stage2Output}"
 
-[DIRECTIVE TO CRITICAL REVIEWER]: Critique and review Agent 1's proposal incorporating the auditor findings. Point out any logic flaws, edge cases, or optimizations concisely in 2 bullet points.`
+[DIRECTIVE TO CRITICAL REVIEWER]:
+1. Validate whether the proposal solves the actual user issue without hallucinating server/backend root causes.
+2. Strip out any unnecessary technical jargon, unsolicited terminal commands, or bloated theories.
+3. Point out any logic flaws or practical improvements concisely in 2 bullet points.`
         }
       ];
 
@@ -2890,7 +2904,12 @@ ${stage2Output}
 3. النقد المنطقي والتحسينات:
 ${stage3Output}
 
-[DIRECTIVE TO CHIEF SYNTHESIZER]: Deliver the finalized, highest quality, polished, and fully validated response to the user. Perfectly adhere to user preferences, domain instructions, and all review corrections. Do not mention the agents; directly provide the definitive answer formatted in clean Markdown.`
+[DIRECTIVE TO CHIEF SYNTHESIZER]:
+1. Deliver the finalized, highest quality, polished, and directly actionable answer to the user in clean Markdown (Arabic).
+2. Strictly address the user's actual situation (e.g. if dealing with an API platform or generation service, explain token/quota/model availability/prompt requirements from the user end).
+3. DO NOT include server admin commands, nginx/chmod, or unsolicited code unless explicitly requested.
+4. Keep the answer direct, practical, and devoid of fluff or hallucinated steps.
+5. Do not mention the agents or internal stages.`
         }
       ];
 
