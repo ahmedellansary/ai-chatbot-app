@@ -9,8 +9,8 @@
   <meta name="apple-mobile-web-app-title" content="X.v1 Dev">
 
   <title>X.v1 — Developer Portal & Codebase Studio</title>
-  <link rel="manifest" href="./dev-manifest.json?v=352">
-  <link rel="stylesheet" href="./dev_style.css?v=352">
+  <link rel="manifest" href="./dev-manifest.json?v=353">
+  <link rel="stylesheet" href="./dev_style.css?v=353">
   <link rel="icon" type="image/png" href="./icons/dev-icon-192.png?v=295">
   <link rel="apple-touch-icon" href="./icons/dev-icon-192.png?v=295">
   <link rel="apple-touch-icon" sizes="512x512" href="./icons/dev-icon-512.png?v=295">
@@ -152,7 +152,7 @@
         </a>
         <div class="repo-status-badge">
           <span class="status-dot"></span>
-          <span class="repo-badge-text" id="dev-status-badge-text">Dev (V352) 04-09-2026 10:16PM</span>
+          <span class="repo-badge-text" id="dev-status-badge-text">Dev (V353) 04-09-2026 10:23PM</span>
         </div>
         <script>
           (function() {
@@ -338,28 +338,28 @@
         <div class="modal-header-top-row">
           <div class="modal-header-title">
             <span>📝</span>
-            <span>ملاحظات المطور (Dev Notes)</span>
-            <span id="dev-notes-sync-badge" class="dev-notes-sync-badge synced" title="حالة المزامنة السحابية">
+            <span>Developer Notes & Ideas</span>
+            <span id="dev-notes-sync-badge" class="dev-notes-sync-badge synced" title="Cloud Sync Status">
               <span class="sync-dot"></span>
-              <span id="dev-notes-sync-text">متزامن مع المستودع</span>
+              <span id="dev-notes-sync-text">Synced with Repo</span>
             </span>
           </div>
-          <button class="icon-btn" onclick="window._closeDevNotesModal()" title="إغلاق">✕</button>
+          <button class="icon-btn" onclick="window._closeDevNotesModal()" title="Close">✕</button>
         </div>
       </div>
 
       <div class="dev-notes-toolbar">
         <div class="dev-notes-search-wrap">
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-          <input type="text" id="dev-notes-search-input" placeholder="بحث في الملاحظات..." oninput="window._filterDevNotes(this.value)">
+          <input type="text" id="dev-notes-search-input" placeholder="Search notes by title or keyword..." oninput="window._filterDevNotes(this.value)">
         </div>
         <div class="dev-notes-toolbar-actions">
-          <button type="button" class="dev-notes-btn-sync" onclick="window._syncDevNotesManual()" title="مزامنة فورية مع المستودع">
+          <button type="button" class="dev-notes-btn-sync" onclick="window._syncDevNotesManual()" title="Instant Sync with GitHub Repo">
             <svg id="notes-sync-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>
-            <span>مزامنة</span>
+            <span>Sync</span>
           </button>
           <button type="button" class="dev-notes-btn-new" onclick="window._toggleNewNoteForm(true)">
-            <span>+ ملاحظة جديدة</span>
+            <span>+ New Note</span>
           </button>
         </div>
       </div>
@@ -368,27 +368,32 @@
       <div id="dev-note-editor-wrap" class="dev-note-editor-wrap hidden">
         <div class="dev-note-editor-card">
           <div class="note-editor-header">
-            <span id="note-editor-title-label">➕ إضافة ملاحظة جديدة</span>
-            <button type="button" class="note-editor-close-btn" onclick="window._toggleNewNoteForm(false)">✕</button>
+            <span id="note-editor-title-label">➕ Add New Note</span>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <button type="button" class="note-action-btn" onclick="window._copyEditorNoteText()" title="Copy Full Text in Editor">
+                <span>📋</span><span>Copy Full</span>
+              </button>
+              <button type="button" class="note-editor-close-btn" onclick="window._toggleNewNoteForm(false)">✕</button>
+            </div>
           </div>
           <input type="hidden" id="editing-note-id" value="">
           <div class="note-editor-row">
-            <input type="text" id="note-input-title" class="note-input-field" placeholder="عنوان الملاحظة (اختياري)..." maxlength="120">
+            <input type="text" id="note-input-title" class="note-input-field" placeholder="Note Title (Optional)..." maxlength="120">
             <select id="note-input-tag" class="note-select-tag">
-              <option value="idea">💡 فكرة (Idea)</option>
-              <option value="code">💻 كود (Code)</option>
-              <option value="todo">📋 مهمة (To-do)</option>
-              <option value="bug">🐛 ثغرة / خطأ (Bug)</option>
-              <option value="note">📌 عام (General)</option>
+              <option value="idea">💡 Idea</option>
+              <option value="code">💻 Code</option>
+              <option value="todo">📋 To-Do</option>
+              <option value="bug">🐛 Bug</option>
+              <option value="note">📌 General</option>
             </select>
           </div>
-          <textarea id="note-input-body" class="note-textarea-field" placeholder="اكتب الملاحظة، الفكرة، أو كود المطور هنا..." rows="5"></textarea>
+          <textarea id="note-input-body" class="note-textarea-field" placeholder="Write your note, idea, or code snippet here..." rows="5"></textarea>
           <div class="note-editor-actions">
             <button type="button" class="dev-btn-primary" onclick="window._saveDevNote()">
-              <span>💾 حفظ الملاحظة</span>
+              <span>💾 Save Note</span>
             </button>
             <button type="button" class="dev-btn-secondary" onclick="window._toggleNewNoteForm(false)">
-              <span>إلغاء</span>
+              <span>Cancel</span>
             </button>
           </div>
         </div>
@@ -586,10 +591,10 @@
 </div>
 
 <!-- Consolidated High-Performance Developer Studio Engine Bundle -->
-<script src="./config.js?v=352"></script>
-<script src="./auth.js?v=352"></script>
-<script src="./models.js?v=352"></script>
-<script src="./github.js?v=352"></script>
-<script src="./dev.js?v=352"></script>
+<script src="./config.js?v=353"></script>
+<script src="./auth.js?v=353"></script>
+<script src="./models.js?v=353"></script>
+<script src="./github.js?v=353"></script>
+<script src="./dev.js?v=353"></script>
 </body>
 </html>
