@@ -4011,3 +4011,119 @@ html, body {
   color: var(--text-main);
   background: rgba(255, 255, 255, 0.1);
 }
+
+/* ─── Sleek Dynamic Thinking Tabs & Motion Component (Chatbot Parity) ─── */
+.dev-thinking-container {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  margin-bottom: 8px;
+  overflow: hidden;
+  transition: all 0.2s ease;
+  font-family: var(--font-sans);
+  direction: ltr;
+  text-align: left;
+}
+.dev-thinking-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 0;
+  background: transparent;
+  cursor: pointer;
+  user-select: none;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+  direction: ltr;
+  text-align: left;
+}
+.dev-thinking-summary .summary-left {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.thinking-brain-icon {
+  font-size: 13px;
+}
+.thinking-brain-icon.pulse {
+  animation: brainPulse 1.2s infinite ease-in-out;
+}
+@keyframes brainPulse {
+  0%, 100% { transform: scale(1); opacity: 0.8; }
+  50% { transform: scale(1.15); opacity: 1; }
+}
+.thinking-chevron {
+  font-size: 10px;
+  color: var(--text-dim);
+  transition: transform 0.2s ease;
+}
+.dev-thinking-container.collapsed .thinking-chevron {
+  transform: rotate(-90deg);
+}
+.dev-thinking-container.collapsed .dev-thinking-tabs-flow {
+  display: none !important;
+}
+.dev-thinking-tabs-flow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 10px;
+  background: rgba(0, 0, 0, 0.1);
+  border-top: 0;
+  padding-inline: 0;
+  padding-block: 2px 4px;
+  flex-direction: column;
+  align-items: flex-start;
+  direction: ltr;
+  text-align: left;
+}
+.dev-thinking-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  padding: 2px 0;
+  border-radius: 0;
+  background: transparent;
+  border: 0;
+  color: var(--text-dim);
+  animation: tabFadeIn 0.3s ease both;
+  direction: ltr;
+  text-align: left;
+}
+@keyframes tabFadeIn {
+  from { opacity: 0; transform: translateY(3px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.dev-thinking-tab .flow-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #10b981;
+}
+.dev-thinking-summary.is-rtl,
+.dev-thinking-tabs-flow.is-rtl,
+.dev-thinking-tab.is-rtl {
+  direction: rtl;
+  text-align: right;
+}
+.dev-thinking-container.active-streaming {
+  border-color: transparent;
+  background: transparent;
+}
+.streaming-dot-pulse i {
+  display: inline-block;
+  width: 4px;
+  height: 4px;
+  margin: 0 1px;
+  background: #60a5fa;
+  border-radius: 50%;
+  animation: dotBlink 1.2s infinite ease-in-out;
+}
+.streaming-dot-pulse i:nth-child(2) { animation-delay: 0.2s; }
+.streaming-dot-pulse i:nth-child(3) { animation-delay: 0.4s; }
+@keyframes dotBlink {
+  0%, 100% { opacity: 0.2; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
