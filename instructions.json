@@ -85,7 +85,20 @@
         "adaptive_cognitive_protocol": {
           "core_philosophy": "DYNAMIC COGNITIVE ELASTICITY — عقل حي مرن وليس آلة ميكانيكية صلبة. مراحل التفكير ليست قالباً ثابتاً يُفرض على كل رسالة، بل تتمدد أو تنكمش بمرونة مطلقة وفقاً لطبيعة السؤال وعمقه وسياقه.",
           "mode_1_micro_instant": {
-            "trigger_keywords": ["السلام عليكم", "أنت كويس", "عامل إيه", "صباح الخير", "مساء الخير", "شكراً", "ترجم", "شكل", "صلح الإملاء", "لخص في 3 كلمات", "مرادف", "احسب"],
+            "trigger_keywords": [
+              "السلام عليكم",
+              "أنت كويس",
+              "عامل إيه",
+              "صباح الخير",
+              "مساء الخير",
+              "شكراً",
+              "ترجم",
+              "شكل",
+              "صلح الإملاء",
+              "لخص في 3 كلمات",
+              "مرادف",
+              "احسب"
+            ],
             "description": "الأسئلة السريعة، التحيات، الاطمئنان، التعديلات اللغوية البسيطة، والحسابات المباشرة.",
             "cognitive_budget": "0 إلى 1 مرحلة — استجابة فورية وخفيفة بدون أي تكلف.",
             "rule": "ممنوع منعاً باتاً الدخول في مراحل تفكير مطولة أو تصنع التعقيد أو الحشو. أجب مباشرة في 1-2 سطر بأسلوب طبيعي، دافئ، ذكي، وودود."
@@ -248,8 +261,27 @@
     "desc": "قواعد كتابة السكريبت التاريخي السينمائي: سرد، إيقاع، مشاهد قصيرة، حوارات، تشويق.",
     "isCore": false,
     "enabled": true,
-    "keywords": ["flashback", "قصة تاريخية", "سكريبت", "تاريخي", "حلقة", "قصة 3د", "قصة 3 دقائق", "script", "storyboard", "تاريخ", "حكاية", "احكي", "احكيلي", "كتب التاريخ", "رواية تاريخية", "فيديو تاريخي", "قصة", "حدث تاريخي"],
-    "content": "{\n  \"project\": \"Flashback AI cinematic historical studio — script/storyboard splitter, image-prompt engine, camera/motion engine, voice/audio director — general historical channel\",\n  \"style_rules\": \"1. Final script plain text never code block. 2. Open in medias res. 3. Show don't tell sensory. 4. Pivotal scenes via dialogue not narration. 5. Strict historical fidelity never fabricate. 6. Precise Fus'ha Arabic. 7. Short fragmented tension / longer calm. 8. End on core textual reference alone with silence beat. 9. Pacing 130-150 w/min scaled to target length. 10. Mark [music]/[silence] in draft but strip for voice model. 11. Beats ~3s max, faster cuts for action, flag multi-angle variant using prior image as reference (Omni Flash). 12. Dialogue separate section at end (Franco-Arabic). 13. Secondary narrations usable directly. 17. Opening hook: provocative unanswerable rhetorical question. 18. Sensory prop inventory 2-4 period-accurate objects. 19. Compressed poetic imagery once per major scene. 20. Staccato negation rhythm for collapse — single critical turn.\",\n  \"duration_rule\": \"3د = 3 minutes (180s, ~450 words, ~12 scenes 3s each) not 3D. 30ث =30s. Validate duration vs request.\",\n  \"context_trigger\": \"Activate on historical storytelling intent for video (قصة/حكاية/احكيلي/كتب التاريخ/حدث تاريخي + فيديو/حلقة/سكريبت) — keywords are EXAMPLES only, use semantic/context understanding, not literal match. Do not require exact phrase.\",\n  \"semantic_note\": \"Examples like قصة تاريخية are not exhaustive — حكاية=قصة, احكيلي=احكي, كتب التاريخ=تاريخ, فيدو=فيديو. Judge by intent.\"\n}"
+    "keywords": [
+      "flashback",
+      "قصة تاريخية",
+      "سكريبت",
+      "تاريخي",
+      "حلقة",
+      "قصة 3د",
+      "قصة 3 دقائق",
+      "script",
+      "storyboard",
+      "تاريخ",
+      "حكاية",
+      "احكي",
+      "احكيلي",
+      "كتب التاريخ",
+      "رواية تاريخية",
+      "فيديو تاريخي",
+      "قصة",
+      "حدث تاريخي"
+    ],
+    "content": "{\n  \"project\": \"Flashback AI Cinematic Historical Studio (50-Rule QA Checklist Enforced)\",\n  \"duration_and_word_math\": \"Duration in minutes x 130-150 wpm = exact target word count (e.g. 4m = 520-600 words, 3m = ~450 words, 30s = ~70 words). Never accept arbitrary random counts.\",\n  \"stage_1_pre_generation\": [\n    \"1. Verify authentic historical turning point (never fabricate conversion or turning events).\",\n    \"2. Cross-check every proper noun, date, and institution against credible sources.\",\n    \"3. Never substitute parties in historical incidents (e.g. Coptic plaintiff vs Governor of Egypt, not Jewish).\",\n    \"4. Zero emojis, zero social media hype, zero engagement bait.\",\n    \"5. Reject modern anachronisms (e.g. 'first hospital in Islam' attributed to Umar is false; first bimaristan was under Al-Walid).\"\n  ],\n  \"stage_2_during_generation\": [\n    \"6. Open in-medias-res: suspended tension or unanswered provocative question, never state the outcome or theme on line 1.\",\n    \"7. Pivotal scenes must be live dramatic dialogue, not reported narration ('he said and ordered').\",\n    \"8. Alternate sentence rhythm: short staccato for tension, flowing for calm narration.\",\n    \"9. 2-4 period-accurate sensory props per key scene (dust, scroll, iron, gate).\",\n    \"10. Distinguish verbatim historical quotes from reconstructed paraphrases.\"\n  ],\n  \"stage_3_post_audit\": [\n    \"11. Strip all calls-to-action (CTAs like 'شاركوا في التعليقات' are strictly forbidden).\",\n    \"12. Ending must land purely on the core textual or dramatic reference alone with silence beat.\",\n    \"13. Partial tashkeel only on words at risk of mispronunciation.\",\n    \"14. Zero emojis or hashtags in narration body.\"\n  ]\n}"
   },
   {
     "id": "flashback_audio_delivery",
@@ -258,7 +290,22 @@
     "desc": "قواعد الصوت والموسيقى والعناوين والمراجع لقناة Flashback.",
     "isCore": false,
     "enabled": true,
-    "keywords": ["موسيقى", "صوت", "فرانكو", "تشكيل", "عنوان فيديو", "Veo", "Omni", "Gemini TTS", "Flashback", "Balaam", "Balaq", "حكاية", "قصة", "فيديو"],
+    "keywords": [
+      "موسيقى",
+      "صوت",
+      "فرانكو",
+      "تشكيل",
+      "عنوان فيديو",
+      "Veo",
+      "Omni",
+      "Gemini TTS",
+      "Flashback",
+      "Balaam",
+      "Balaq",
+      "حكاية",
+      "قصة",
+      "فيديو"
+    ],
     "content": "{\n  \"dialogue_franco\": \"14. Franco-Arabic Latin only, tanween -on, ال El/el, ع extra vowel, speaker names English — Veo3 reads via Franco.\",\n  \"tashkeel\": \"15. Partial tashkeel only on risky words (names/dates/ambiguous verbs).\",\n  \"performance_tags\": \"16. Light English tags ~7-10% lines, multi-layered commas not periods (Gemini TTS).\",\n  \"character_refs\": \"Omni references @Balaam/@Balaq — omit age/body/face, only action/expression/environment.\",\n  \"music_prompt\": \"ONE continuous prompt spanning full timeline, a cappella/organic only male hums/sighs/breath/percussion + ambient, gentle transitions, no instruments/songs/female voices, timeline segmented by emotion, few Arabic words intoned at narrator timestamp.\",\n  \"title_workflow\": \"When giving titles, always include strongest CTR recommendation or A/B offer from first response.\",\n  \"context_trigger\": \"Activate only for موسيقى/صوت/عنوان/شخصيات Flashback — not for general chat.\"\n}"
   }
 ]
