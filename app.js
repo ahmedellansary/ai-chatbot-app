@@ -817,8 +817,8 @@
       if (msg.multiAgentSteps && Array.isArray(msg.multiAgentSteps)) {
         const titleText = `تشاور واعتماد الوكلاء (${msg.multiAgentSteps.length} مراحل)`;
         const tabsHtml = msg.multiAgentSteps.map((st, idx) => {
-          const isCompleted = st.status.includes('✓') || st.status.includes('Done') || st.status.includes('معتمد');
-          const isWarn = st.status.includes('تجاوز') || st.hasError;
+          const isCompleted = st.status.includes('✓') || st.status.includes('Done') || st.status.includes('معتمد') || st.status.includes('تجاوز');
+          const isWarn = !!st.hasError;
           const statusIcon = isCompleted ? (isWarn ? '⚠️' : '✓') : '•';
           return `
             <div class="dev-thinking-tab reached is-rtl" style="animation-delay: ${idx * 0.08}s">
@@ -871,6 +871,11 @@
         `;
       }
 
+      let modelFooter = '';
+      if (msg.role === 'ai' && msg.model) {
+        const fb = msg.usedFallback ? ' • fallback' : '';
+        modelFooter = `<div class="claude-footer-note"><span class="claude-terracotta-star">✦</span><span class="claude-disclaimer-text"> ${this.escapeHtml(msg.model)}${fb}</span></div>`;
+      }
       if (msg.role === 'user') {
         row.innerHTML = `<div class="msg-content" ${dirAttr} style="position:relative;padding-inline-end:36px">${parsed}${attachmentsHtml}<button class="user-copy-inside" onclick="window._copyMsgText(this)" title="نسخ"><svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button></div>`;
       } else {
@@ -880,6 +885,7 @@
             ${parsed}
             ${attachmentsHtml}
             ${observerHtml}
+            ${modelFooter}
           </div>
         `;
       }
@@ -2944,12 +2950,12 @@
 
         const isDone = !isThinking && steps.every(s => s.status.includes('✓') || s.status.includes('معتمد') || s.status.includes('تجاوز'));
         const okC = steps.filter(s => /✓|مكتمل|معتمد|Done|Approved/i.test(s.status)).length;
-        const warnC = steps.filter(s => s.status.includes('تجاوز') || s.hasError).length;
+        const warnC = steps.filter(s => s.hasError).length;
         const activeStep = steps.find(s => s.status.includes('نشط') || s.status.includes('Active')) || steps[steps.length - 1];
 
         const tabsHtml = steps.filter(s => s.summary && s.status !== 'في الانتظار').map((s, idx) => {
-          const isWarn = s.status.includes('تجاوز') || s.hasError;
-          const isCompleted = s.status.includes('✓') || s.status.includes('Done') || s.status.includes('معتمد');
+          const isWarn = !!s.hasError;
+          const isCompleted = s.status.includes('✓') || s.status.includes('Done') || s.status.includes('معتمد') || s.status.includes('تجاوز');
           const flowIcon = isWarn ? '⚠️' : (isCompleted ? '✓' : (s.icon || '⚡'));
           return `
             <div class="dev-thinking-tab ${isCompleted ? 'reached' : 'active'} is-rtl" style="animation-delay: ${idx * 0.08}s">
@@ -2960,7 +2966,7 @@
         }).join('');
 
         const headline = isDone
-          ? (warnC > 0 ? `تشاور وتدقيق (${steps.length} مراحل - ${warnC} ملاحظات)` : `تشاور وتدقيق (${steps.length} مراحل - معتمد)`)
+          ? (warnC > 0 ? `تشاور وتدقيق (${steps.length} مراحل - ${warnC} ملاحظات)` : `تشاور وتدقيق (${steps.length} مراحل - معتمد ✓)`)
           : `جاري تشاور الوكلاء (${MessageRenderer.escapeHtml(activeStep?.shortName || activeStep?.title?.split(' ')[0] || 'تحليل')}...)`;
 
         const boxHtml = `
@@ -2996,22 +3002,42 @@
         { id: 4, icon: '👑', title: 'المقرر النهائي (Chief Synthesizer)', shortName: 'المقرر', status: 'في الانتظار', summary: 'بانتظار التقارير للصياغة المعتمدة...' }
       ];
 
-      const isTrivialMA = /^(السلام عليكم|مرحبا|هلا|اهلا|انت (كويس|عامل ايه)|كيف حالك|ترجم( كلمة)?$|ضيف تشكيل|عدل الجملة)/i.test(textForPayload.trim()) || textForPayload.trim().length < 22;
-      if(isTrivialMA){
-        // bypass for trivial — direct single FAST call, no 4 stages
-        try{
+      const isTrivialMA = /^(السلام عليكم|مرحبا|هلا|اهلا|هاي|صباح الخير|مساء الخير|انت (كويس|عامل ايه)|كيف حالك|ترجم( كلمة)?$|ضيف تشكيل|عدل الجملة)/i.test(textForPayload.trim()) || textForPayload.trim().length < 15;
+      if (isTrivialMA) {
+        // Fast direct response for greetings & trivial messages without cluttering UI with thinking boxes
+        try {
           const stream0 = ModelEngine.chatWithFallback('FAST', apiMessages, state.abortController.signal, () => {});
-          let out=''; for await(const {chunk} of stream0) { out+=chunk; }
-          steps.forEach(s=>{ s.status='✓ تجاوز تريفيال'; s.summary='Trivial bypass'; });
-          renderLiveUI(steps, out, false);
-          aiMsgObj.content=out; aiMsgObj.multiAgentSteps=steps; StateController.save();
-        }catch(e){ debugPrint(e, 'MultiAgent trivial bypass failed'); }
+          let out = '';
+          const row = getOrCreateRow();
+          for await (const { chunk } of stream0) {
+            out += chunk;
+            if (row) {
+              row.innerHTML = MessageRenderer.parseMarkdown(out);
+              const isAr = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(out || userText);
+              const parentRow = document.querySelector(`[data-id="${aiMsgId}"]`);
+              if (parentRow) {
+                parentRow.classList.toggle('is-rtl', isAr);
+                parentRow.classList.toggle('is-ltr', !isAr);
+              }
+            }
+          }
+          aiMsgObj.content = out;
+          delete aiMsgObj.multiAgentSteps;
+          StateController.save();
+        } catch (e) {
+          debugPrint(e, 'MultiAgent trivial bypass failed');
+        }
         return;
       }
 
       renderLiveUI(steps, '', true);
 
       // --- STAGE 1: Strategic Analyst ---
+      const isCreativeOrNarrative = /(قصة|اسكريبت|سيناريو|حكاية|تاريخ|رواية|فيديو|مشهد|script|story|flashback)/i.test(textForPayload);
+      const durationMatch = textForPayload.match(/(\d+)\s*(?:د(?:قائق)?|min(?:ute)?s?)/i);
+      const targetMinutes = durationMatch ? parseInt(durationMatch[1], 10) : (textForPayload.includes('3د') ? 3 : (textForPayload.includes('4د') ? 4 : 0));
+      const targetWords = targetMinutes > 0 ? targetMinutes * 140 : 0;
+
       const stage1Messages = [
         ...apiMessages.slice(0, -1),
         {
@@ -3019,10 +3045,15 @@
           content: `${textForPayload}
 
 [DIRECTIVE TO STRATEGIC ANALYST]:
-1. Understand the exact problem from the user's perspective (client/end-user vs server admin).
-2. DO NOT assume the user runs, owns, or configures the backend/server/hosting (e.g. nginx, permissions, chmod, apache) unless explicitly stated.
-3. DO NOT output unsolicited code blocks or configuration scripts unless the user explicitly requested code.
-4. Provide a sharp, structured, and logical direct diagnosis and practical solution in clean, concise Arabic.`
+1. Intent & Ground-Truth Anchor:
+   - Identify the exact core requirement without confabulating facts, APIs, statistics, or historical events.
+   - If historical/narrative: anchor only in authentic documented turning points (e.g. for Umar ibn al-Khattab: Islam in his sister's house via Surah Taha; Coptic plaintiff vs Governor of Egypt; no fake first hospital). Reject superficial clichés.
+   ${targetWords ? `- Mathematical Duration Rule: Target is ${targetMinutes} minutes -> exactly ~${targetWords} words (130-150 wpm).` : ''}
+2. Universal Anti-Cliché & Discipline:
+   - ZERO emoji clutter in section titles.
+   - ZERO social media engagement bait or calls-to-action ("شاركنا في التعليقات").
+   - ZERO unsolicited code blocks unless explicitly requested.
+3. Provide a sharp, grounded, and structurally rigorous analysis and initial draft in fluent, eloquent Arabic.`
         }
       ];
 
@@ -3112,9 +3143,15 @@ ${domainInstructions || 'قواعد الفصاحة والأسلوب ومطابق
 "${stage1Output}"
 
 [DIRECTIVE TO CRITICAL REVIEWER]:
-1. Validate whether the proposal solves the actual user issue without hallucinating server/backend root causes.
-2. Strip out any unnecessary technical jargon, unsolicited terminal commands, or bloated theories.
-3. Point out any logic flaws or practical improvements concisely in 2 bullet points.`
+1. Fact-Check & Anti-Hallucination:
+   - Flag any fabricated historical events, misidentified figures (e.g. Copt vs Jew), false superlatives ("first hospital", "only"), or invented technical claims.
+   - Verify that quotes are documented verbatim, or marked explicitly as reconstructed meaning.
+2. Anti-Cliché & Scope Enforcement:
+   - Strip out any emojis in headings, marketing hype, or engagement bait ("شاركوا في التعليقات").
+   - Ensure the conclusion lands on the core drama/takeaway with zero trailing generic questions.
+3. Word Count & Mathematical Reality:
+   - Ensure draft length matches requested duration math (${targetWords ? `~${targetWords} words` : 'appropriate density'}) without lazy truncation.
+4. Point out any logic flaws or practical improvements concisely in 2 bullet points.`
         }
       ];
       let stage2Output = '', stage3Output = '';
@@ -3171,10 +3208,11 @@ ${stage3Output}
 
 [DIRECTIVE TO CHIEF SYNTHESIZER]:
 1. Deliver the finalized, highest quality, polished, and directly actionable answer to the user in clean Markdown (Arabic).
-2. Strictly address the user's actual situation (e.g. if dealing with an API platform or generation service, explain token/quota/model availability/prompt requirements from the user end).
-3. DO NOT include server admin commands, nginx/chmod, or unsolicited code unless explicitly requested.
-4. Keep the answer direct, practical, and devoid of fluff or hallucinated steps.
-5. Do not mention the agents or internal stages.`
+2. Ground all historical/factual claims strictly in documented truth. Zero confabulation, zero fake milestones.
+3. Pure cinematic/analytical delivery: ZERO emoji headers, ZERO social media calls-to-action ("شاركوا وقولولنا في الكومنتات"), ZERO throat-clearing.
+4. If narrative/script: open in-medias-res, bring pivotal scenes to life with authentic live dialogue and sensory anchors, and close purely on the dramatic reality.
+5. Strictly address the user's actual situation with zero unsolicited server commands or code unless requested.
+6. Do not mention the agents or internal stages.`
         }
       ];
 
