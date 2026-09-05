@@ -647,23 +647,91 @@
 
     parseMarkdown(text) {
       if (!text) return '';
-      let html = this.escapeHtml(text);
-      // Allow highlight spans by importance — unescape only hl-* classes
+      let out = text;
+
+      // 1. Strip raw proposal/deploy JSON if present
+      out = out.replace(/```json\s*\{[\s\S]*?"(?:file|deploy|files|content)"[\s\S]*?\}\s*```/gi, '');
+      out = out.replace(/\{[\s\S]*?"(?:file|deploy|files)"\s*:[\s\S]*?"content"\s*:[\s\S]*?\}/gi, '');
+
+      // 2a. Convert standalone diagnostic explanations / steps into thinking flow
+      const diagPreambleMatch = out.match(/(?:^|\n)((?:قبل أي تعديل|المشكلة الجذرية|السبب الجذري|Root Cause|الحل\s*\(The Fix\)|The Fix|خطوات التعديل|1\.\s*تعديل|النتيجة:?)[\s\S]*?)(?=(?:```json|```js|```html|```css|\{"file"|\{"deploy"|$))/i);
+      if (diagPreambleMatch && !out.includes('<think>') && !out.includes('<thinking>') && !out.includes('<thought>')) {
+        const diagContent = diagPreambleMatch[1];
+        out = out.replace(diagContent, '<think>\n' + diagContent + '\n</think>\n');
+      }
+
+      // 2b. Extract think blocks to protect them from markdown escaping
+      const thinkBlocks = [];
+      out = out.replace(/<(?:think|thinking|thought)>([\s\S]*?)<\/(?:think|thinking|thought)>/gi, (m, thinkContent) => {
+        const rawLines = thinkContent.trim().split('\n')
+          .map(l => l.replace(/^[•\-\*◌●\d\.]+\s*/, '').replace(/---/g, '').trim())
+          .filter(l => l.length > 2 && l.length < 160 && !/^(---|===|\*\*\*)$/.test(l));
+        
+        const steps = rawLines.length > 0 ? rawLines : ['Analyzing Intent', 'Examining Context', 'Synthesizing Response'];
+        const isAr = /[\u0600-\u06FF]/.test(thinkContent);
+        const titleText = isAr ? `مراحل التفكير والتشخيص (${steps.length} خطوات)` : `Thinking Process (${steps.length} steps completed)`;
+        const stepIcons = ['🧠', '📂', '📋', '✍️', '🔍', '⚡', '✨', '🎯', '🛡️', '👑'];
+        const tabsHtml = steps.map((st, idx) => `
+          <div class="dev-thinking-tab reached ${isAr ? 'is-rtl' : ''}" style="animation-delay: ${Math.min(idx * 0.08, 0.8)}s">
+            <span class="flow-icon" aria-hidden="true">${stepIcons[idx % stepIcons.length]}</span>
+            <span class="tab-label">${this.escapeHtml(st)}</span>
+          </div>
+        `).join('');
+
+        const containerHtml = `
+<div class="dev-thinking-container collapsed">
+  <div class="dev-thinking-summary ${isAr ? 'is-rtl' : ''}" onclick="this.parentElement.classList.toggle('collapsed')">
+    <div class="summary-left">
+      <span class="thinking-brain-icon">🧠</span>
+      <span class="thinking-headline">${titleText}</span>
+    </div>
+    <span class="thinking-chevron">▾</span>
+  </div>
+  <div class="dev-thinking-tabs-flow ${isAr ? 'is-rtl' : ''}">
+    ${tabsHtml}
+  </div>
+</div>`;
+        const placeholder = `__THINK_BLOCK_${thinkBlocks.length}__`;
+        thinkBlocks.push(containerHtml);
+        return placeholder;
+      });
+
+      out = out.replace(/<(?:think|thinking|thought)>([\s\S]*?)$/gi, (m, inFlight) => {
+        const lines = inFlight.trim().split('\n')
+          .map(l => l.replace(/^[•\-\*◌●\d\.]+\s*/, '').replace(/---/g, '').trim())
+          .filter(l => l.length > 2 && l.length < 160 && !/^(---|===|\*\*\*)$/.test(l));
+        
+        const isAr = /[\u0600-\u06FF]/.test(inFlight);
+        const currentStep = lines[lines.length - 1] || (isAr ? 'جاري التحليل وصياغة الرد...' : 'Analyzing context & synthesizing response...');
+        
+        const inFlightHtml = `
+<div class="dev-thinking-container active-streaming">
+  <div class="dev-thinking-summary ${isAr ? 'is-rtl' : ''}">
+    <div class="summary-left">
+      <span class="thinking-brain-icon pulse">🧠</span>
+      <span class="thinking-headline">${this.escapeHtml(currentStep)}</span>
+    </div>
+    <span class="streaming-dot-pulse"><i></i><i></i><i></i></span>
+  </div>
+</div>`;
+        const placeholder = `__THINK_BLOCK_${thinkBlocks.length}__`;
+        thinkBlocks.push(inFlightHtml);
+        return placeholder;
+      });
+
+      let html = this.escapeHtml(out);
       html = html.replace(/&lt;span class=&quot;(hl-(?:important|critical|success|info|keyword))&quot;&gt;/g, '<span class="$1">');
       html = html.replace(/&lt;\/span&gt;/g, '</span>');
 
-      // Fenced code blocks
       html = html.replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) => {
         const label = (lang || 'code').toLowerCase();
         const trimmed = code.trim();
         const isWebCode = label === 'html' || label === 'svg' || (label === 'javascript' && (trimmed.includes('<') || trimmed.includes('document.')));
         const encodedCode = encodeURIComponent(trimmed);
-
         let runBtn = '';
         if (isWebCode) {
           runBtn = `<button class="sandbox-launch-btn" data-code="${encodedCode}" onclick="window._runSandbox(decodeURIComponent(this.dataset.code))">▶️ تشغيل المحاكاة</button>`;
         }
-
         return `<div class="code-window">
           <div class="code-header-bar">
             <span>${label}</span>
@@ -676,7 +744,6 @@
         </div>`;
       });
 
-      // Multi-Agent Roundtable Persona Styling
       html = html.replace(/\[(?:الخبير التحليلي|الخبير|Architect)\]\s*([\s\S]*?)(?=\[(?:الناقد|المنسق|Critic|Synthesizer)\]|$)/gi, (m, content) => {
         return `<div class="roundtable-persona architect"><div class="roundtable-badge"><span>🧠</span> <span>الخبير التحليلي (Architect)</span></div><div class="roundtable-body">${content.trim()}</div></div>`;
       });
@@ -689,13 +756,13 @@
         return `<div class="roundtable-persona synthesizer"><div class="roundtable-badge"><span>🎯</span> <span>المنسق التنفيذي (Synthesizer)</span></div><div class="roundtable-body">${content.trim()}</div></div>`;
       });
 
-      // ── TTS/Audio cards: [audio:src|desc|tag] + [tts:text] (local speechSynthesis fallback)
       html = html.replace(/\[audio:(https?:\/\/[^\s|\]]+|blob:[^\s|\]]+|data:[^\s|\]]+)(?:\|([^|\]]+))?(?:\|([^\]]+))?\]/gi, (m, src, desc, tag) => {
         const tagTitle = (tag || 'TTS Audio').trim();
         const descText = (desc || '🔊 ملف صوتي جاهز').trim();
         const cleanSrc = src.trim();
         return `\n\n<div class="modern-audio-card" data-src="${cleanSrc}">\n  <div class="audio-card-header"><div class="audio-tag-badge"><span class="audio-dot"></span><span>${this.escapeHtml(tagTitle)}</span></div></div>\n  <div class="audio-card-desc">${this.escapeHtml(descText)}</div>\n  <div class="audio-progress-row"><span class="audio-time current-time">0:00</span><div class="audio-progress-bar-wrap" onclick="window._seekAudio(this, event)"><div class="audio-progress-fill"></div></div><span class="audio-time total-time">--:--</span></div>\n  <div class="audio-controls-row"><button type="button" class="audio-ctrl-btn speed-btn" onclick="window._changeAudioSpeed(this)" title="Speed">1x</button><button type="button" class="audio-ctrl-btn" onclick="window._skipAudio(this, -15)" title="-15s">↺15</button><button type="button" class="audio-play-btn" onclick="window._togglePlayAudio(this)" title="Play/Pause"><svg class="play-icon" viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"></polygon></svg><svg class="pause-icon" style="display:none;" viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"></rect><rect x="14" y="4" width="4" height="16" rx="1"></rect></svg></button><button type="button" class="audio-ctrl-btn" onclick="window._skipAudio(this, 15)" title="+15s">↻15</button><button type="button" class="audio-ctrl-btn volume-btn" onclick="window._toggleMuteAudio(this)" title="Mute">🔊</button><button type="button" class="audio-ctrl-btn download-btn" onclick="window._downloadAudio(this)" title="تحميل">⬇</button></div>\n  <audio class="hidden-audio" src="${cleanSrc}" preload="metadata"></audio>\n</div>\n\n`;
       });
+
       html = html.replace(/\[tts:([^\]]+)\]/gi, (m, ttsText) => {
         const clean = this.escapeHtml(ttsText.trim().slice(0, 400));
         const encoded = encodeURIComponent(ttsText.trim());
@@ -719,7 +786,11 @@
         return `<p>${block.replace(/\n/g, '<br>')}</p>`;
       });
 
-      return formattedBlocks.join('\n');
+      let result = formattedBlocks.join('\n');
+      thinkBlocks.forEach((tb, i) => {
+        result = result.replace(new RegExp(`<p>__THINK_BLOCK_${i}__<\/p>|__THINK_BLOCK_${i}__`, 'g'), tb);
+      });
+      return result;
     },
 
     createMessageRow(msg) {
@@ -744,85 +815,58 @@
 
       let multiAgentHtml = '';
       if (msg.multiAgentSteps && Array.isArray(msg.multiAgentSteps)) {
-        const okCount = msg.multiAgentSteps.filter(s=>/✓|مكتمل|معتمد|Done|Approved/i.test(s.status)).length;
-        const warnCount = msg.multiAgentSteps.length - okCount;
-        const statusBadgeCls = warnCount > 0 ? 'warn' : 'ok';
-        const badgeLabel = warnCount > 0 ? `⚠️ ${warnCount} ملاحظات` : `✓ معتمد (0 أخطاء)`;
-        const pipelineTrackHtml = `
-          <div class="audit-pulse-track">
-            ${msg.multiAgentSteps.map((s, i) => {
-              const isCompleted = s.status.includes('✓') || s.status.includes('Done') || s.status.includes('معتمد');
-              const isWarn = s.status.includes('تجاوز') || s.hasError;
-              const nodeClass = isCompleted ? (isWarn ? 'failed' : 'completed') : 'completed';
-              return `
-                <div class="audit-pulse-node ${nodeClass}" title="${this.escapeHtml(s.title)}">
-                  <span class="audit-pulse-dot"></span>
-                  <span class="audit-pulse-label">${i + 1}. ${this.escapeHtml(s.shortName || s.title.split(' ')[0])}</span>
-                </div>
-                ${i < msg.multiAgentSteps.length - 1 ? '<div class="audit-pulse-connector completed"></div>' : ''}
-              `;
-            }).join('')}
-          </div>
-        `;
-        const bulletsHtml = msg.multiAgentSteps.filter(s => s.summary).map(s => {
-          const isWarn = s.status.includes('تجاوز') || s.hasError;
-          return `<li class="peer-bullet ${isWarn ? 'warn' : 'ok'}" dir="rtl"><span class="peer-bullet-dot"></span><span class="peer-bullet-text"><strong>${this.escapeHtml(s.title.split('(')[0].trim())}:</strong> ${this.escapeHtml(s.summary)}</span></li>`;
-        }).join('');
-        multiAgentHtml = `
-          <div class="multi-agent-box proposal-audit-section" id="box-${msg.id}">
-            <div class="proposal-audit-header" onclick="this.closest('.multi-agent-box')?.classList.toggle('collapsed')">
-              <div class="dev-peer-title">
-                <span class="dev-peer-icon">👥</span>
-                <span class="dev-peer-name">تشاور الوكلاء (${msg.multiAgentSteps.length} وكلاء)</span>
-                <span class="dev-peer-badge ${statusBadgeCls}">${badgeLabel}</span>
-              </div>
-              <span class="dev-peer-toggle">▾</span>
+        const titleText = `تشاور واعتماد الوكلاء (${msg.multiAgentSteps.length} مراحل)`;
+        const tabsHtml = msg.multiAgentSteps.map((st, idx) => {
+          const isCompleted = st.status.includes('✓') || st.status.includes('Done') || st.status.includes('معتمد');
+          const isWarn = st.status.includes('تجاوز') || st.hasError;
+          const statusIcon = isCompleted ? (isWarn ? '⚠️' : '✓') : '•';
+          return `
+            <div class="dev-thinking-tab reached is-rtl" style="animation-delay: ${idx * 0.08}s">
+              <span class="flow-icon" aria-hidden="true">${st.icon || '🧠'}</span>
+              <span class="tab-label"><strong>${this.escapeHtml(st.shortName || st.title.split(' ')[0])}:</strong> [${statusIcon}] ${this.escapeHtml(st.summary || st.status)}</span>
             </div>
-            <div class="observer-details dev-peer-body">
-              ${pipelineTrackHtml}
-              <ul class="peer-bullets-list">${bulletsHtml}</ul>
+          `;
+        }).join('');
+
+        multiAgentHtml = `
+          <div class="dev-thinking-container collapsed" id="box-${msg.id}">
+            <div class="dev-thinking-summary is-rtl" onclick="this.parentElement.classList.toggle('collapsed')">
+              <div class="summary-left">
+                <span class="thinking-brain-icon">👥</span>
+                <span class="thinking-headline">${titleText}</span>
+              </div>
+              <span class="thinking-chevron">▾</span>
+            </div>
+            <div class="dev-thinking-tabs-flow is-rtl">
+              ${tabsHtml}
             </div>
           </div>
         `;
       }
 
-      // Observer persistence — Dev parity horizontal pulse track + peer card
       let observerHtml = '';
       if (msg.observerReview) {
-        const lines = String(msg.observerReview).split(/\n/).map(s=>s.trim()).filter(Boolean);
+        const lines = String(msg.observerReview).split(/\n/).map(ln=>ln.trim()).filter(Boolean);
         const bullets = lines.map(l=> l.replace(/^[?•\-*]\s*/,'').replace(/^\d+[\.\)\-]\s*/,'').trim()).filter(Boolean).slice(0,5);
-        const ok = bullets.filter(b=>/نعم|yes|✓|مُلتزم|Compliant/i.test(b)).length;
-        const warn = bullets.length - ok;
-        const getCls=b=>{ if(b.includes('التناقض:')) return b.includes('نعم')?'warn':'ok'; if(b.includes('الالتزام:')||b.includes('المصادر:')) return (b.includes('نعم')||b.includes('موثوقة')||b.includes('سليم'))?'ok':'warn'; return b.includes('لا')||b.includes('تحتاج')?'warn':'ok'; };
-        const mainBul=bullets.slice(0,-1), sBul=bullets.slice(-1)[0];
-        const mainHtml=mainBul.length? `<ul class="peer-bullets-list">${mainBul.map(b=>`<li class="peer-bullet ${getCls(b)}" dir="rtl"><span class="peer-bullet-dot"></span><span class="peer-bullet-text">${this.escapeHtml(b)}</span></li>`).join('')}</ul>` : '';
-        const sugBox=(sBul && !(sBul.includes('لا يوجد') || /No improvement/i.test(sBul)))? `<div class="suggest-box"><div class="suggest-box-body">${this.escapeHtml(sBul)}</div><div class="peer-actions-bar"><button class="peer-action-btn apply-btn" onclick="window._applyObserverSuggestion(this.closest('.observer-box')?.dataset?.review||'', this)">⚡ Apply</button><button class="peer-action-btn retry-btn" onclick="window._sendToLLM(this)">🚀 Send to LLM</button><button class="peer-action-btn apply-btn" onclick="window._sendAndApply(this)">⚡ Send & Apply</button></div></div>` : '';
-        const bulletsHtml=(mainHtml+sugBox) || `<div style="font-size:12px;color:var(--text-dim)">${this.escapeHtml(String(msg.observerReview).slice(0,140))}</div>`;
-        const chainNames = ['Qwen', 'GPT-20B', 'North', 'GPT-120B', 'Inkling'];
-        const pipelineTrackHtml = `
-          <div class="audit-pulse-track">
-            ${chainNames.map((name, i) => `
-              <div class="audit-pulse-node completed" title="${name}">
-                <span class="audit-pulse-dot"></span>
-                <span class="audit-pulse-label">${i + 1}. ${name}</span>
-              </div>
-              ${i < chainNames.length - 1 ? '<div class="audit-pulse-connector completed"></div>' : ''}
-            `).join('')}
+        const tabsHtml = bullets.map((b, idx) => `
+          <div class="dev-thinking-tab reached is-rtl" style="animation-delay: ${idx * 0.08}s">
+            <span class="flow-icon" aria-hidden="true">${b.includes('لا') || b.includes('تحتاج') || b.includes('غير') ? '⚠️' : '🛡️'}</span>
+            <span class="tab-label">${this.escapeHtml(b)}</span>
           </div>
-        `;
-        const statusBadgeCls = warn > 0 ? 'warn' : 'ok';
-        const badgeLabel = warn > 0 ? `⚠️ ${warn} ملاحظات` : `✓ معتمد (0 أخطاء)`;
+        `).join('');
+
         observerHtml = `
-          <div class="observer-box proposal-audit-section" data-review="${this.escapeHtml(msg.observerReview).slice(0,300)}">
-            <div class="proposal-audit-header" onclick="this.closest('.observer-box')?.classList.toggle('collapsed')">
-              <div class="dev-peer-title">
-                <span class="dev-peer-icon">🛡️</span>
-                <span class="dev-peer-name">فحص الجودة والمطابقة (5 مراجعين)</span>
-                <span class="dev-peer-badge ${statusBadgeCls}">${badgeLabel}</span>
+          <div class="dev-thinking-container collapsed observer-box" data-review="${this.escapeHtml(msg.observerReview).slice(0,300)}">
+            <div class="dev-thinking-summary is-rtl" onclick="this.parentElement.classList.toggle('collapsed')">
+              <div class="summary-left">
+                <span class="thinking-brain-icon">🛡️</span>
+                <span class="thinking-headline">فحص الجودة والمطابقة (${bullets.length} مراجعين)</span>
               </div>
-              <span class="dev-peer-toggle">▾</span>
+              <span class="thinking-chevron">▾</span>
             </div>
-            <div class="observer-details dev-peer-body">${pipelineTrackHtml}${bulletsHtml}</div>
+            <div class="dev-thinking-tabs-flow is-rtl">
+              ${tabsHtml}
+            </div>
           </div>
         `;
       }
@@ -842,7 +886,7 @@
       return row;
     },
 
-    renderAllMessages(messages) {
+        renderAllMessages(messages) {
       const container = $('chat-container');
       if (!container) return;
       if (!messages || messages.length === 0) {
@@ -921,12 +965,12 @@
         depth = isTrivial ? 2 : (isSimple ? 3 : 4);
       }
       const allHigh = [
-        { icon: '🧠', text: 'Intent Understanding', delay: 0 },
-        { icon: '📂', text: 'Gather Context & Directives', delay: 400 },
-        { icon: '📋', text: 'Cognitive Architecture & Plan', delay: 900 },
-        { icon: '✍️', text: 'Synthesizing Deep Analysis', delay: 1500 },
-        { icon: '🔍', text: 'Epistemic Self-Critique', delay: 2200 },
-        { icon: '✨', text: 'Refinement & Polish', delay: 3000 }
+        { icon: '🧠', text: 'Intent', delay: 600 },
+        { icon: '📂', text: 'Gather context', delay: 1600 },
+        { icon: '📋', text: 'Plan structure', delay: 3000 },
+        { icon: '✍️', text: 'Draft', delay: 5000 },
+        { icon: '🔍', text: 'Self-critique', delay: 7000 },
+        { icon: '✨', text: 'Refine', delay: 9000 }
       ];
       const allMid = [
         { icon: '🧠', text: 'Understanding', delay: 0 },
@@ -2477,6 +2521,8 @@
       state._lastSendStart = Date.now();
 
       let { textForPayload, currentAttachments } = this.preparePayload(userText);
+      // ── Arabic duration disambiguation: 3د → 3 دقائق (not 3D) ──
+      textForPayload = textForPayload.replace(/(\d+)\s*د\b/g, '$1 دقائق').replace(/(\d+)\s*ث\b/g, '$1 ثانية');
       // ── show user message instantly (fix 3-4s delay) ──
       const _displayText = (userText.trim() || textForPayload).slice(0,1200);
       const _earlyUserMsg = StateController.addMessage('user', _displayText, null, currentAttachments);
@@ -2752,6 +2798,8 @@
           });
         };
 
+        // keep thinking flow visible during streaming — final stage "Generating..." until done
+        const _streamStart = Date.now();
         for await (const { chunk, model, usedFallback } of stream) {
           fullContent += chunk;
           aiMsgObj.model = model.name;
@@ -2759,8 +2807,15 @@
           aiMsgObj.usedFallback = usedFallback;
 
           if (!msgRow) {
-            MessageRenderer.hideTyping();
-            state.isThinking = false;
+            // first token — switch from thinking to generating stage, don't hide flow yet
+            const genStage = document.getElementById('thinking-flow');
+            if(genStage && !document.getElementById('gen-stage')){
+              const gen=document.createElement('div'); gen.id='gen-stage'; gen.className='thinking-flow-item reached';
+              gen.innerHTML='<span class="flow-dot" style="display:block"></span><span class="flow-text">Generating response...</span>';
+              genStage.appendChild(gen);
+            }
+            MessageRenderer.setThinkingStage('Generating');
+            // keep flow visible, just update header
             UIEngine.updateSendBtnState();
             MessageRenderer.appendMessage(aiMsgObj);
             msgRow = document.querySelector(`[data-id="${aiMsgId}"] .msg-content`);
@@ -2890,58 +2945,35 @@
         const isDone = !isThinking && steps.every(s => s.status.includes('✓') || s.status.includes('معتمد') || s.status.includes('تجاوز'));
         const okC = steps.filter(s => /✓|مكتمل|معتمد|Done|Approved/i.test(s.status)).length;
         const warnC = steps.filter(s => s.status.includes('تجاوز') || s.hasError).length;
-        const statusBadgeCls = isDone ? (warnC > 0 ? 'warn' : 'ok') : 'running';
-        const badgeLabel = isDone ? (warnC > 0 ? `⚠️ ${warnC} ملاحظات` : '✓ معتمد (0 أخطاء)') : '⏳ جاري التشاور...';
+        const activeStep = steps.find(s => s.status.includes('نشط') || s.status.includes('Active')) || steps[steps.length - 1];
 
-        const pipelineTrackHtml = `
-          <div class="audit-pulse-track">
-            ${steps.map((s, i) => {
-              const isCompleted = s.status.includes('✓') || s.status.includes('Done') || s.status.includes('معتمد');
-              const isActive = s.status.includes('نشط') || s.status.includes('Active');
-              const isWarn = s.status.includes('تجاوز') || s.hasError;
-              const nodeClass = isCompleted ? (isWarn ? 'failed' : 'completed') : (isActive ? 'active' : 'pending');
-              return `
-                <div class="audit-pulse-node ${nodeClass}" title="${MessageRenderer.escapeHtml(s.title)}">
-                  <span class="audit-pulse-dot"></span>
-                  <span class="audit-pulse-label">${i + 1}. ${MessageRenderer.escapeHtml(s.shortName || s.title.split(' ')[0])}</span>
-                </div>
-                ${i < steps.length - 1 ? `<div class="audit-pulse-connector ${isCompleted ? 'completed' : ''}"></div>` : ''}
-              `;
-            }).join('')}
-          </div>
-        `;
-
-        const bulletsHtml = steps.filter(s => s.summary && s.status !== 'في الانتظار').map(s => {
+        const tabsHtml = steps.filter(s => s.summary && s.status !== 'في الانتظار').map((s, idx) => {
           const isWarn = s.status.includes('تجاوز') || s.hasError;
+          const isCompleted = s.status.includes('✓') || s.status.includes('Done') || s.status.includes('معتمد');
+          const flowIcon = isWarn ? '⚠️' : (isCompleted ? '✓' : (s.icon || '⚡'));
           return `
-            <li class="peer-bullet ${isWarn ? 'warn' : 'ok'}" dir="rtl">
-              <span class="peer-bullet-dot"></span>
-              <span class="peer-bullet-text"><strong>${MessageRenderer.escapeHtml(s.title.split('(')[0].trim())}:</strong> ${MessageRenderer.escapeHtml(s.summary)}</span>
-            </li>
+            <div class="dev-thinking-tab ${isCompleted ? 'reached' : 'active'} is-rtl" style="animation-delay: ${idx * 0.08}s">
+              <span class="flow-icon" aria-hidden="true">${flowIcon}</span>
+              <span class="tab-label"><strong>${MessageRenderer.escapeHtml(s.shortName || s.title.split(' ')[0])}:</strong> ${MessageRenderer.escapeHtml(s.summary)}</span>
+            </div>
           `;
         }).join('');
 
+        const headline = isDone
+          ? (warnC > 0 ? `تشاور وتدقيق (${steps.length} مراحل - ${warnC} ملاحظات)` : `تشاور وتدقيق (${steps.length} مراحل - معتمد)`)
+          : `جاري تشاور الوكلاء (${MessageRenderer.escapeHtml(activeStep?.shortName || activeStep?.title?.split(' ')[0] || 'تحليل')}...)`;
+
         const boxHtml = `
-          <div class="multi-agent-box proposal-audit-section" id="box-${aiMsgId}">
-            <div class="proposal-audit-header" onclick="this.closest('.multi-agent-box')?.classList.toggle('collapsed')">
-              <div class="dev-peer-title">
-                <span class="dev-peer-icon">👥</span>
-                <span class="dev-peer-name">تشاور الوكلاء (${steps.length} وكلاء)</span>
-                <span class="dev-peer-badge ${statusBadgeCls}">${badgeLabel}</span>
+          <div class="dev-thinking-container ${isDone ? 'collapsed' : 'active-streaming'} multi-agent-box is-rtl" id="box-${aiMsgId}">
+            <div class="dev-thinking-summary is-rtl" onclick="this.parentElement.classList.toggle('collapsed')">
+              <div class="summary-left">
+                <span class="thinking-brain-icon">${isDone ? '👥' : '⚡'}</span>
+                <span class="thinking-headline">${headline}</span>
               </div>
-              <span class="dev-peer-toggle">▾</span>
+              <span class="thinking-chevron">▾</span>
             </div>
-            <div class="observer-details dev-peer-body">
-              ${pipelineTrackHtml}
-              <ul class="peer-bullets-list">
-                ${bulletsHtml || `<li class="peer-bullet ok" dir="rtl"><span class="peer-bullet-dot"></span><span class="peer-bullet-text">جاري بدء مراحل التشاور والتدقيق...</span></li>`}
-              </ul>
-              ${isDone ? `
-                <div class="peer-actions-bar">
-                  <button class="peer-action-btn retry-btn" onclick="window._sendToLLM(this)"><span>🚀</span><span>Send to LLM</span></button>
-                  <button class="peer-action-btn apply-btn" onclick="window._applyObserverSuggestion(this.closest('.multi-agent-box')?.dataset?.review||'', this)"><span>⚡</span><span>Apply</span></button>
-                </div>
-              ` : ''}
+            <div class="dev-thinking-tabs-flow is-rtl">
+              ${tabsHtml || '<div class="dev-thinking-tab is-rtl"><span class="flow-icon">⏳</span><span class="tab-label">جاري بدء مراحل التشاور والتدقيق...</span></div>'}
             </div>
           </div>
         `;
@@ -3190,59 +3222,36 @@ ${stage3Output}
       const steps = allSteps.slice(0, obsDepth);
 
       const renderObserver = (finalReview = '', activeIdx = 0) => {
-        // Floating bullets — no numbers — COMMITTED header with colored numbers, icon toggle, Apply only
-          const getCls=b=>{ if(b.includes('التناقض:')) return b.includes('نعم')?'warn':'ok'; if(b.includes('الالتزام:')||b.includes('المصادر:')) return (b.includes('نعم')||b.includes('موثوقة')||b.includes('سليم'))?'ok':'warn'; return b.includes('لا')||b.includes('تحتاج')?'warn':'ok'; };
-          const buildBullets = (txt)=> {
-            const lines = String(txt||'').split(/\n/).map(s=>s.trim()).filter(Boolean);
-            const bullets = lines.map(l=> l.replace(/^[?]\s*/,'').replace(/^\d+[\.\)\-]\s*/,'').trim()).filter(Boolean).slice(0,5);
-            if(!bullets.length) return `<div style="font-size:12px;color:var(--text-dim)">${MessageRenderer.escapeHtml(String(txt||'').slice(0,140))}</div>`;
-            const main=bullets.slice(0,-1), last=bullets.slice(-1)[0];
-            const mainHtml=main.length? `<ul class="observer-bullets">${main.map(b=>`<li class="observer-bullet ${getCls(b)}"><span class="observer-bullet-text">${MessageRenderer.escapeHtml(b)}</span></li>`).join('')}</ul>` : '';
-            const box=(last && !(last.includes('لا يوجد') || /No improvement/i.test(last)))? `<div class="suggest-box"><div class="suggest-box-body">${MessageRenderer.escapeHtml(last)}</div><div class="suggest-box-actions"><button class="observer-apply-btn" onclick="window._applyObserverSuggestion(this.closest('.observer-box').dataset.review||'', this)">⚡ Apply</button><button class="llm-end-btn" onclick="window._sendToLLM(this)">⚡ Send to LLM</button><button class="llm-send-apply-btn" onclick="window._sendAndApply(this)">⚡ Send & Apply</button></div></div>` : '';
-            return mainHtml+box;
-          };
-
-        const chainNames = ['Qwen', 'GPT-20B', 'North', 'GPT-120B', 'Inkling'];
         const isRunning = activeIdx < 5;
-        const pipelineTrackHtml = `
-          <div class="audit-pulse-track">
-            ${chainNames.map((name, i) => {
-              const isCompleted = !isRunning || i < activeIdx;
-              const isActive = isRunning && i === activeIdx;
-              const nodeClass = isCompleted ? 'completed' : (isActive ? 'active' : 'pending');
-              return `
-                <div class="audit-pulse-node ${nodeClass}" title="${name}">
-                  <span class="audit-pulse-dot"></span>
-                  <span class="audit-pulse-label">${i + 1}. ${name}</span>
-                </div>
-                ${i < chainNames.length - 1 ? `<div class="audit-pulse-connector ${isCompleted ? 'completed' : ''}"></div>` : ''}
-              `;
-            }).join('')}
-          </div>
-        `;
+        const lines = String(finalReview || '').split(/\n/).map(s => s.trim()).filter(Boolean);
+        const bullets = lines.map(l => l.replace(/^[?•\-*]\s*/, '').replace(/^\d+[\.\)\-]\s*/, '').trim()).filter(Boolean).slice(0, 6);
+        const warnN = bullets.filter(b => b.includes('لا') || b.includes('تحتاج') || b.includes('غير')).length;
+        const badgeLabel = isRunning ? '⏳ جاري الفحص...' : (warnN > 0 ? `⚠️ فحص الجودة (${warnN} ملاحظات)` : `✓ فحص الجودة والمطابقة (معتمد)`);
 
-        const okC = (txt)=> (String(txt).match(/نعم|yes|✓|مُلتزم|Compliant/gi)||[]).length;
-        const reviewHtml = finalReview ? buildBullets(finalReview) : `<div style="font-size:12px; color:var(--text-dim); padding:6px 0;">${t('جاري التدقيق الخماسي...','5-Agent reviewing...')}</div>`;
-        const okN = finalReview ? okC(finalReview) : 0;
-        const warnN = finalReview ? (String(finalReview).split(/\n/).filter(Boolean).length - okN) : 0;
-        const statusBadgeCls = warnN > 0 ? 'warn' : 'ok';
-        const badgeLabel = warnN > 0 ? `⚠️ ${warnN} ملاحظات` : `✓ معتمد (0 أخطاء)`;
-        const box = aiRow.querySelector('.observer-box') || document.createElement('div');
-        box.className = 'observer-box proposal-audit-section';
-        box.style.cssText = 'margin-top:10px; padding:0; border:none; background:transparent;';
-        if(finalReview) box.dataset.review = finalReview;
-        box.innerHTML = `
-          <div class="proposal-audit-header" onclick="this.closest('.observer-box')?.classList.toggle('collapsed')">
-            <div class="dev-peer-title">
-              <span class="dev-peer-icon">🛡️</span>
-              <span class="dev-peer-name">فحص الجودة والمطابقة (5 مراجعين)</span>
-              <span class="dev-peer-badge ${isRunning ? 'running' : statusBadgeCls}">${isRunning ? '⏳ جاري الفحص...' : badgeLabel}</span>
+        const tabsHtml = bullets.length ? bullets.map((b, idx) => {
+          const isWarn = b.includes('لا') || b.includes('تحتاج') || b.includes('غير');
+          return `
+            <div class="dev-thinking-tab reached is-rtl" style="animation-delay: ${idx * 0.08}s">
+              <span class="flow-icon" aria-hidden="true">${isWarn ? '⚠️' : '🛡️'}</span>
+              <span class="tab-label">${MessageRenderer.escapeHtml(b)}</span>
             </div>
-            <span class="dev-peer-toggle">▾</span>
+          `;
+        }).join('') : `<div class="dev-thinking-tab is-rtl"><span class="flow-icon">⏳</span><span class="tab-label">${isRunning ? 'جاري فحص الجودة والمطابقة...' : 'اكتمل الفحص.'}</span></div>`;
+
+        const box = aiRow.querySelector('.observer-box') || document.createElement('div');
+        box.className = `dev-thinking-container ${isRunning ? 'active-streaming' : 'collapsed'} observer-box is-rtl`;
+        box.style.cssText = 'margin-top:10px;';
+        if (finalReview) box.dataset.review = finalReview;
+        box.innerHTML = `
+          <div class="dev-thinking-summary is-rtl" onclick="this.parentElement.classList.toggle('collapsed')">
+            <div class="summary-left">
+              <span class="thinking-brain-icon">🛡️</span>
+              <span class="thinking-headline">${badgeLabel}</span>
+            </div>
+            <span class="thinking-chevron">▾</span>
           </div>
-          <div class="observer-details dev-peer-body">
-            ${pipelineTrackHtml}
-            ${reviewHtml}
+          <div class="dev-thinking-tabs-flow is-rtl">
+            ${tabsHtml}
           </div>
         `;
         if (!aiRow.querySelector('.observer-box')) {
