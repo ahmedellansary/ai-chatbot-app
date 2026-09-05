@@ -1,4 +1,4 @@
-const CACHE_NAME = 'xv1-chat-v366';
+const CACHE_NAME = 'xv1-chat-v367';
 
 // Install immediately
 self.addEventListener('install', event => {
@@ -33,7 +33,7 @@ self.addEventListener('fetch', event => {
       .then(response => {
         if (response.ok) {
           const clone = response.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+          event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone)));
         }
         return response;
       })
