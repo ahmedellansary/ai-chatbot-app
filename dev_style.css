@@ -3622,6 +3622,12 @@ pre code {
   border-radius: 50%;
   background: #10b981;
 }
+.dev-thinking-summary.is-rtl,
+.dev-thinking-tabs-flow.is-rtl,
+.dev-thinking-tab.is-rtl {
+  direction: rtl;
+  text-align: right;
+}
 .dev-thinking-container.active-streaming {
   border-color: transparent;
   background: transparent;
