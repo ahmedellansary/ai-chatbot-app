@@ -4501,7 +4501,7 @@ ${stage3Output}
   let _vpLast = 0;
   function lockViewportHeight() {
     const now = Date.now();
-    if (now - _vpLast < 120) return; // debounce 120ms — prevents scroll+keyboard thrash at 1-2s
+    if (now - _vpLast < 220) return; // debounce 220ms — prevents scroll+keyboard thrash without logic change
     _vpLast = now;
     if (_vpRaf) cancelAnimationFrame(_vpRaf);
     _vpRaf = requestAnimationFrame(() => {
@@ -4518,7 +4518,9 @@ ${stage3Output}
       return;
     }
     try {
-      const res = await fetch('./system_prompt.txt?t=' + Date.now());
+      const ctrl = new AbortController(); const to=setTimeout(()=>ctrl.abort(), 3000);
+      const res = await fetch('./system_prompt.txt?t=' + Date.now(), {signal: ctrl.signal});
+      clearTimeout(to);
       if (res.ok) {
         state.systemPrompt = await res.text();
         localStorage.setItem('system_prompt', state.systemPrompt);
@@ -4533,8 +4535,10 @@ ${stage3Output}
     if (modelCatalogLoadPromise) return modelCatalogLoadPromise;
     modelCatalogLoadPromise = (async () => {
       try {
+      const ver = localStorage.getItem('XV1_APP_VERSION') || localStorage.getItem('app_version') || '';
+      const cachedVer = localStorage.getItem('model_catalog_version');
       const cached = localStorage.getItem('model_catalog');
-      if (cached) {
+      if (cached && cachedVer === ver) {
         const parsed = JSON.parse(cached);
         if (Array.isArray(parsed) && parsed.length) {
           state.modelCatalog = ModelEngine.normalizeCatalog(parsed);
@@ -4549,6 +4553,7 @@ ${stage3Output}
         if (catalog.length) {
           state.modelCatalog = catalog;
           localStorage.setItem('model_catalog', JSON.stringify(catalog));
+          try{ localStorage.setItem('model_catalog_version', localStorage.getItem('XV1_APP_VERSION')||''); }catch{}
           return;
         }
       }
@@ -4771,6 +4776,8 @@ ${stage3Output}
       window.visualViewport.addEventListener('resize', lockViewportHeight);
     }
 
+    // ensure instructions ready before state uses systemPrompt
+    try{ InstructionManager.load().catch(()=>{}); }catch{}
     StateController.load();
     initAppCustomization();
     UIEngine.setupEventListeners();
