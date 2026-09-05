@@ -317,13 +317,23 @@
         fullPrompt += `\n\n═══════════════════════════════════════════════════════════════\n📁 AVAILABLE_INSTRUCTION_FOLDERS (for smart editing — JSON strict):\n${JSON.stringify(folders, null, 2)}\n═══════════════════════════════════════════════════════════════\nUse this list to decide: if keywords match existing file → append there; else create new folder. Always check for duplicate/conflict before outputting JSON block.`;
       }
 
-      // Only attach contextual custom files if the query is complex AND matches their keywords
+      // Only attach contextual custom files if the query is complex AND matches their keywords (semantic, not literal)
       if (isComplex) {
         const textLower = ((userText || '') + ' ' + (attachments || []).map(a => a.name || '').join(' ')).toLowerCase();
         const activeContextualFiles = this.files.filter(f => !f.isCore && f.enabled);
         const matchedFiles = activeContextualFiles.filter(f => {
           if (!Array.isArray(f.keywords) || !f.keywords.length) return false;
-          return f.keywords.some(kw => kw && textLower.includes(kw.toLowerCase()));
+          // exact keyword match
+          if (f.keywords.some(kw => kw && textLower.includes(kw.toLowerCase()))) return true;
+          // semantic fallback for Flashback: historical narrative intent (حكاية=قصة, احكيلي=احكي, كتب التاريخ=تاريخ) + video/story intent
+          if (String(f.id).startsWith('flashback')) {
+            const hasHist = /تاريخ|حكاية|قصة|احكي|رواية|حدث تاريخي|كتب التاريخ/i.test(textLower);
+            const hasVideo = /فيديو|حلقة|سكريبت|قصة|حكاية|احكي|تصوير|انتاج/i.test(textLower);
+            if (hasHist && hasVideo) return true;
+            // also pure historical without video still matches script production
+            if (hasHist) return true;
+          }
+          return false;
         });
         if (matchedFiles.length > 0) {
           matchedFiles.forEach(file => {
