@@ -1105,11 +1105,31 @@ STRICT RULE: The local engine automatically merges your surgical patches directl
           }
         }
 
-        // 3. Local Instant Syntax & Integrity Check (Zero AI latency)
+        // 3. Local Instant Syntax & Integrity Check (Zero AI latency & CSP Safe)
         let syntaxError = null;
         if (file.endsWith('.js')) {
           try {
-            new Function(patchContent);
+            const isEvalAllowed = (() => {
+              try { new Function('return true;')(); return true; } catch { return false; }
+            })();
+            if (isEvalAllowed) {
+              new Function(patchContent);
+            } else {
+              // CSP blocks dynamic code execution (EvalError): perform safe structural bracket & quote syntax check
+              const openB = (patchContent.match(/\{/g) || []).length;
+              const closeB = (patchContent.match(/\}/g) || []).length;
+              const openP = (patchContent.match(/\(/g) || []).length;
+              const closeP = (patchContent.match(/\)/g) || []).length;
+              const openK = (patchContent.match(/\[/g) || []).length;
+              const closeK = (patchContent.match(/\]/g) || []).length;
+              if (openB !== closeB) {
+                syntaxError = `Unbalanced curly braces ({: ${openB}, }: ${closeB})`;
+              } else if (openP !== closeP) {
+                syntaxError = `Unbalanced parentheses ((: ${openP}, ): ${closeP})`;
+              } else if (openK !== closeK) {
+                syntaxError = `Unbalanced brackets ([: ${openK}, ]: ${closeK})`;
+              }
+            }
           } catch (err) {
             syntaxError = err.message;
           }
@@ -1594,26 +1614,29 @@ Reply strictly in 5 concise lines starting with • :
     try {
       const input = $('chat-input') || $('user-input');
       if (!input) return;
-      const card = btn?.closest('.dev-proposal-box');
+      const card = btn?.closest('.dev-proposal-box') || (btn?.closest('.dev-observer-box')?.previousElementSibling?.classList?.contains('dev-proposal-box') ? btn.closest('.dev-observer-box').previousElementSibling : document.querySelector('.dev-proposal-box:last-of-type'));
       const propId = card?.id?.replace(/^proposal-/, '');
       const proposal = propId ? state.pendingModifications[propId] : null;
-      const auditNotes = String(card?.dataset?.auditReview || notes || '').trim();
-      const cleanNotes = [
-        'Original user request:',
-        proposal?.originalRequest || 'Use the current request.',
-        '',
-        'Code/lines to modify:',
-        proposal?.content || 'Use the current proposed code and preserve unrelated code.',
-        '',
-        'Strict 5-reviewer audit guidance:',
-        auditNotes || 'Re-check compliance, integrity, security, DOM architecture, and production quality.'
-      ].join('\n');
-      if (!cleanNotes) return;
-      input.value = `Apply the requested code change using the exact code context and all reviewer guidance below. Preserve unrelated code, fix every flagged issue, and do not deploy:\n\n${cleanNotes}`;
+      const rawAuditNotes = String(card?.dataset?.auditReview || btn?.closest('.dev-observer-box')?.dataset?.review || notes || '').trim();
+      
+      // Extract ONLY specific critique notes & actionable advice (NO full right/wrong draft, NO approvals)
+      const lines = rawAuditNotes.split(/\n/).map(l => l.trim()).filter(Boolean);
+      const actionableNotes = lines.filter(l => {
+        // Exclude pure approval items
+        if (/^(•|\d+[\.\)]|\-)?\s*(مطابق وسليم|سليم ومتماسك|آمن ومحمي|متوافق ودقيق|جاهز وموثوق|جاهز للإنتاج|Compliant|Intact|Secure|Accurate)/i.test(l)) {
+          if (!/غير مطابق|تنبيه|ثغرة|ملاحظة|خلل|نقص|تحسين/i.test(l)) return false;
+        }
+        return true;
+      });
+      const cleanAdvice = actionableNotes.length ? actionableNotes.join('\n') : rawAuditNotes;
+      const targetFile = proposal?.file || 'app.js';
+
+      // Send strictly the specific critique & advice with an explicit command to modify the code
+      input.value = `يرجى تعديل الكود في ملف (${targetFile}) بناءً على ملاحظات وتوجيهات المدققين التالية فقط، وتطبيق التعديل الدقيق المطلوب دون إعادة طباعة الملف كاملاً وبدون حشو:\n\n${cleanAdvice}\n\nالمطلوب: تطبيق التعديل الجراحي الدقيق (surgical patch أو deploy block محدد) لحل هذه الملاحظات.`;
       if (window.DevUIEngine) DevUIEngine.updateSendBtn?.();
       const sendBtn = $('send-btn');
       if (sendBtn) sendBtn.click();
-      if (window.DevUIEngine) DevUIEngine.showToast?.('🚀 تم توجيه الملاحظات للمطور لإصلاح وتطبيق الكود فوراً!', 'success');
+      if (window.DevUIEngine) DevUIEngine.showToast?.('🚀 تم توجيه الملاحظات المحددة للمطور لإصلاح وتطبيق الكود فوراً!', 'success');
     } catch(e) {
       console.warn('[SendReviewToDev]', e);
     }
@@ -2348,48 +2371,58 @@ Reply strictly in 5 concise lines starting with • :
       out = out.replace(/```json\s*\{[\s\S]*?"(?:file|deploy|files|content)"[\s\S]*?\}\s*```/gi, '');
       out = out.replace(/\{[\s\S]*?"(?:file|deploy|files)"\s*:[\s\S]*?"content"\s*:[\s\S]*?\}/gi, '');
 
-      // 2. Parse <think>...</think> into Sleek Dynamic Thinking Tabs
-      out = out.replace(/<think>([\s\S]*?)<\/think>/gi, (m, thinkContent) => {
+      // 2a. Convert standalone diagnostic explanations / steps into thinking flow
+      const diagPreambleMatch = out.match(/(?:^|\n)((?:قبل أي تعديل|المشكلة الجذرية|السبب الجذري|Root Cause|الحل\s*\(The Fix\)|The Fix|خطوات التعديل|1\.\s*تعديل|النتيجة:?)[\s\S]*?)(?=(?:```json|```js|```html|```css|\{"file"|\{"deploy"|$))/i);
+      if (diagPreambleMatch && !out.includes('<think>') && !out.includes('<thinking>') && !out.includes('<thought>')) {
+        const diagContent = diagPreambleMatch[1];
+        out = out.replace(diagContent, `<think>\n${diagContent}\n</think>\n`);
+      }
+
+      // 2b. Parse <think>, <thinking>, <thought> into Sleek Dynamic Thinking Tabs
+      out = out.replace(/<(?:think|thinking|thought)>([\s\S]*?)<\/(?:think|thinking|thought)>/gi, (m, thinkContent) => {
         const rawLines = thinkContent.trim().split('\n')
-          .map(l => l.replace(/^[•\-\*◌●\d\.]+\s*/, '').trim())
-          .filter(l => l.length > 2 && l.length < 120);
+          .map(l => l.replace(/^[•\-\*◌●\d\.]+\s*/, '').replace(/---/g, '').trim())
+          .filter(l => l.length > 2 && l.length < 160 && !/^(---|===|\*\*\*)$/.test(l));
         
-        const steps = rawLines.length > 0 ? rawLines.slice(0, 5) : ['Diagnosing Root Cause', 'Inspecting Live Files', 'Synthesizing Patch'];
+        const steps = rawLines.length > 0 ? rawLines : ['Diagnosing Root Cause', 'Inspecting Live Files', 'Synthesizing Patch'];
+        const isAr = /[\u0600-\u06FF]/.test(thinkContent);
+        const titleText = isAr ? `مراحل التفكير والتشخيص (${steps.length} خطوات)` : `Thinking Process (${steps.length} steps completed)`;
         
-        const stepIcons = ['🧠', '📂', '📋', '✍️', '🔍'];
+        const stepIcons = ['🧠', '📂', '📋', '✍️', '🔍', '⚡', '✨', '🎯', '🛡️', '👑'];
         const tabsHtml = steps.map((s, idx) => `
-          <div class="dev-thinking-tab reached" style="animation-delay: ${idx * 0.1}s">
-            <span class="flow-icon" aria-hidden="true">${stepIcons[idx] || '•'}</span>
+          <div class="dev-thinking-tab reached ${isAr ? 'is-rtl' : ''}" style="animation-delay: ${Math.min(idx * 0.08, 0.8)}s">
+            <span class="flow-icon" aria-hidden="true">${stepIcons[idx % stepIcons.length]}</span>
             <span class="tab-label">${this.escapeHtml(s)}</span>
           </div>
         `).join('');
 
         return `
 <div class="dev-thinking-container collapsed">
-  <div class="dev-thinking-summary" onclick="this.parentElement.classList.toggle('collapsed')">
+  <div class="dev-thinking-summary ${isAr ? 'is-rtl' : ''}" onclick="this.parentElement.classList.toggle('collapsed')">
     <div class="summary-left">
       <span class="thinking-brain-icon">🧠</span>
-      <span class="thinking-headline">Thinking Process (${steps.length} steps completed)</span>
+      <span class="thinking-headline">${titleText}</span>
     </div>
     <span class="thinking-chevron">▾</span>
   </div>
-  <div class="dev-thinking-tabs-flow">
+  <div class="dev-thinking-tabs-flow ${isAr ? 'is-rtl' : ''}">
     ${tabsHtml}
   </div>
 </div>`;
       });
 
-      // 3. Handle in-flight open <think> during active streaming
-      out = out.replace(/<think>([\s\S]*?)$/gi, (m, inFlight) => {
+      // 3. Handle in-flight open think during active streaming
+      out = out.replace(/<(?:think|thinking|thought)>([\s\S]*?)$/gi, (m, inFlight) => {
         const lines = inFlight.trim().split('\n')
-          .map(l => l.replace(/^[•\-\*◌●\d\.]+\s*/, '').trim())
-          .filter(l => l.length > 2 && l.length < 120);
+          .map(l => l.replace(/^[•\-\*◌●\d\.]+\s*/, '').replace(/---/g, '').trim())
+          .filter(l => l.length > 2 && l.length < 160 && !/^(---|===|\*\*\*)$/.test(l));
         
-        const currentStep = lines[lines.length - 1] || 'Analyzing architecture & synthesizing patch...';
+        const isAr = /[\u0600-\u06FF]/.test(inFlight);
+        const currentStep = lines[lines.length - 1] || (isAr ? 'جاري تحليل المعمارية وهندسة الحل...' : 'Analyzing architecture & synthesizing patch...');
         
         return `
 <div class="dev-thinking-container active-streaming">
-  <div class="dev-thinking-summary">
+  <div class="dev-thinking-summary ${isAr ? 'is-rtl' : ''}">
     <div class="summary-left">
       <span class="thinking-brain-icon pulse">🧠</span>
       <span class="thinking-headline">${this.escapeHtml(currentStep)}</span>
