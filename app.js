@@ -2989,21 +2989,25 @@
         }
       };
 
-      const isTrivialMA = /^(السلام عليكم|مرحبا|هلا|اهلا|انت (كويس|عامل ايه)|كيف حالك|ترجم( كلمة)?$|ضيف تشكيل|عدل الجملة)/i.test(textForPayload.trim()) || textForPayload.trim().length < 22;
-      if(isTrivialMA){
-        // bypass for trivial — direct single FAST call, no 6 stages
-        const stream0 = ModelEngine.chatWithFallback('FAST', apiMessages, state.abortController.signal, () => {});
-        let out=''; for await(const {chunk} of stream0) { out+=chunk; renderLiveUI(steps, out, false); }
-        steps.forEach(s=>{ s.status='✓ تجاوز تريفيال'; s.summary='Trivial bypass'; });
-        renderLiveUI(steps, out, false);
-        aiMsgObj.content=out; aiMsgObj.multiAgentSteps=steps; StateController.save(); return;
-      }
       const steps = [
         { id: 1, icon: '💡', title: 'المحلل الاستراتيجي (Strategic Analyst)', shortName: 'المحلل', status: 'نشط الآن', summary: 'جاري دراسة المسألة واقتراح التحليل والمسودة الأولية...' },
         { id: 2, icon: '🎯', title: 'مدقق التفضيلات والتعليمات (Preferences & Domain Auditor)', shortName: 'التفضيلات', status: 'في الانتظار', summary: 'بانتظار المسودة لمطابقتها مع التفضيلات وسياق التعليمات والهدف الجوهري...' },
         { id: 3, icon: '🔍', title: 'الناقد المنطقي (Critical Reviewer)', shortName: 'الناقد', status: 'في الانتظار', summary: 'بانتظار فحص المسودة وتدقيق الثغرات...' },
         { id: 4, icon: '👑', title: 'المقرر النهائي (Chief Synthesizer)', shortName: 'المقرر', status: 'في الانتظار', summary: 'بانتظار التقارير للصياغة المعتمدة...' }
       ];
+
+      const isTrivialMA = /^(السلام عليكم|مرحبا|هلا|اهلا|انت (كويس|عامل ايه)|كيف حالك|ترجم( كلمة)?$|ضيف تشكيل|عدل الجملة)/i.test(textForPayload.trim()) || textForPayload.trim().length < 22;
+      if(isTrivialMA){
+        // bypass for trivial — direct single FAST call, no 4 stages
+        try{
+          const stream0 = ModelEngine.chatWithFallback('FAST', apiMessages, state.abortController.signal, () => {});
+          let out=''; for await(const {chunk} of stream0) { out+=chunk; }
+          steps.forEach(s=>{ s.status='✓ تجاوز تريفيال'; s.summary='Trivial bypass'; });
+          renderLiveUI(steps, out, false);
+          aiMsgObj.content=out; aiMsgObj.multiAgentSteps=steps; StateController.save();
+        }catch(e){ debugPrint(e, 'MultiAgent trivial bypass failed'); }
+        return;
+      }
 
       renderLiveUI(steps, '', true);
 
